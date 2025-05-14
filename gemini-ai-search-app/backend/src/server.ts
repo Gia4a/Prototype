@@ -3,6 +3,8 @@ import express, { Request, Response } from 'express';
 import axios from 'axios';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import { findAndFormatFirstTextRecipe } from './cocktail';
+import { MongoClient, Db } from 'mongodb'; // Import MongoClient
 
 dotenv.config(); // Load environment variables from .env file
 
@@ -24,6 +26,25 @@ app.use(express.json());
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
+// --- MongoDB Setup ---
+const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017'; // Default local MongoDB URI
+const DB_NAME = 'cocktailAppCache';
+const COLLECTION_NAME = 'searchResults';
+let db: Db;
+
+async function connectToMongo() {
+    try {
+        const client = new MongoClient(MONGO_URI);
+        await client.connect();
+        db = client.db(DB_NAME);
+        console.log(`Successfully connected to MongoDB: ${DB_NAME}`);
+    } catch (error) {
+        console.error("Failed to connect to MongoDB", error);
+        process.exit(1); // Exit if DB connection fails
+    }
+}
+// --- End MongoDB Setup ---
+
 if (!GEMINI_API_KEY) {
     console.error("FATAL ERROR: GEMINI_API_KEY is not defined in .env file.");
     // process.exit(1); // Optionally exit if key is missing
@@ -40,6 +61,27 @@ app.get('/api/search', (req: Request, res: Response) => {
         if (!GEMINI_API_KEY) {
             return res.status(500).json({ message: 'API key for Gemini service is not configured on the server.' });
         }
+
+        // --- Check MongoDB Cache First ---
+        try {
+            if (!db) {
+                console.warn("MongoDB not connected yet. Skipping cache check.");
+            } else {
+                const cachedData = await db.collection(COLLECTION_NAME).findOne({ query: query.toLowerCase() });
+                if (cachedData) {
+                    console.log(`Serving from cache for query: ${query}`);
+                    // Ensure the structure matches what the frontend expects
+                    return res.json({
+                        results: cachedData.results,
+                        formattedRecipe: cachedData.formattedRecipe
+                    });
+                }
+            }
+        } catch (cacheError) {
+            console.error("Error checking MongoDB cache:", cacheError);
+            // Proceed to API call if cache check fails
+        }
+        // --- End Cache Check ---
 
         try {
             // --- This is a SIMPLIFIED example of calling a Gemini-like API ---
@@ -75,33 +117,62 @@ app.get('/api/search', (req: Request, res: Response) => {
             // If it returns text, you might need a robust parsing strategy.
             // If it can return JSON directly (e.g. via prompt engineering), that's better.
 
-            let results: any[] = [];
-            // Example: if geminiResponse.data.candidates[0].content.parts[0].text is a JSON string
+            let resultsFromApi: any[] = [];
             try {
-                const responseText = geminiResponse.data.candidates[0].content.parts[0].text;
-                results = JSON.parse(responseText); // This assumes Gemini returns a parsable JSON string
-                                                    // This is a big assumption and might require prompt engineering.
+                let responseText = geminiResponse.data.candidates[0].content.parts[0].text;
+                
+                // Clean the responseText: Remove Markdown JSON block fences if present
+                const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
+                const match = responseText.match(jsonRegex);
+                if (match && match[1]) {
+                    responseText = match[1];
+                }
+
+                resultsFromApi = JSON.parse(responseText); 
             } catch (parseError) {
                 console.error("Error parsing Gemini response:", parseError);
-                // Fallback or attempt to extract info differently if direct JSON parsing fails
-                results = [{
-                    id: 'gemini-raw',
-                    title: 'Gemini Raw Response',
+                console.error("Original responseText that failed parsing:", geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text);
+                resultsFromApi = [{
+                    id: 'gemini-raw-parse-failed', // Changed ID to be more specific
+                    title: 'Gemini Raw Response - Parse Failed',
                     snippet: geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text || "Could not parse response.",
+                    filePath: null
                 }];
             }
 
-
-            // Ensure results match the SearchResult structure expected by the frontend
-            const formattedResults = results.map((item: any, index: number) => ({
+            const mappedResultsForFrontend = resultsFromApi.map((item: any, index: number) => ({
                 id: item.id || `gemini-result-${index}-${Date.now()}`,
                 title: item.title || 'Untitled Result',
-                filePath: item.filePath,
+                filePath: item.filePath || item.file_path,
                 snippet: item.snippet || 'No snippet available.'
             }));
 
+            const recipeString = findAndFormatFirstTextRecipe(mappedResultsForFrontend);
 
-            res.json({ results: formattedResults });
+            // --- Save to MongoDB Cache ---
+            try {
+                if (db) {
+                    await db.collection(COLLECTION_NAME).insertOne({
+                        query: query.toLowerCase(),
+                        results: mappedResultsForFrontend,
+                        formattedRecipe: recipeString,
+                        createdAt: new Date()
+                    });
+                    console.log(`Cached results for query: ${query}`);
+                }
+            } catch (cacheSaveError) {
+                console.error("Error saving to MongoDB cache:", cacheSaveError);
+            }
+            // --- End Save to Cache ---
+
+            if (recipeString && !recipeString.startsWith("Could not parse") && !recipeString.startsWith("No recipe item found")) {
+                return res.json({
+                    results: mappedResultsForFrontend,
+                    formattedRecipe: recipeString
+                });
+            }
+
+            res.json({ results: mappedResultsForFrontend });
 
         } catch (error: any) {
             console.error('Error calling Gemini API:', error.response?.data || error.message);
@@ -113,11 +184,18 @@ app.get('/api/search', (req: Request, res: Response) => {
     })();
 });
 
-app.listen(PORT, () => {
-    console.log(`Backend server is running on http://localhost:${PORT}`);
-    if (GEMINI_API_KEY) {
-        console.log("Gemini API Key loaded.");
-    } else {
-        console.warn("Gemini API Key is MISSING. The /api/search endpoint will not work correctly.");
-    }
-});
+// --- Start Server and Connect to DB ---
+async function startServer() {
+    await connectToMongo(); // Connect to DB before starting the server
+    app.listen(PORT, () => {
+        console.log(`Backend server is running on http://localhost:${PORT}`);
+        if (GEMINI_API_KEY) {
+            console.log("Gemini API Key loaded.");
+        } else {
+            console.warn("Gemini API Key is MISSING. The /api/search endpoint will not work correctly.");
+        }
+    });
+}
+
+startServer();
+// --- End Start Server ---
