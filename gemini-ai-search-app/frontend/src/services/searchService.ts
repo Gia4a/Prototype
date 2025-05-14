@@ -1,23 +1,28 @@
 // filepath: gemini-ai-search-app/frontend/src/services/searchService.ts
 import axios from 'axios';
-import type { SearchResult } from '../components/ResultsPopup'; // Import the interface
+import type { SearchResult } from '../components/ResultsPopup';
 
-// The URL of your backend API. Adjust if your backend runs on a different port.
-const BACKEND_API_URL = 'http://localhost:3001/api/search'; // Example backend URL
+const BACKEND_API_URL = 'http://localhost:3001/api/search';
 
-export const fetchSearchResultsFromBackend = async (query: string): Promise<SearchResult[]> => {
+// Define a new interface for the expected backend response
+export interface BackendResponse {
+    results: SearchResult[];
+    formattedRecipe?: string | null; // Make formattedRecipe optional
+}
+
+export const fetchSearchResultsFromBackend = async (query: string): Promise<BackendResponse> => {
     try {
-        const response = await axios.get(BACKEND_API_URL, {
+        const response = await axios.get<BackendResponse>(BACKEND_API_URL, {
             params: { q: query }
         });
-        // Assuming your backend returns data in a property called 'results'
-        // and that it matches the SearchResult[] structure.
-        return response.data.results || response.data;
+        // Return the entire data object from the backend
+        return response.data;
     } catch (error) {
         console.error('Error fetching search results from backend:', error);
-        // You might want to throw a more specific error or handle it differently
         if (axios.isAxiosError(error) && error.response) {
-            throw new Error(error.response.data.message || 'Failed to fetch results from backend');
+            // Try to parse the error response from backend if available
+            const errorMessage = error.response.data?.message || error.response.data?.details || 'Failed to fetch results from backend';
+            throw new Error(errorMessage);
         }
         throw new Error('An unknown error occurred while fetching results.');
     }
