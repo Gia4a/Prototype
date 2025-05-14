@@ -28,7 +28,7 @@ app.use((0, cors_1.default)({
     origin: frontendURL
 }));
 app.use(express_1.default.json());
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'; // Example, replace with actual
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 if (!GEMINI_API_KEY) {
     console.error("FATAL ERROR: GEMINI_API_KEY is not defined in .env file.");

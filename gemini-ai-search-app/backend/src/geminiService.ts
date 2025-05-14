@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
 
 export interface GeminiSearchResultItem {
     id: string;
@@ -18,7 +18,23 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         contents: [{
             parts: [{
                 // Modified prompt text below
-                text: `For the query "${query}", please provide search results. If you find a recipe for "${query}" on liquor.com, try to include its ingredients and instructions directly in the snippet for that result. For all results, include a title, a brief snippet, and if applicable, a file path. Format the entire output as a JSON array.`
+                text: `You are a helpful search assistant specializing in cocktails and liquors.
+For the user query "${query}":
+- If "${query}" is a specific cocktail name (e.g., "Mojito", "Old Fashioned"):
+    - Prioritize finding multiple recipes.
+    - From these recipes, select up to 3 results that have the most complete and detailed 'ingredients' and 'instructions'.
+    - For these top results, ensure their 'snippet' field includes the full ingredients and instructions directly. If a source like liquor.com is available for a complete recipe, favor that.
+    - If fewer than 3 complete recipes are found, return as many as possible that meet the completeness criteria.
+- If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
+    - Your primary goal is to find cocktail recipes that prominently feature "${query}".
+    - For each cocktail recipe found (up to 3):
+        - The "title" MUST be the specific name of the cocktail recipe detailed in the "snippet". Do NOT use "${query}" as the title for these cocktail recipes.
+        - The "snippet" MUST contain the full list of ingredients and the complete step-by-step instructions for making the cocktail. Structure this clearly (e.g., "Ingredients: ..." followed by "Instructions: ...").
+        - Prioritize recipes with clear, comprehensive ingredients and instructions.
+    - If fewer than 3 such complete recipes are found, return as many as possible.
+- For all search results, provide a "title", the "snippet" (as detailed above), and if directly applicable, a "filePath".
+- The entire output MUST be a single, valid JSON array of objects. Each object in the array should represent one search result and have the keys: "title", "snippet", and "filePath" (use null for filePath if not applicable). Do not include any text outside of this JSON array (e.g. no "Here are the results..." or markdown backticks around the JSON).
+Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredients: ingredient 1, ingredient 2. Instructions: step 1, step 2.", "filePath": null}`
             }]
         }]
     };

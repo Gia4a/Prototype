@@ -4,10 +4,16 @@ import type { SearchResult } from '../components/ResultsPopup';
 
 const BACKEND_API_URL = 'http://localhost:3001/api/search';
 
-// Define a new interface for the expected backend response
+// Define the structure for the best recipe object
+export interface BestRecipe {
+    title: string;
+    recipe: string;
+}
+
+// Update BackendResponse to use BestRecipe
 export interface BackendResponse {
     results: SearchResult[];
-    formattedRecipe?: string | null; // Make formattedRecipe optional
+    formattedRecipe?: BestRecipe | null; // formattedRecipe is now an object or null
 }
 
 export const fetchSearchResultsFromBackend = async (query: string): Promise<BackendResponse> => {

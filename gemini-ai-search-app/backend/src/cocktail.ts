@@ -43,44 +43,20 @@ function parseSnippetForRecipe(snippet: string): string | null {
     return null; // Return null if a complete recipe (both parts) isn't found
 }
 
-export function extractBestRecipe(results: SearchResultItem[]): string | null {
+export interface BestRecipe { // Define a new interface for the structured recipe
+    title: string;
+    recipe: string;
+}
+
+export function extractBestRecipe(results: SearchResultItem[]): BestRecipe | null {
     for (const item of results) {
-        if (item.snippet &&
-            item.snippet.toLowerCase().includes('ingredients:') &&
-            item.snippet.toLowerCase().includes('instructions:')) {
-            
-            const formattedRecipe = parseSnippetForRecipe(item.snippet);
-            if (formattedRecipe) {
-                // console.log(`Formatted recipe from item: "${item.title}"`); // For server logging
-                return formattedRecipe; // Return the first successfully parsed complete recipe
+        if (item.snippet) {
+            const recipeDetails = parseSnippetForRecipe(item.snippet);
+            if (recipeDetails) {
+                // Return an object containing both the title and the recipe string
+                return { title: item.title, recipe: recipeDetails };
             }
         }
     }
-
-    // If loop completes, no item had a complete, parsable recipe.
-    // We can add informational messages here if needed for logging,
-    // similar to before, but the primary goal is to return the first complete one.
-    
-    // Optional: Check for items that had keywords but failed parsing
-    const potentialButFailed = results.find(item =>
-        item.snippet &&
-        item.snippet.toLowerCase().includes('ingredients:') &&
-        item.snippet.toLowerCase().includes('instructions:') &&
-        !parseSnippetForRecipe(item.snippet)
-    );
-    if (potentialButFailed) {
-        return `Found item "${potentialButFailed.title}" with recipe keywords, but could not parse Ingredients/Instructions. Snippet: ${potentialButFailed.snippet.substring(0,150)}...`;
-    }
-    
-    // Optional: Check for items that looked like candidates but were missing one keyword
-    const missingKeyword = results.find(item =>
-        item.snippet &&
-        (item.snippet.toLowerCase().includes('ingredients:') || item.snippet.toLowerCase().includes('instructions:')) &&
-        !(item.snippet.toLowerCase().includes('ingredients:') && item.snippet.toLowerCase().includes('instructions:'))
-    );
-    if (missingKeyword) {
-        return `Found item "${missingKeyword.title}" with partial recipe keywords. Snippet: ${missingKeyword.snippet.substring(0,150)}...`;
-    }
-
-    return null; // No suitable recipe found or parsed
+    return null;
 }

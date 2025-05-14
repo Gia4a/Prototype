@@ -9,10 +9,15 @@ export interface SearchResult {
     snippet: string;
 }
 
+interface BestRecipe {
+    title: string;
+    recipe: string;
+}
+
 interface ResultsPopupProps {
     searchQuery: string; // Add searchQuery prop
     results: SearchResult[];
-    formattedRecipe?: string | null;
+    formattedRecipe: BestRecipe | null;
     error?: string | null;
     onClose: () => void;
     visible: boolean;
@@ -69,9 +74,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, forma
                 
                 {formattedRecipe ? (
                     <>
-                        <h3>Recipe</h3> {/* Changed from h2 to h3 to be subordinate to the main title */}
+                        <h3>{capitalizeTitle(formattedRecipe.title)}</h3> {/* Changed from h2 to h3 to be subordinate to the main title */}
                         <pre className="formatted-recipe-text" style={{ whiteSpace: 'pre-wrap', textAlign: 'left', color: '#333' }}> 
-                            {formattedRecipe}
+                            {formattedRecipe.recipe}
                         </pre>
                     </>
                 ) : error ? (
