@@ -24,7 +24,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
                 type="text"
                 value={query}
                 onChange={handleInputChange}
-                placeholder="Search with Gemini AI..."
+                placeholder="Blind Pig Service..."
                 style={{ padding: '10px', marginRight: '10px', width: '300px' }}
                 disabled={isLoading}
             />

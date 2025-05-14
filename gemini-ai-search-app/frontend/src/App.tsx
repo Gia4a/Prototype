@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
+// Import SearchResult type from ResultsPopup
 import type { SearchResult } from './components/ResultsPopup';
 // Import BackendResponse type
 import { fetchSearchResultsFromBackend } from './services/searchService';
 import type { BackendResponse } from './services/searchService';
+// Remove the incorrect import of BestRecipe as a component
+// import BestRecipe from './components/ResultsPopup'; 
 import './App.css';
 
 function App() {
     const [results, setResults] = useState<SearchResult[]>([]);
-    const [formattedRecipe, setFormattedRecipe] = useState<string | null | undefined>(null);
+    // Use 'any' or define BestRecipe type locally if needed, otherwise use the correct type from the backend response
+    const [formattedRecipe, setFormattedRecipe] = useState<any | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [isPopupVisible, setIsPopupVisible] = useState(false);
@@ -32,7 +36,7 @@ function App() {
         try {
             const backendResponse: BackendResponse = await fetchSearchResultsFromBackend(query);
             setResults(backendResponse.results || []);
-            setFormattedRecipe(backendResponse.formattedRecipe);
+            setFormattedRecipe(backendResponse.formattedRecipe ?? null);
             setIsPopupVisible(true);
         } catch (err: any) {
             setError(err.message || 'Failed to fetch results. Is the backend running?');
@@ -52,7 +56,7 @@ function App() {
 
     return (
         <div className="app-container">
-            <h1>Gemini AI Search</h1>
+            <h1></h1>
             <SearchBar onSearch={handleSearch} isLoading={isLoading} />
             {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
             <ResultsPopup
