@@ -17,26 +17,81 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
     const requestBody = {
         contents: [{
             parts: [{
-                // Modified prompt text below
                 text: `You are a helpful search assistant specializing in cocktails and liquors.
 For the user query "${query}":
 - If "${query}" is a specific cocktail name (e.g., "Mojito", "Old Fashioned"):
-    - Prioritize finding multiple recipes.
-    - From these recipes, select up to 3 results that have the most complete and detailed 'ingredients' and 'instructions'.
-    - For these top results, ensure their 'snippet' field includes the full ingredients and instructions directly. If a source like liquor.com is available for a complete recipe, favor that.
-    - If fewer than 3 complete recipes are found, return as many as possible that meet the completeness criteria.
+    - Prioritize finding a recipe.
+    - From available recipes, select 1 result that has the most complete and detailed 'ingredients' and 'instructions'.
+    - For this top result, ensure its 'snippet' field includes the full ingredients and instructions directly. 
+    - If 1 complete recipe is not found, return an empty array.
 - If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
-    - Your primary goal is to find cocktail recipes that prominently feature "${query}".
-    - For each cocktail recipe found (up to 3):
-        - The "title" MUST be the specific name of the cocktail recipe detailed in the "snippet". Do NOT use "${query}" as the title for these cocktail recipes.
-        - The "snippet" MUST contain the full list of ingredients and the complete step-by-step instructions for making the cocktail. Structure this clearly (e.g., "Ingredients: ..." followed by "Instructions: ...").
-        - Prioritize recipes with clear, comprehensive ingredients and instructions.
-    - If fewer than 3 such complete recipes are found, return as many as possible.
+    - CRITICALLY IMPORTANT: ALWAYS search willowpark.net catalog FIRST to find REAL, AVAILABLE products of this liquor type
+    - NEVER recommend generic liquor types - ALWAYS use specific brands/products found on willowpark.net
+    - Example: Use "Belvedere Vodka" or "Grey Goose Vodka" instead of just "Vodka"
+    - For the selected liquor, the format MUST BE: "[Specific Brand/Product Name from willowpark.net]"
+    - Provide a DIFFERENT specific product AND cocktail recipe each time this query is made
+    - Select a random, less common, but still valid cocktail that features the specific liquor as a main ingredient.
+    - For the cocktail recipe found (target 1):
+        - The "title" MUST be the specific name of the cocktail recipe that uses the specific liquor brand.
+        - The "snippet" MUST include the specific liquor brand from willowpark.net and contain the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list with the specific liquor brand]" then "Instructions: ...").
+        - Prioritize a recipe with clear, comprehensive ingredients and instructions.
+    - If a complete recipe is not found, return an empty array.
+- If "${query}" is a food item (e.g., "steak", "pasta", "chocolate", "seafood", "taco", "burger", "pizza"):
+    - IMPORTANT: This is ALWAYS a beverage pairing request - NEVER return food recipes
+    - For ALL food item queries, return EXACTLY 3 beverage pairing recommendations
+    - First check if "${query}" matches ANY of these common food categories:
+        * Common foods: burger, pizza, taco, burrito, sushi, pasta, steak, salmon, chicken, curry, soup, salad
+        * Cuisines: Mexican, Italian, Japanese, Chinese, Indian, Thai, French, Mediterranean, American
+        * Meal types: breakfast, lunch, dinner, appetizer, dessert, snack
+        * Components: meat, seafood, vegetable, fruit, grain, bread, dairy
+    - ANY of the above should be identified as food items WITHOUT needing to check external sources
+    - If not immediately recognized, THEN use allrecipes.com as a reference catalog to identify food items
+    - YOUR RESPONSE SHOULD NEVER BE EMPTY for food items.
+    - CRITICAL: PROVIDE COMPLETELY DIFFERENT, UNIQUE PAIRINGS EACH TIME THIS QUERY IS MADE.
+    - NEVER REPEAT PAIRINGS FROM PREVIOUS QUERIES.
+    - THIS APPLIES TO ALL PAIRING TYPES - WINES, SPIRITS, AND BEERS.
+    - Aim for interesting, unusual, but still appropriate pairings.
+    - Use this exact structure for each beverage pairing:
+    
+    - For WINE (recommend 1):
+        - MANDATORY: Search willowpark.net catalog FIRST to find a REAL, AVAILABLE wine product that pairs with ${query}
+        - NEVER recommend generic wine types - ALWAYS use specific brands/products found on willowpark.net
+        - Title format MUST include the EXACT product name: "[Specific Wine Brand, Name, Vintage from willowpark.net] - Wine Pairing for ${query}"
+        - Example: "Antinori Peppoli Chianti Classico 2019 - Wine Pairing for steak" NOT just "Chianti" or "Red Wine"
+        - Snippet format: "Pairing Notes: [explain why this specific wine from willowpark.net works with the food]. Serving Suggestion: [temperature, glass type, etc.]"
+    
+    - For SPIRITS (recommend 1):
+        - MANDATORY: Search willowpark.net catalog FIRST to find a REAL, AVAILABLE spirit product that pairs with ${query}
+        - NEVER recommend generic spirit types - ALWAYS use specific brands/products found on willowpark.net
+        - Title format MUST include the EXACT product name: "[Specific Spirit Brand, Name, Age from willowpark.net] - Spirit Pairing for ${query}"
+        - Example: "The Macallan 12 Year Double Cask - Spirit Pairing for steak" NOT just "Scotch" or "Whisky"
+        - Snippet format: "Pairing Notes: [explain why this specific spirit from willowpark.net complements the food]. Serving Suggestion: [how to serve, glass type, etc.]"
+        
+    - For CRAFT BEER or READY-TO-DRINK (recommend 1):
+        - MANDATORY: Search willowpark.net catalog FIRST to find a REAL, AVAILABLE product in either category:
+          * Option 1: A craft beer that pairs with ${query}
+          * Option 2: A ready-to-drink cocktail/premixed beverage that pairs with ${query}
+        - NEVER recommend generic types - ALWAYS use specific brands/products found on willowpark.net
+        - Title format MUST include the EXACT product name: 
+          * For beer: "[Specific Beer Brand and Name from willowpark.net] - Beer Pairing for ${query}"
+          * For RTD: "[Specific RTD Brand and Product Name from willowpark.net] - Ready-to-Drink Pairing for ${query}"
+        - Examples: 
+          * "Brewdog Punk IPA - Beer Pairing for steak" NOT just "IPA" or "Craft Beer"
+          * "Cutwater Tequila Margarita - Ready-to-Drink Pairing for tacos" NOT just "Margarita"
+        - Snippet format: "Pairing Notes: [explain why this specific product from willowpark.net works with the food]. Serving Suggestion: [temperature, glass type, ice recommendation, etc.]."
+    
+    - ALWAYS PROVIDE 3 TOTAL RECOMMENDATIONS using the above formats.
 - For all search results, provide a "title", the "snippet" (as detailed above), and if directly applicable, a "filePath".
-- The entire output MUST be a single, valid JSON array of objects. Each object in the array should represent one search result and have the keys: "title", "snippet", and "filePath" (use null for filePath if not applicable). Do not include any text outside of this JSON array (e.g. no "Here are the results..." or markdown backticks around the JSON).
+- The entire output MUST be a single, valid JSON array of objects. Each object in the array should represent one search result and have the keys: "title", "snippet", and "filePath" (use null for filePath if not applicable). If no suitable recipe is found according to the criteria above, return an empty JSON array: []. Do not include any text outside of this JSON array (e.g. no "Here are the results..." or markdown backticks around the JSON).
 Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredients: ingredient 1, ingredient 2. Instructions: step 1, step 2.", "filePath": null}`
             }]
-        }]
+        }],
+        generationConfig: {
+            temperature: 1.0,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048
+        }
     };
 
     try {
@@ -50,6 +105,8 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
             }
         );
 
+        console.log("Raw Gemini API Response:", geminiResponse.data); // Added console log here
+
         let resultsFromApi: any[] = [];
         if (geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
             let responseText = geminiResponse.data.candidates[0].content.parts[0].text;
@@ -62,6 +119,7 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
 
             try {
                 resultsFromApi = JSON.parse(responseText);
+                console.log("Raw Data Before Cache:", resultsFromApi);
             } catch (parseError) {
                 console.error("Error parsing Gemini response in service:", parseError);
                 console.error("Original responseText that failed parsing in service:", responseText);
@@ -74,12 +132,20 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
             throw new Error('No valid content returned from Gemini API.');
         }
         
-        return resultsFromApi.map((item: any, index: number) => ({
+        const mappedResults = resultsFromApi.map((item: any, index: number) => ({
             id: item.id || `gemini-result-${index}-${Date.now()}`,
             title: item.title || 'Untitled Result',
             filePath: item.filePath || item.file_path, // Handles both snake_case and camelCase
             snippet: item.snippet || 'No snippet available.'
         }));
+
+        // If no results are found based on the criteria, return the raw data
+        if (mappedResults.length === 0) {
+            console.warn("No results found based on criteria, returning raw data.");
+            return resultsFromApi;
+        }
+
+        return mappedResults;
 
     } catch (error: any) {
         console.error('Error calling Gemini API in service:', error.response?.data || error.message);

@@ -15,7 +15,7 @@ interface BestRecipe {
 }
 
 interface ResultsPopupProps {
-    searchQuery: string; // Add searchQuery prop
+    searchQuery: string;
     results: SearchResult[];
     formattedRecipe: BestRecipe | null;
     error?: string | null;
@@ -23,7 +23,16 @@ interface ResultsPopupProps {
     visible: boolean;
 }
 
+// Common food items to check against for better user messaging
+const FOOD_ITEMS = ["steak", "pasta", "chocolate", "seafood", "chicken", "beef", "pork", "fish", "lamb", "dessert"];
+
 const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, formattedRecipe, error, onClose, visible }) => {
+
+    // Check if the query is likely a food item
+    const isLikelyFoodItem = () => {
+        if (!searchQuery) return false;
+        return FOOD_ITEMS.includes(searchQuery.toLowerCase().trim());
+    };
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -58,6 +67,22 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, forma
         return title.toLowerCase().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
     };
 
+    // Renders pairing items in a more attractive way
+    const renderPairingResults = () => {
+        return (
+            <div className="pairing-results">
+                {results.map((result) => (
+                    <div key={result.id} className="pairing-item">
+                        <h4>{result.title}</h4>
+                        <div className="pairing-content">
+                            {result.snippet}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
     return (
         <div className="results-popup-overlay" onClick={handleOverlayClick}>
             <div className="results-popup-content">
@@ -74,46 +99,44 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, forma
                 
                 {formattedRecipe ? (
                     <>
-                        <h3>{capitalizeTitle(formattedRecipe.title)}</h3> {/* Changed from h2 to h3 to be subordinate to the main title */}
+                        <h3>{capitalizeTitle(formattedRecipe.title)}</h3>
                         <pre className="formatted-recipe-text" style={{ whiteSpace: 'pre-wrap', textAlign: 'left', color: '#333' }}> 
                             {formattedRecipe.recipe}
                         </pre>
                     </>
                 ) : error ? (
                     <>
-                        <h3>Error</h3> {/* Changed from h2 to h3 */}
+                        <h3>Error</h3>
                         <p style={{ color: 'red' }}>{error}</p>
                         {results && results.length > 0 && <hr />} 
                     </>
                 ) : (
                     <>
-                        <h3>Search Results</h3> {/* Changed from h2 to h3 */}
+                        <h3>{results && results.length > 0 ? "Beverage Pairings" : "Search Results"}</h3>
                         {results && results.length > 0 ? (
-                            <ul>
-                                {results.map((result) => (
-                                    <li key={result.id} className="result-item">
-                                        <h4>{result.title}</h4> {/* Changed from h3 to h4 */}
-                                        {result.filePath && (
-                                            <p className="result-file-path">
-                                                Path: {result.filePath}
-                                            </p>
-                                        )}
-                                        <p className="result-snippet">{result.snippet}</p>
-                                    </li>
-                                ))}
-                            </ul>
+                            // Use the new pairing renderer for better display
+                            renderPairingResults()
                         ) : (
-                            <p>No results found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
+                            <div className="no-results-message">
+                                {isLikelyFoodItem() ? (
+                                    <>
+                                        <p>No beverage pairings found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
+                                        <p>Try searching again to discover wine, spirit, and cocktail recommendations that complement {searchQuery}.</p>
+                                    </>
+                                ) : (
+                                    <p>No results found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
+                                )}
+                            </div>
                         )}
                     </>
                 )}
                 {error && !formattedRecipe && results && results.length > 0 && (
                      <>
-                        <h3>Search Results (alongside error)</h3> {/* Changed from h2 to h3 */}
+                        <h3>Search Results (alongside error)</h3>
                         <ul>
                             {results.map((result) => (
                                 <li key={result.id} className="result-item">
-                                    <h4>{result.title}</h4> {/* Changed from h3 to h4 */}
+                                    <h4>{result.title}</h4>
                                     {result.filePath && (
                                         <p className="result-file-path">
                                             Path: {result.filePath}

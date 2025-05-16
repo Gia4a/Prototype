@@ -19,7 +19,10 @@ export interface BackendResponse {
 export const fetchSearchResultsFromBackend = async (query: string): Promise<BackendResponse> => {
     try {
         const response = await axios.get<BackendResponse>(BACKEND_API_URL, {
-            params: { q: query }
+            params: { 
+                q: query,
+                timestamp: Date.now() // Cache-busting parameter
+            }
         });
         // Return the entire data object from the backend
         return response.data;
