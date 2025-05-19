@@ -24,10 +24,13 @@ a:hover {
 
 body {
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
+  padding: 0;
   min-height: 100vh;
+  background-image: url('/Gangpig.png');
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  background-size: contain; /* or use 'cover' to fill entire screen */
+  background-attachment: fixed;
 }
 
 h1 {
