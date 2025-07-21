@@ -18,18 +18,25 @@ export interface BackendResponse {
 
 export const fetchSearchResultsFromBackend = async (query: string): Promise<BackendResponse> => {
     try {
-        const response = await axios.get<BackendResponse>(BACKEND_API_URL, {
-            params: { 
-                q: query,
-                timestamp: Date.now() // Cache-busting parameter
-            }
-        });
-        // Return the entire data object from the backend
-        return response.data;
+        // If query looks like a base64 image, POST it as an image
+        if (query.startsWith('data:image/')) {
+            const response = await axios.post<BackendResponse>(BACKEND_API_URL, {
+                image: query,
+                timestamp: Date.now()
+            });
+            return response.data;
+        } else {
+            const response = await axios.get<BackendResponse>(BACKEND_API_URL, {
+                params: { 
+                    q: query,
+                    timestamp: Date.now()
+                }
+            });
+            return response.data;
+        }
     } catch (error) {
         console.error('Error fetching search results from backend:', error);
         if (axios.isAxiosError(error) && error.response) {
-            // Try to parse the error response from backend if available
             const errorMessage = error.response.data?.message || error.response.data?.details || 'Failed to fetch results from backend';
             throw new Error(errorMessage);
         }
