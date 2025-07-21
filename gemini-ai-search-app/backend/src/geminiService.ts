@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent';
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export interface GeminiSearchResultItem {
     id: string;
@@ -19,11 +19,12 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
             parts: [{
                 text: `You are a helpful search assistant specializing in cocktails and liquors.
 For the user query "${query}":
-- If "${query}" is a specific cocktail name (e.g., "Mojito", "Old Fashioned"):
     - Prioritize finding a recipe.
     - From available recipes, select 1 result that has the most complete and detailed 'ingredients' and 'instructions'.
     - For this top result, ensure its 'snippet' field includes the full ingredients and instructions directly. 
     - If 1 complete recipe is not found, return an empty array.
+    - ONLY select recipes that use common kitchen ingredients (e.g., vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.).
+    - EXCLUDE any recipe that requires special or uncommon ingredients such as bitters, liqueurs, vermouth, syrups (except simple syrup), infusions, or hard-to-find items. Do NOT include any recipe that requires these.
 - If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
     - CRITICALLY IMPORTANT: ALWAYS search willowpark.net catalog FIRST to find REAL, AVAILABLE products of this liquor type
     - NEVER recommend generic liquor types - ALWAYS use specific brands/products found on willowpark.net

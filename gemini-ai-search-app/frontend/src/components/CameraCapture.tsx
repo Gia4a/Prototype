@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
 
 export interface CameraCaptureHandle {
@@ -78,7 +78,7 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
     setStreaming(false);
   }
 
-  const capturePhoto = () => {
+  const scanFrame = () => {
     if (videoRef.current && canvasRef.current) {
       const video = videoRef.current;
       const canvas = canvasRef.current;
@@ -88,8 +88,7 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
       if (ctx) {
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         const imageData = canvas.toDataURL('image/png');
-        onCapture(imageData);
-        stopCamera();
+        onCapture(imageData); // Do NOT stop camera, allow repeated scans
       }
     }
   };
@@ -99,8 +98,8 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
       <div>
         <video ref={videoRef} autoPlay playsInline style={{ width: 240, height: 180, border: '1px solid #ccc', background: '#000' }} />
         <br />
-        <button type="button" onClick={capturePhoto} style={{ marginRight: '10px' }} disabled={!streaming}>
-          Capture
+        <button type="button" onClick={scanFrame} style={{ marginRight: '10px' }} disabled={!streaming}>
+          Scan
         </button>
         <button type="button" onClick={() => { stopCamera(); onCapture(''); }}>
           Cancel

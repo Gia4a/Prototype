@@ -2,7 +2,7 @@
 import axios from 'axios';
 import type { SearchResult } from '../components/ResultsPopup';
 
-const BACKEND_API_URL = 'http://localhost:3001/api/search';
+const BACKEND_API_URL = import.meta.env.VITE_BACKEND_API_URL;
 
 // Define the structure for the best recipe object
 export interface BestRecipe {
@@ -16,24 +16,18 @@ export interface BackendResponse {
     formattedRecipe?: BestRecipe | null; // formattedRecipe is now an object or null
 }
 
-export const fetchSearchResultsFromBackend = async (query: string): Promise<BackendResponse> => {
+export const fetchSearchResultsFromBackend = async (query: string, imageData?: string): Promise<BackendResponse> => {
     try {
-        // If query looks like a base64 image, POST it as an image
-        if (query.startsWith('data:image/')) {
-            const response = await axios.post<BackendResponse>(BACKEND_API_URL, {
-                image: query,
-                timestamp: Date.now()
-            });
-            return response.data;
-        } else {
-            const response = await axios.get<BackendResponse>(BACKEND_API_URL, {
-                params: { 
-                    q: query,
-                    timestamp: Date.now()
-                }
-            });
-            return response.data;
+        // Always use POST to send both query and image (if available)
+        const payload: { query: string; image?: string; timestamp: number } = {
+            query,
+            timestamp: Date.now(),
+        };
+        if (imageData && imageData.startsWith('data:image/')) {
+            payload.image = imageData;
         }
+        const response = await axios.post<BackendResponse>(BACKEND_API_URL, payload);
+        return response.data;
     } catch (error) {
         console.error('Error fetching search results from backend:', error);
         if (axios.isAxiosError(error) && error.response) {

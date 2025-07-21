@@ -9,54 +9,43 @@ const router = Router();
 const COLLECTION_NAME = 'searchResults';
 
 export function configureSearchRoutes(db: Db, apiKey: string) {
-    // POST /search for image-based search
+    // POST /search for text, image, or both
     router.post('/search', async (req: Request, res: Response) => {
-        const { image } = req.body;
-        if (!image) {
-            return res.status(400).json({ error: 'Image data is required.' });
+        const { image, query } = req.body;
+        if (!image && !query) {
+            return res.status(400).json({ error: 'Either image or query is required.' });
         }
         if (!apiKey) {
             return res.status(500).json({ error: 'API key for search service is not configured.' });
         }
         try {
-            // Call Gemini Vision API to extract text/labels from the image
-            // This is a placeholder for Gemini Vision API call
-            const visionApiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-vision:generateContent';
-            const requestBody = {
-                contents: [{
-                    parts: [
-                        { inlineData: { mimeType: 'image/png', data: image.split(',')[1] } },
-                        { text: 'What food or drink item is in this image? Respond with a single word or short phrase.' }
-                    ]
-                }],
-                generationConfig: { temperature: 0.2, maxOutputTokens: 20 }
-            };
-            const geminiResponse = await axios.post(
-                `${visionApiUrl}?key=${apiKey}`,
-                requestBody
-            );
-            // Parse Gemini Vision response
-            let detectedQuery = '';
-            const candidates = geminiResponse.data?.candidates;
-            if (candidates && candidates.length > 0) {
-                const text = candidates[0]?.content?.parts?.[0]?.text || '';
-                detectedQuery = text.trim().split('\n')[0];
+            let detectedQuery = query || '';
+            let shooterResult = null;
+            // If image is present, use Gemini Vision to extract liquor and recommend shooter
+            if (image) {
+                // Dynamically import shooters logic to avoid circular deps
+                const { getShooterFromImage } = await import('../shooters');
+                const base64 = image.split(',')[1] || image;
+                shooterResult = await getShooterFromImage(base64);
+                if (shooterResult && shooterResult.query) {
+                    detectedQuery = shooterResult.query;
+                }
             }
             if (!detectedQuery) {
-                return res.status(200).json({ results: [], formattedRecipe: null, message: 'No recognizable item found in image.' });
+                return res.status(200).json({ results: [], formattedRecipe: null, message: 'No recognizable item found.' });
             }
-            // Now run the normal search logic with the detected query
-            // For now, call fetchAndProcessGeminiResults directly
+            // Run the normal search logic with the detected query
             const resultsFromApi = await fetchAndProcessGeminiResults(detectedQuery, apiKey);
             const bestRecipeDetails: BestRecipe | null = extractBestRecipe(resultsFromApi);
             const responsePayloadFromApi = {
                 results: resultsFromApi,
                 formattedRecipe: bestRecipeDetails,
-                detectedQuery
+                detectedQuery,
+                shooter: shooterResult
             };
             return res.json(responsePayloadFromApi);
         } catch (error: any) {
-            console.error('Error during image search:', error.message);
+            console.error('Error during search:', error.message);
             return res.status(500).json({ error: `An error occurred: ${error.message}`, results: [], formattedRecipe: null });
         }
     });
