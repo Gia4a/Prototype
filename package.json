@@ -7,14 +7,10 @@
     "express": "^4.18.2"
   },
   "scripts": {
-    "dev:frontend": "vite",
-    "dev:backend": "cd backend && npm run dev",
-    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
-    "build:frontend": "cd frontend && npm install && npm run build",
-    "build:backend": "cd backend && npm install && npm run build",
-    "build": "npm run build:backend && npm run build:frontend",
-    "start": "cd backend && npm start",
-    "postinstall": "npm run build:backend"
+    "install:server": "cd backend && npm install && cd ..",
+    "install": "npm run install:backend",
+    "build": "cd backend && npm run build && cd ..",
+    "start": "cd backend && npm run start && cd .."
   },
   "engines": {
     "node": ">=16.0.0"
