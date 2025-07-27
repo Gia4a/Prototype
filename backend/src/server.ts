@@ -10,10 +10,21 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+
 const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({
     origin: frontendURL
 }));
+
+// Serve frontend static files in production
+import path from 'path';
+const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+if (process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true') {
+    app.use(express.static(frontendDistPath));
+    app.get('*', (req, res) => {
+        res.sendFile(path.join(frontendDistPath, 'index.html'));
+    });
+}
 
 app.use(express.json({ limit: '10mb' }));
 
