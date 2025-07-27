@@ -65,7 +65,7 @@ export async function getShooterFromImage(imageBase64: string): Promise<ShooterR
         const description = `Shooter: ${shooter}\nIngredients:\n${ingredients}\n\nInstructions:\n${instructions}`.trim();
         let detectedItems: string[] | undefined = undefined;
         if (ingredients) {
-            detectedItems = ingredients.split(/,|\n|\*/).map(s => s.trim()).filter(Boolean);
+            detectedItems = ingredients.split(/,|\n|\*/).map((s: string) => s.trim()).filter(Boolean);
         }
 
         // Use liquor as the query, or fallback to shooter
