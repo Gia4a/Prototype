@@ -35,18 +35,13 @@ For the user query "${query}":
     - If 1 complete recipe is not found, return an empty array.
     - ONLY select recipes that use common kitchen ingredients (e.g., vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.).
     - EXCLUDE any recipe that requires special or uncommon ingredients such as bitters, liqueurs, vermouth, syrups (except simple syrup), infusions, or hard-to-find items. Do NOT include any recipe that requires these.
-- If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
-    - CRITICALLY IMPORTANT: ALWAYS search willowpark.net catalog FIRST to find REAL, AVAILABLE products of this liquor type
-    - NEVER recommend generic liquor types - ALWAYS use specific brands/products found on willowpark.net
-    - Example: Use "Belvedere Vodka" or "Grey Goose Vodka" instead of just "Vodka"
-    - For the selected liquor, the format MUST BE: "[Specific Brand/Product Name from willowpark.net]"
-    - Provide a DIFFERENT specific product AND cocktail recipe each time this query is made
-    - Select a random, less common, but still valid cocktail that features the specific liquor as a main ingredient.
-    - For the cocktail recipe found (target 1):
-        - The "title" MUST be the specific name of the cocktail recipe that uses the specific liquor brand.
-        - The "snippet" MUST include the specific liquor brand from willowpark.net and contain the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list with the specific liquor brand]" then "Instructions: ...").
+
+    - If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
+        - Provide a cocktail recipe that features this liquor as a main ingredient.
+        - The "title" should be the name of the cocktail recipe.
+        - The "snippet" should include the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list]" then "Instructions: ...").
         - Prioritize a recipe with clear, comprehensive ingredients and instructions.
-    - If a complete recipe is not found, return an empty array.
+        - If a complete recipe is not found, return an empty array.
 - If "${query}" is a food item (e.g., "steak", "pasta", "chocolate", "seafood", "taco", "burger", "pizza"):
     - IMPORTANT: This is ALWAYS a beverage pairing request - NEVER return food recipes
     - For ALL food item queries, return EXACTLY 3 beverage pairing recommendations
