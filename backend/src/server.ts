@@ -18,11 +18,14 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017';
 const DB_NAME = 'cocktailAppCache';
 
 if (!GEMINI_API_KEY) {
     console.error("FATAL ERROR: GEMINI_API_KEY is not defined in .env file.");
+}
+if (!process.env.MONGODB_URI && !process.env.MONGO_URI) {
+    console.warn("WARNING: MONGODB_URI is not set. Defaulting to localhost. This will fail on cloud platforms like Render. Set MONGODB_URI in your environment variables.");
 }
 
 async function startServer() {
