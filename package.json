@@ -7,7 +7,7 @@
     "express": "^4.18.2"
   },
   "scripts": {
-    "install:server": "cd backend && npm install && cd ..",
+    "install:backend": "cd backend && npm install && npm run build && cd ..",
     "install": "npm run install:backend",
     "build": "cd backend && npm run build && cd ..",
     "start": "cd backend && npm run start && cd .."
