@@ -1,5 +1,15 @@
 import axios from 'axios';
 
+
+// Type for Gemini API response
+interface GeminiApiResponse {
+    candidates?: Array<{
+        content?: {
+            parts?: Array<{ text?: string }>
+        }
+    }>;
+    [key: string]: any;
+}
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export interface GeminiSearchResultItem {
@@ -96,7 +106,8 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
     };
 
     try {
-        const geminiResponse = await axios.post(
+
+        const geminiResponse = await axios.post<GeminiApiResponse>(
             `${GEMINI_API_URL}?key=${apiKey}`,
             requestBody,
             {
@@ -110,7 +121,7 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
 
         let resultsFromApi: any[] = [];
         if (geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            let responseText = geminiResponse.data.candidates[0].content.parts[0].text;
+            let responseText = geminiResponse.data.candidates?.[0]?.content?.parts?.[0]?.text;
 
             const jsonRegex = /```json\s*([\s\S]*?)\s*```/;
             const match = responseText.match(jsonRegex);
@@ -151,10 +162,10 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
     } catch (error: any) {
         console.error('Error calling Gemini API in service:', error.response?.data || error.message);
         // Re-throw the error to be handled by the route handler in server.ts
-        // Or wrap it in a custom error
-        if (axios.isAxiosError(error)) {
+        // Manual type guard for Axios errors
+        if (error && typeof error === 'object' && 'isAxiosError' in error && (error as any).isAxiosError) {
             throw new Error(`Gemini API request failed: ${error.response?.data?.error?.message || error.message}`);
         }
         throw error; // Re-throw other errors
     }
-}
+}   
