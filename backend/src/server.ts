@@ -50,6 +50,26 @@ async function startServer() {
         const searchRouter = configureSearchRoutes(db, GEMINI_API_KEY || '');
         app.use('/api', searchRouter);
 
+        // Add GET /api/search for browser testing
+        app.get('/api/search', async (req, res) => {
+            const query = req.query.q;
+            if (!query) {
+                return res.status(400).json({ error: 'Query parameter "q" is required.' });
+            }
+            // Fetch fresh results using Gemini service
+            try {
+                // Import Gemini and cocktail logic
+                const { fetchAndProcessGeminiResults } = require('./geminiService');
+                const { extractBestRecipe } = require('./cocktail');
+                const resultsFromApi = await fetchAndProcessGeminiResults(query, GEMINI_API_KEY);
+                const bestRecipeDetails = extractBestRecipe(resultsFromApi);
+                return res.json({ results: resultsFromApi, formattedRecipe: bestRecipeDetails });
+            } catch (error) {
+                const errorMessage = (error instanceof Error) ? error.message : String(error);
+                return res.status(500).json({ error: errorMessage });
+            }
+        });
+
         app.listen(PORT, () => {
             console.log(`Backend server is running on http://localhost:${PORT}`);
             if (GEMINI_API_KEY) {
