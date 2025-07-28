@@ -76,21 +76,34 @@ For the food item "${query}":
     - The entire output MUST be a single, valid JSON array of objects. Each object should have: "title", "snippet", and "filePath" (use null for filePath). Do not include any text outside of this JSON array.`;
     
     } else if (isLiquor) {
-        // Handle liquor types - return cocktail recipes with common ingredients only
-        promptText = `You are a helpful search assistant specializing in cocktails and liquors.
+        // Handle liquor types - return cocktail recipe + food pairing recommendations
+        promptText = `You are a helpful search assistant specializing in cocktails and food pairings.
 For the liquor type "${query}":
-    - Provide a cocktail recipe that features this liquor as a main ingredient.
-    - From available recipes, select 1 result that has the most complete and detailed 'ingredients' and 'instructions'.
-    - For this top result, ensure its 'snippet' field includes the full ingredients and instructions directly.
-    - If 1 complete recipe is not found, return an empty array.
-    - ONLY select recipes that use common kitchen ingredients (e.g., vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.).
-    - EXCLUDE any recipe that requires special or uncommon ingredients such as bitters, liqueurs, vermouth, syrups (except simple syrup), infusions, or hard-to-find items. Do NOT include any recipe that requires these.
-    - The "title" should be the name of the cocktail recipe.
-    - The "snippet" should include the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list]" then "Instructions: ...").
-    - Prioritize a recipe with clear, comprehensive ingredients and instructions.
-    - If a complete recipe is not found, return an empty array.
+    - Provide EXACTLY 2 recommendations: 1 cocktail recipe + 1 food pairing
+    
+    COCKTAIL RECIPE (provide 1):
+    - Provide a cocktail recipe that features "${query}" as the main ingredient
+    - ONLY use common kitchen ingredients (vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.)
+    - EXCLUDE recipes requiring special ingredients (bitters, liqueurs, vermouth, syrups except simple syrup, infusions, hard-to-find items)
+    - Title format: "[Cocktail Name] - ${query} Cocktail Recipe"
+    - Snippet format: "Ingredients: [full list]. Instructions: [complete step-by-step instructions]."
+    
+    FOOD PAIRING (provide 1):
+    - Recommend a specific food dish that pairs excellently with "${query}" when sipped neat or on the rocks
+    - Focus on classic, well-known pairings (like bourbon with BBQ, scotch with smoked salmon, etc.)
+    - Title format: "[Specific Food Dish] - Food Pairing for ${query}"
+    - Snippet format: "Pairing Notes: [explain why this food complements ${query}'s flavor profile]. Serving Suggestion: [how to serve the ${query} - neat, on rocks, temperature, etc.]"
+    - Examples of good pairings:
+      * Bourbon: Nashville-style smoked brisket, dark chocolate, pecan pie
+      * Scotch: Smoked salmon, aged cheddar, dark chocolate
+      * Vodka: Caviar, smoked fish, pickled vegetables  
+      * Gin: Oysters, cucumber sandwiches, citrus-based dishes
+      * Rum: Tropical fruits, coconut desserts, spiced dishes
+      * Tequila: Mexican cuisine, lime-based dishes, spicy foods
+    
+    - ALWAYS PROVIDE EXACTLY 2 TOTAL RECOMMENDATIONS (1 cocktail + 1 food pairing)
     - The entire output MUST be a single, valid JSON array of objects. Each object should have: "title", "snippet", and "filePath" (use null for filePath). Do not include any text outside of this JSON array.
-Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredients: ingredient 1, ingredient 2. Instructions: step 1, step 2.", "filePath": null}`;
+Example: [{"title": "Moscow Mule - Vodka Cocktail Recipe", "snippet": "Ingredients: 2 oz vodka, 4 oz ginger beer, 0.5 oz lime juice, lime wedge. Instructions: Fill copper mug with ice, add vodka and lime juice, top with ginger beer, stir gently, garnish with lime wedge.", "filePath": null}, {"title": "Smoked Salmon - Food Pairing for Vodka", "snippet": "Pairing Notes: The clean, neutral profile of vodka enhances the delicate smokiness of salmon without overpowering its subtle flavors. Serving Suggestion: Serve vodka chilled neat in a shot glass or on rocks in a rocks glass at freezer temperature.", "filePath": null}]`;
     
     } else {
         // Handle cocktail names - return the exact recipe as-is (including uncommon ingredients)

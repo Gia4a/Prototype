@@ -16,14 +16,23 @@ app.use(cors({
     origin: frontendURL
 }));
 
-// Serve frontend static files in production
+
+// Serve frontend static files in production, with robust error handling
 import path from 'path';
 const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
 if (process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true') {
-    app.use(express.static(frontendDistPath));
-    app.get('*', (req, res) => {
-        res.sendFile(path.join(frontendDistPath, 'index.html'));
-    });
+    const fs = require('fs');
+    if (fs.existsSync(frontendDistPath) && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
+        app.use(express.static(frontendDistPath));
+        app.get('*', (req, res) => {
+            res.sendFile(path.join(frontendDistPath, 'index.html'));
+        });
+    } else {
+        console.warn(`WARNING: Frontend build not found at ${frontendDistPath}. Static file serving is disabled.`);
+        app.get('*', (req, res) => {
+            res.status(404).send('Frontend build not found. Please build the frontend and deploy dist files.');
+        });
+    }
 }
 
 app.use(express.json({ limit: '10mb' }));
