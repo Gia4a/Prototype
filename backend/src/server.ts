@@ -56,9 +56,12 @@ async function startServer() {
             if (!query) {
                 return res.status(400).json({ error: 'Query parameter "q" is required.' });
             }
-            // List of liquor types for detection
+            // List of liquor types and cocktail names for detection
             const LIQUOR_TYPES = [
                 "vodka", "whiskey", "rum", "gin", "tequila", "brandy", "scotch", "bourbon", "cognac", "mezcal", "absinthe", "vermouth", "schnapps", "liqueur", "triple sec", "amaretto", "cointreau", "campari", "baileys", "kahlua", "sambuca", "ouzo", "soju", "sake", "port", "sherry", "grappa", "aquavit", "pisco", "armagnac", "calvados", "chartreuse", "curaçao", "maraschino", "frangelico", "drambuie", "jagermeister", "limoncello", "midori", "strega", "tía maria", "galliano", "crème de menthe", "crème de cassis", "crème de cacao"
+            ];
+            const COCKTAIL_NAMES = [
+                "moscow mule", "margarita", "martini", "old fashioned", "manhattan", "daiquiri", "negroni", "whiskey sour", "cosmopolitan", "mojito", "bloody mary", "paloma", "mint julep", "sidecar", "tom collins", "french 75", "gimlet", "sazerac", "pina colada", "mai tai", "dark and stormy", "white russian", "espresso martini", "aperol spritz", "rum punch", "irish coffee", "bellini", "caipirinha", "cuba libre", "planter's punch", "tequila sunrise", "amaretto sour", "boulevardier", "bramble", "vesper", "aviation", "bee's knees", "paper plane", "last word", "corpse reviver #2", "clover club", "godfather", "godmother", "royal flush", "lemon drop", "sex on the beach", "long island iced tea", "blue lagoon", "fuzzy navel", "screwdriver", "sea breeze", "harvey wallbanger", "alabama slammer", "b52", "black russian", "red snapper", "rusty nail", "between the sheets", "french martini", "chocolate martini", "apple martini", "peach bellini", "pisco sour", "caesar", "painkiller", "zombie", "singapore sling", "bahama mama", "hurricane", "rum runner", "blue hawaii", "tornado", "tuxedo", "el diablo", "jungle bird", "canchanchara", "canchánchara"
             ];
             let queryStr: string;
             if (typeof query === 'string') {
@@ -68,7 +71,8 @@ async function startServer() {
             } else {
                 queryStr = String(query);
             }
-            const isLiquor = LIQUOR_TYPES.includes(queryStr.trim().toLowerCase());
+            const normalizedQuery = queryStr.trim().toLowerCase();
+            const isLiquorOrCocktail = LIQUOR_TYPES.includes(normalizedQuery) || COCKTAIL_NAMES.includes(normalizedQuery);
             try {
                 const { fetchAndProcessGeminiResults } = require('./geminiService');
                 const { extractBestRecipe } = require('./cocktail');
@@ -90,11 +94,11 @@ async function startServer() {
                 }
                 const resultsFromApi = await fetchAndProcessGeminiResults(queryStr, GEMINI_API_KEY);
                 const bestRecipeDetails = extractBestRecipe(resultsFromApi);
-                if (isLiquor) {
-                    // For liquor/cocktail queries, return both cocktail and shooter recipes
+                if (isLiquorOrCocktail) {
+                    // Always return only the cocktail recipe and shooter recipe for liquor/cocktail queries
                     return res.json({ results: [], formattedRecipe: bestRecipeDetails, shooterRecipe });
                 } else {
-                    // For food queries, return beverage pairings
+                    // Only for food queries, return beverage pairings
                     return res.json({ results: resultsFromApi, formattedRecipe: null });
                 }
             } catch (error) {
