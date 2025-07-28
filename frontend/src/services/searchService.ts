@@ -25,8 +25,8 @@ export const fetchSearchResultsFromBackend = async (query: string, imageData?: s
         if (imageData && imageData.startsWith('data:image/')) {
             payload.image = imageData;
         }
-        // Use relative path for single-service deployment
-        const response = await axios.post<BackendResponse>('/search', payload);
+        // Use /api/search to match backend route
+        const response = await axios.post<BackendResponse>('/api/search', payload);
         return response.data;
     } catch (error) {
         console.error('Error fetching search results from backend:', error);

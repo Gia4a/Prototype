@@ -13,7 +13,7 @@
   "build": "npm run build:backend && npm run build:frontend",
   "build:backend": "cd backend && npm run build && cd ..",
   "build:frontend": "cd frontend && npm run build && cd ..",
-  "start": "cd backend && npm run dev && cd .."
+  "start": "cd backend && npm run start && cd .."
 },
   "engines": {
     "node": ">=16.0.0"
