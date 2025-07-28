@@ -26,6 +26,10 @@ export const fetchSearchResultsFromBackend = async (query: string, imageData?: s
         if (imageData && imageData.startsWith('data:image/')) {
             payload.image = imageData;
         }
+        // Ensure BACKEND_API_URL is defined
+        if (!BACKEND_API_URL) {
+            throw new Error('VITE_BACKEND_API_URL is not defined. Please set it in your environment variables or .env file.');
+        }
         // Ensure the request always goes to /search endpoint
         const apiUrl = BACKEND_API_URL.endsWith('/search') ? BACKEND_API_URL : `${BACKEND_API_URL.replace(/\/$/, '')}/search`;
         const response = await axios.post<BackendResponse>(apiUrl, payload);
