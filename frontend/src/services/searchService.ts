@@ -26,7 +26,9 @@ export const fetchSearchResultsFromBackend = async (query: string, imageData?: s
         if (imageData && imageData.startsWith('data:image/')) {
             payload.image = imageData;
         }
-        const response = await axios.post<BackendResponse>(BACKEND_API_URL, payload);
+        // Ensure the request always goes to /search endpoint
+        const apiUrl = BACKEND_API_URL.endsWith('/search') ? BACKEND_API_URL : `${BACKEND_API_URL.replace(/\/$/, '')}/search`;
+        const response = await axios.post<BackendResponse>(apiUrl, payload);
         return response.data;
     } catch (error) {
         console.error('Error fetching search results from backend:', error);
