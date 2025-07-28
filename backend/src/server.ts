@@ -16,22 +16,39 @@ app.use(cors({
     origin: frontendURL
 }));
 
-
-// Serve frontend static files in production, with robust error handling
+// Serve frontend static files in production
 import path from 'path';
-const frontendDistPath = path.resolve(__dirname, '../../frontend/dist');
+import fs from 'fs';
+
+// Try different possible paths for the frontend build
+let frontendDistPath = '';
+const possiblePaths = [
+    path.resolve(__dirname, '../../frontend/dist'),
+    path.resolve(__dirname, '../frontend/dist'),
+    path.resolve(__dirname, './frontend/dist'),
+    path.resolve(process.cwd(), 'frontend/dist'),
+    path.resolve(process.cwd(), 'dist'),
+    path.resolve(process.cwd(), 'build')
+];
+
+for (const possiblePath of possiblePaths) {
+    if (fs.existsSync(path.join(possiblePath, 'index.html'))) {
+        frontendDistPath = possiblePath;
+        console.log(`Found frontend files at: ${frontendDistPath}`);
+        break;
+    }
+}
+
 if (process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true') {
-    const fs = require('fs');
-    if (fs.existsSync(frontendDistPath) && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
+    if (frontendDistPath && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
+        console.log(`Serving frontend static files from: ${frontendDistPath}`);
         app.use(express.static(frontendDistPath));
         app.get('*', (req, res) => {
             res.sendFile(path.join(frontendDistPath, 'index.html'));
         });
     } else {
-        console.warn(`WARNING: Frontend build not found at ${frontendDistPath}. Static file serving is disabled.`);
-        app.get('*', (req, res) => {
-            res.status(404).send('Frontend build not found. Please build the frontend and deploy dist files.');
-        });
+        console.warn('Frontend files not found. Running in API-only mode.');
+        console.log('Searched paths:', possiblePaths);
     }
 }
 
