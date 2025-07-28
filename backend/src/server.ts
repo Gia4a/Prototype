@@ -4,12 +4,12 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import { MongoClient } from 'mongodb';
 import { configureSearchRoutes } from './routes/searchRoutes';
+import { isFoodItem, isLiquorType } from '../../shared/constants';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 
 const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
 app.use(cors({
@@ -56,13 +56,7 @@ async function startServer() {
             if (!query) {
                 return res.status(400).json({ error: 'Query parameter "q" is required.' });
             }
-            // List of liquor types and cocktail names for detection
-            const LIQUOR_TYPES = [
-                "vodka", "whiskey", "rum", "gin", "tequila", "brandy", "scotch", "bourbon", "cognac", "mezcal", "absinthe", "vermouth", "schnapps", "liqueur", "triple sec", "amaretto", "cointreau", "campari", "baileys", "kahlua", "sambuca", "ouzo", "soju", "sake", "port", "sherry", "grappa", "aquavit", "pisco", "armagnac", "calvados", "chartreuse", "curaçao", "maraschino", "frangelico", "drambuie", "jagermeister", "limoncello", "midori", "strega", "tía maria", "galliano", "crème de menthe", "crème de cassis", "crème de cacao"
-            ];
-            const COCKTAIL_NAMES = [
-                "moscow mule", "margarita", "martini", "old fashioned", "manhattan", "daiquiri", "negroni", "whiskey sour", "cosmopolitan", "mojito", "bloody mary", "paloma", "mint julep", "sidecar", "tom collins", "french 75", "gimlet", "sazerac", "pina colada", "mai tai", "dark and stormy", "white russian", "espresso martini", "aperol spritz", "rum punch", "irish coffee", "bellini", "caipirinha", "cuba libre", "planter's punch", "tequila sunrise", "amaretto sour", "boulevardier", "bramble", "vesper", "aviation", "bee's knees", "paper plane", "last word", "corpse reviver #2", "clover club", "godfather", "godmother", "royal flush", "lemon drop", "sex on the beach", "long island iced tea", "blue lagoon", "fuzzy navel", "screwdriver", "sea breeze", "harvey wallbanger", "alabama slammer", "b52", "black russian", "red snapper", "rusty nail", "between the sheets", "french martini", "chocolate martini", "apple martini", "peach bellini", "pisco sour", "caesar", "painkiller", "zombie", "singapore sling", "bahama mama", "hurricane", "rum runner", "blue hawaii", "tornado", "tuxedo", "el diablo", "jungle bird", "canchanchara", "canchánchara"
-            ];
+
             let queryStr: string;
             if (typeof query === 'string') {
                 queryStr = query;
@@ -71,35 +65,46 @@ async function startServer() {
             } else {
                 queryStr = String(query);
             }
+
+            // Use shared logic to determine query type
             const normalizedQuery = queryStr.trim().toLowerCase();
-            const isLiquorOrCocktail = LIQUOR_TYPES.includes(normalizedQuery) || COCKTAIL_NAMES.includes(normalizedQuery);
+            const isFood = isFoodItem(normalizedQuery);
+            const isLiquor = isLiquorType(normalizedQuery);
+
+            console.log(`Server - Query: "${normalizedQuery}", isFood: ${isFood}, isLiquor: ${isLiquor}`);
+
             try {
                 const { fetchAndProcessGeminiResults } = require('./geminiService');
                 const { extractBestRecipe } = require('./cocktail');
+                
                 // Dynamically import shooters logic
                 let shooterRecipe = null;
                 try {
-                    const { getShooterFromImage, getShooterFromLiquor } = require('./shooters');
-                    const fullShooter = await getShooterFromLiquor(queryStr.trim().toLowerCase());
+                    const { getShooterFromLiquor } = require('./shooters');
+                    const fullShooter = await getShooterFromLiquor(normalizedQuery);
                     if (fullShooter && fullShooter.name && fullShooter.ingredients) {
                         shooterRecipe = {
                             name: fullShooter.name,
                             ingredients: fullShooter.ingredients
                         };
-                    } else {
-                        shooterRecipe = null;
                     }
                 } catch (e) {
+                    console.log('Shooters not available or error:', e);
                     shooterRecipe = null;
                 }
+
                 const resultsFromApi = await fetchAndProcessGeminiResults(queryStr, GEMINI_API_KEY);
                 const bestRecipeDetails = extractBestRecipe(resultsFromApi);
-                if (isLiquorOrCocktail) {
-                    // Always return only the cocktail recipe and shooter recipe for liquor/cocktail queries
+
+                if (isFood) {
+                    // Food items return beverage pairings
+                    return res.json({ results: resultsFromApi, formattedRecipe: null });
+                } else if (isLiquor) {
+                    // Liquor types return cocktail recipes (with common ingredients)
                     return res.json({ results: [], formattedRecipe: bestRecipeDetails, shooterRecipe });
                 } else {
-                    // Only for food queries, return beverage pairings
-                    return res.json({ results: resultsFromApi, formattedRecipe: null });
+                    // Everything else is treated as a cocktail name - search for that specific recipe
+                    return res.json({ results: [], formattedRecipe: bestRecipeDetails, shooterRecipe });
                 }
             } catch (error) {
                 const errorMessage = (error instanceof Error) ? error.message : String(error);

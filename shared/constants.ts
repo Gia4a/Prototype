@@ -1,3 +1,5 @@
+// shared/constants.ts - Shared between frontend and backend
+
 export const FOOD_ITEMS = [
     // Meats
     "steak", "rib", "ribs", "chicken", "pork", "beef", "lamb", "duck", "brisket", 
@@ -10,8 +12,6 @@ export const FOOD_ITEMS = [
     "pho", "butter chicken", "curry", "sushi", "tacos", "paella", "pasta", 
     "ramen", "tikka masala", "pad thai", "biryani", "risotto", "enchiladas",
     
-    // Add more categories and items as needed...
-    
     // Sides/Vegetables
     "potatoes", "asparagus", "brussels sprouts", "mushrooms", "broccoli", "carrots",
     "corn", "spinach", "kale", "zucchini", "eggplant", "cauliflower",
@@ -20,11 +20,6 @@ export const FOOD_ITEMS = [
     "chocolate", "cheesecake", "tiramisu", "ice cream", "cake", "pie", "cookies",
     "brownies", "pudding", "custard", "tart", "pastry", "donut", "éclair",
     
-    // Fruits/Garnishes
-    "orange", "lemon", "lime", "cherry", "olive", "pineapple", "apple", 
-    "grapefruit", "mint", "cucumber", "strawberry", "blueberry", "raspberry",
-    "mango", "banana", "peach", "watermelon", "grape",
-
     // Common Foods
     "burger", "pizza", "burrito", "soup", "salad", "sandwich", "rice", "noodles", 
     "bread", "vegetable", "fruit", "cheese",
@@ -72,3 +67,22 @@ export const LIQUOR_TYPES = [
     // Other Categories
     "bitters", "aperitif", "digestif", "schnapps", "curacao", "cordial"
 ];
+
+// Helper functions that can be used by both frontend and backend
+export const isFoodItem = (query: string): boolean => {
+    const normalizedQuery = query.toLowerCase().trim();
+    return FOOD_ITEMS.includes(normalizedQuery);
+};
+
+export const isLiquorType = (query: string): boolean => {
+    const normalizedQuery = query.toLowerCase().trim();
+    return LIQUOR_TYPES.includes(normalizedQuery);
+};
+
+export const getSearchType = (query: string): 'food' | 'liquor' | 'cocktail' => {
+    if (!query) return 'cocktail';
+    
+    if (isFoodItem(query)) return 'food';
+    if (isLiquorType(query)) return 'liquor';
+    return 'cocktail';
+};

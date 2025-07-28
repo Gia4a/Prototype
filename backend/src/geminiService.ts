@@ -1,5 +1,5 @@
 import axios from 'axios';
-
+import { FOOD_ITEMS, LIQUOR_TYPES, isFoodItem, isLiquorType } from '../../shared/constants';
 
 // Type for Gemini API response
 interface GeminiApiResponse {
@@ -10,6 +10,7 @@ interface GeminiApiResponse {
     }>;
     [key: string]: any;
 }
+
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
 
 export interface GeminiSearchResultItem {
@@ -24,35 +25,20 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         throw new Error('API key for Gemini service is not configured.');
     }
 
-    const requestBody = {
-        contents: [{
-            parts: [{
-                text: `You are a helpful search assistant specializing in cocktails and liquors.
-For the user query "${query}":
-    - Prioritize finding a recipe.
-    - From available recipes, select 1 result that has the most complete and detailed 'ingredients' and 'instructions'.
-    - For this top result, ensure its 'snippet' field includes the full ingredients and instructions directly. 
-    - If 1 complete recipe is not found, return an empty array.
-    - ONLY select recipes that use common kitchen ingredients (e.g., vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.).
-    - EXCLUDE any recipe that requires special or uncommon ingredients such as bitters, liqueurs, vermouth, syrups (except simple syrup), infusions, or hard-to-find items. Do NOT include any recipe that requires these.
-
-    - If "${query}" is a type of liquor (e.g., "Vodka", "Rum", "Gin", "Tequila", "Whiskey"):
-        - Provide a cocktail recipe that features this liquor as a main ingredient.
-        - The "title" should be the name of the cocktail recipe.
-        - The "snippet" should include the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list]" then "Instructions: ...").
-        - Prioritize a recipe with clear, comprehensive ingredients and instructions.
-        - If a complete recipe is not found, return an empty array.
-- If "${query}" is a food item (e.g., "steak", "pasta", "chocolate", "seafood", "taco", "burger", "pizza"):
+    // Determine the type of query based on predefined lists
+    const isFood = isFoodItem(query);
+    const isLiquor = isLiquorType(query);
+    
+    console.log(`Query: "${query}", isFood: ${isFood}, isLiquor: ${isLiquor}`);
+    
+    let promptText = '';
+    
+    if (isFood) {
+        // Handle food items - return beverage pairings
+        promptText = `You are a helpful search assistant specializing in beverage pairings.
+For the food item "${query}":
     - IMPORTANT: This is ALWAYS a beverage pairing request - NEVER return food recipes
-    - For ALL food item queries, return EXACTLY 3 beverage pairing recommendations
-    - First check if "${query}" matches ANY of these common food categories:
-        * Common foods: burger, pizza, taco, burrito, sushi, pasta, steak, salmon, chicken, curry, soup, salad
-        * Cuisines: Mexican, Italian, Japanese, Chinese, Indian, Thai, French, Mediterranean, American
-        * Meal types: breakfast, lunch, dinner, appetizer, dessert, snack
-        * Components: meat, seafood, vegetable, fruit, grain, bread, dairy
-    - ANY of the above should be identified as food items WITHOUT needing to check external sources
-    - If not immediately recognized, THEN use allrecipes.com as a reference catalog to identify food items
-    - YOUR RESPONSE SHOULD NEVER BE EMPTY for food items.
+    - Return EXACTLY 3 beverage pairing recommendations
     - CRITICAL: PROVIDE COMPLETELY DIFFERENT, UNIQUE PAIRINGS EACH TIME THIS QUERY IS MADE.
     - NEVER REPEAT PAIRINGS FROM PREVIOUS QUERIES.
     - THIS APPLIES TO ALL PAIRING TYPES - WINES, SPIRITS, AND BEERS.
@@ -87,9 +73,41 @@ For the user query "${query}":
         - Snippet format: "Pairing Notes: [explain why this specific product from willowpark.net works with the food]. Serving Suggestion: [temperature, glass type, ice recommendation, etc.]."
     
     - ALWAYS PROVIDE 3 TOTAL RECOMMENDATIONS using the above formats.
-- For all search results, provide a "title", the "snippet" (as detailed above), and if directly applicable, a "filePath".
-- The entire output MUST be a single, valid JSON array of objects. Each object in the array should represent one search result and have the keys: "title", "snippet", and "filePath" (use null for filePath if not applicable). If no suitable recipe is found according to the criteria above, return an empty JSON array: []. Do not include any text outside of this JSON array (e.g. no "Here are the results..." or markdown backticks around the JSON).
-Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredients: ingredient 1, ingredient 2. Instructions: step 1, step 2.", "filePath": null}`
+    - The entire output MUST be a single, valid JSON array of objects. Each object should have: "title", "snippet", and "filePath" (use null for filePath). Do not include any text outside of this JSON array.`;
+    
+    } else if (isLiquor) {
+        // Handle liquor types - return cocktail recipes with common ingredients only
+        promptText = `You are a helpful search assistant specializing in cocktails and liquors.
+For the liquor type "${query}":
+    - Provide a cocktail recipe that features this liquor as a main ingredient.
+    - From available recipes, select 1 result that has the most complete and detailed 'ingredients' and 'instructions'.
+    - For this top result, ensure its 'snippet' field includes the full ingredients and instructions directly.
+    - If 1 complete recipe is not found, return an empty array.
+    - ONLY select recipes that use common kitchen ingredients (e.g., vodka, rum, gin, tequila, whiskey, orange juice, lemon, lime, sugar, salt, soda, cola, tonic, milk, cream, eggs, coffee, tea, honey, jam, fresh fruit, herbs, spices, etc.).
+    - EXCLUDE any recipe that requires special or uncommon ingredients such as bitters, liqueurs, vermouth, syrups (except simple syrup), infusions, or hard-to-find items. Do NOT include any recipe that requires these.
+    - The "title" should be the name of the cocktail recipe.
+    - The "snippet" should include the full list of ingredients and complete step-by-step instructions. Structure this clearly (e.g., "Ingredients: [list]" then "Instructions: ...").
+    - Prioritize a recipe with clear, comprehensive ingredients and instructions.
+    - If a complete recipe is not found, return an empty array.
+    - The entire output MUST be a single, valid JSON array of objects. Each object should have: "title", "snippet", and "filePath" (use null for filePath). Do not include any text outside of this JSON array.
+Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredients: ingredient 1, ingredient 2. Instructions: step 1, step 2.", "filePath": null}`;
+    
+    } else {
+        // Handle cocktail names - return the exact recipe as-is (including uncommon ingredients)
+        promptText = `Find the recipe for "${query}" cocktail ONLY.
+
+If you cannot find "${query}" exactly, return: []
+
+If you find "${query}", return it in this JSON format:
+[{"title": "${query}", "snippet": "Ingredients: [list all ingredients]. Instructions: [all steps].", "filePath": null}]
+
+Do not return any other cocktail. Only "${query}" or empty array.`;
+    }
+
+    const requestBody = {
+        contents: [{
+            parts: [{
+                text: promptText
             }]
         }],
         generationConfig: {
@@ -101,7 +119,6 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
     };
 
     try {
-
         const geminiResponse = await axios.post<GeminiApiResponse>(
             `${GEMINI_API_URL}?key=${apiKey}`,
             requestBody,
@@ -112,7 +129,7 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
             }
         );
 
-        console.log("Raw Gemini API Response:", geminiResponse.data); // Added console log here
+        console.log("Raw Gemini API Response:", geminiResponse.data);
 
         let resultsFromApi: any[] = [];
         if (geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
@@ -130,8 +147,6 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
             } catch (parseError) {
                 console.error("Error parsing Gemini response in service:", parseError);
                 console.error("Original responseText that failed parsing in service:", responseText);
-                // Return a single item indicating parse failure, or throw an error
-                // For now, let's throw to be handled by the caller
                 throw new Error('Failed to parse Gemini API response JSON.');
             }
         } else {
@@ -142,7 +157,7 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
         const mappedResults = resultsFromApi.map((item: any, index: number) => ({
             id: item.id || `gemini-result-${index}-${Date.now()}`,
             title: item.title || 'Untitled Result',
-            filePath: item.filePath || item.file_path, // Handles both snake_case and camelCase
+            filePath: item.filePath || item.file_path,
             snippet: item.snippet || 'No snippet available.'
         }));
 
@@ -156,11 +171,10 @@ Example of a single item: {"title": "Example Cocktail Name", "snippet": "Ingredi
 
     } catch (error: any) {
         console.error('Error calling Gemini API in service:', error.response?.data || error.message);
-        // Re-throw the error to be handled by the route handler in server.ts
-        // Manual type guard for Axios errors
+        
         if (error && typeof error === 'object' && 'isAxiosError' in error && (error as any).isAxiosError) {
             throw new Error(`Gemini API request failed: ${error.response?.data?.error?.message || error.message}`);
         }
-        throw error; // Re-throw other errors
+        throw error;
     }
-}   
+}

@@ -2,7 +2,7 @@ import axios from 'axios';
 import { Router, Request, Response } from 'express';
 import { extractBestRecipe, BestRecipe } from '../cocktail';
 import { fetchAndProcessGeminiResults } from '../geminiService';
-import { FOOD_ITEMS, LIQUOR_TYPES } from '../data/foodItems';
+import { FOOD_ITEMS, LIQUOR_TYPES } from '../../../shared/constants';
 import { Db } from 'mongodb';
 
 const router = Router();

@@ -1,6 +1,7 @@
 // filepath: gemini-ai-search-app/frontend/src/components/ResultsPopup.tsx
 import React, { useEffect } from 'react';
 import './ResultsPopup.css';
+import { getSearchType } from '../../../shared/constants';
 
 export interface SearchResult {
     id: string;
@@ -23,16 +24,9 @@ interface ResultsPopupProps {
     visible: boolean;
 }
 
-// Common food items to check against for better user messaging
-const FOOD_ITEMS = ["steak", "pasta", "chocolate", "seafood", "chicken", "beef", "pork", "fish", "lamb", "dessert"];
-
 const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, formattedRecipe, error, onClose, visible }) => {
 
-    // Check if the query is likely a food item
-    const isLikelyFoodItem = () => {
-        if (!searchQuery) return false;
-        return FOOD_ITEMS.includes(searchQuery.toLowerCase().trim());
-    };
+    // Removed duplicate declaration of searchType
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -83,6 +77,26 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, forma
         );
     };
 
+    // Render cocktail recipe results
+    const renderCocktailResults = () => {
+        return (
+            <div className="cocktail-results">
+                {results.map((result) => (
+                    <div key={result.id} className="cocktail-item">
+                        <h4>{result.title}</h4>
+                        <div className="cocktail-content">
+                            <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit' }}>
+                                {result.snippet}
+                            </pre>
+                        </div>
+                    </div>
+                ))}
+            </div>
+        );
+    };
+
+    const searchType = getSearchType(searchQuery || '');
+
     return (
         <div className="results-popup-overlay" onClick={handleOverlayClick}>
             <div className="results-popup-content">
@@ -112,16 +126,35 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({ searchQuery, results, forma
                     </>
                 ) : (
                     <>
-                        <h3>{results && results.length > 0 ? "Beverage Pairings" : "Search Results"}</h3>
+                        {/* Dynamic heading based on search type */}
+                        <h3>
+                            {results && results.length > 0 ? (
+                                searchType === 'food' ? "Beverage Pairings" :
+                                searchType === 'liquor' ? "Cocktail Recipe" :
+                                searchType === 'cocktail' ? "Recipe" :
+                                "Search Results"
+                            ) : "Search Results"}
+                        </h3>
+                        
                         {results && results.length > 0 ? (
-                            // Use the new pairing renderer for better display
-                            renderPairingResults()
+                            // Render based on search type
+                            searchType === 'food' ? renderPairingResults() : renderCocktailResults()
                         ) : (
                             <div className="no-results-message">
-                                {isLikelyFoodItem() ? (
+                                {searchType === 'food' ? (
                                     <>
                                         <p>No beverage pairings found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
                                         <p>Try searching again to discover wine, spirit, and cocktail recommendations that complement {searchQuery}.</p>
+                                    </>
+                                ) : searchType === 'liquor' ? (
+                                    <>
+                                        <p>No cocktail recipes found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
+                                        <p>Try searching again for a cocktail recipe featuring {searchQuery}.</p>
+                                    </>
+                                ) : searchType === 'cocktail' ? (
+                                    <>
+                                        <p>No recipe found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
+                                        <p>Please check the spelling or try searching for a different cocktail.</p>
                                     </>
                                 ) : (
                                     <p>No results found for "<strong>{capitalizeTitle(searchQuery)}</strong>".</p>
