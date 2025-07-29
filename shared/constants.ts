@@ -124,7 +124,12 @@ export const isFlavoredLiquor = (query: string): boolean => {
     return isInList;
 };
 
-// Updated getSearchType function with correct order
+// NEW: Shooter detection function
+export const isShooterQuery = (query: string): boolean => {
+    return /\b\w+\s+(shooter|shot)\b/i.test(query) || /\b(shooter|shot)\s+\w+\b/i.test(query);
+};
+
+// Updated getSearchType function with shooter detection
 export const getSearchType = (query: string): 'food' | 'liquor' | 'flavored_liquor' | 'cocktail' => {
     if (!query) return 'cocktail';
     
@@ -135,16 +140,21 @@ export const getSearchType = (query: string): 'food' | 'liquor' | 'flavored_liqu
         return 'food';
     }
     
-    // 2. Check flavored liquor BEFORE general liquor (more specific than general liquor)
+    // 2. Check shooter queries BEFORE flavored liquor (to prioritize shooter detection)
+    if (isShooterQuery(query)) {
+        return 'flavored_liquor'; // Use same handling as flavored liquor
+    }
+    
+    // 3. Check flavored liquor BEFORE general liquor (more specific than general liquor)
     if (isFlavoredLiquor(query)) {
         return 'flavored_liquor';
     }
     
-    // 3. Check general liquor types (less specific than flavored)
+    // 4. Check general liquor types (less specific than flavored)
     if (isLiquorType(query)) {
         return 'liquor';
     }
     
-    // 4. Fallback to cocktail for everything else
+    // 5. Fallback to cocktail for everything else
     return 'cocktail';
 };
