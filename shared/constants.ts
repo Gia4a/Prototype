@@ -1,5 +1,14 @@
 // shared/constants.ts - Shared between frontend and backend
 
+// Flavored Liquors (for special handling - shooters)
+export const FLAVORED_LIQUORS = [
+    'crown peach', 'smirnoff peach', 'fireball', 'crown apple',
+    'smirnoff vanilla', 'absolut citron', 'grey goose cherry noir',
+    'baileys', 'kahlua', 'sambuca', 'hypnotiq', 'goldschlager',
+    'malibu coconut', 'captain morgan spiced', 'bacardi vanilla',
+    // ... add more flavored spirits as needed
+];
+
 export const FOOD_ITEMS = [
     // Meats
     "steak", "rib", "ribs", "chicken", "pork", "beef", "lamb", "duck", "brisket", 
@@ -71,18 +80,71 @@ export const LIQUOR_TYPES = [
 // Helper functions that can be used by both frontend and backend
 export const isFoodItem = (query: string): boolean => {
     const normalizedQuery = query.toLowerCase().trim();
-    return FOOD_ITEMS.includes(normalizedQuery);
+    return FOOD_ITEMS.some(item => normalizedQuery.includes(item.toLowerCase()));
 };
 
 export const isLiquorType = (query: string): boolean => {
     const normalizedQuery = query.toLowerCase().trim();
-    return LIQUOR_TYPES.includes(normalizedQuery);
+    return LIQUOR_TYPES.some(liquor => normalizedQuery.includes(liquor.toLowerCase()));
 };
 
-export const getSearchType = (query: string): 'food' | 'liquor' | 'cocktail' => {
+export const isFlavoredLiquor = (query: string): boolean => {
+    const normalized = query.toLowerCase().trim();
+    
+    // First check the explicit list
+    const isInList = FLAVORED_LIQUORS.some(liquor => 
+        normalized.includes(liquor.toLowerCase())
+    );
+    
+    // If not in list, check patterns for broader coverage
+    if (!isInList) {
+        const flavoredPatterns = [
+            // Brand + flavor combinations
+            /\b(crown|smirnoff|absolut|grey goose|captain morgan|jose cuervo|jack daniels|jim beam|jameson|bacardi|malibu)\s+(peach|apple|vanilla|cherry|cinnamon|coconut|lime|citrus|raspberry|strawberry|blueberry|watermelon|pineapple|mango|honey|caramel|banana|orange)/i,
+            
+            // Specific well-known flavored spirits
+            /\b(fireball|goldschlager|sambuca|hypnotiq|hpnotiq)\b/i,
+            
+            // Flavor + base spirit combinations
+            /\b(peach|apple|vanilla|cherry|cinnamon|coconut|raspberry|strawberry|blueberry|watermelon|pineapple|mango|honey|caramel|banana|orange)\s+(vodka|whiskey|whisky|rum|tequila|gin|schnapps)/i,
+            
+            // Cream liqueurs
+            /\b(baileys|kahlua|amaretto|frangelico|sambuca)\b/i,
+            
+            // Flavored rums
+            /\b(captain morgan|bacardi|malibu)\s+(spiced|coconut|vanilla|cherry|pineapple)/i,
+            
+            // Flavored vodkas
+            /\b(absolut|smirnoff|grey goose|titos|pinnacle)\s+(citron|vanilla|cherry|raspberry|peach|apple|coconut)/i
+        ];
+        
+        return flavoredPatterns.some(pattern => pattern.test(normalized));
+    }
+    
+    return isInList;
+};
+
+// Updated getSearchType function with correct order
+export const getSearchType = (query: string): 'food' | 'liquor' | 'flavored_liquor' | 'cocktail' => {
     if (!query) return 'cocktail';
     
-    if (isFoodItem(query)) return 'food';
-    if (isLiquorType(query)) return 'liquor';
+    // IMPORTANT: Check in this specific order!
+    
+    // 1. Check food first (most specific)
+    if (isFoodItem(query)) {
+        return 'food';
+    }
+    
+    // 2. Check flavored liquor BEFORE general liquor (more specific than general liquor)
+    if (isFlavoredLiquor(query)) {
+        return 'flavored_liquor';
+    }
+    
+    // 3. Check general liquor types (less specific than flavored)
+    if (isLiquorType(query)) {
+        return 'liquor';
+    }
+    
+    // 4. Fallback to cocktail for everything else
     return 'cocktail';
 };

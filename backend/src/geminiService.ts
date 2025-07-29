@@ -1,5 +1,30 @@
 import axios from 'axios';
-import { FOOD_ITEMS, LIQUOR_TYPES, isFoodItem, isLiquorType } from '../../shared/constants';
+import { FOOD_ITEMS, LIQUOR_TYPES, isFoodItem, isLiquorType, isFlavoredLiquor } from '../../shared/constants';
+
+// Enhanced detection for flavored spirits using pattern matching
+function isFlavoredSpirit(query: string): boolean {
+    const flavoredPatterns = [
+        // Brand + flavor combinations
+        /\b(crown|smirnoff|absolut|grey goose|captain morgan|jose cuervo|jack daniels|jim beam|jameson|bacardi|malibu)\s+(peach|apple|vanilla|cherry|cinnamon|coconut|lime|citrus|raspberry|strawberry|blueberry|watermelon|pineapple|mango|honey|caramel|banana|orange)/i,
+        
+        // Specific well-known flavored spirits
+        /\b(fireball|goldschlager|sambuca|hypnotiq|hpnotiq)\b/i,
+        
+        // Flavor + base spirit combinations
+        /\b(peach|apple|vanilla|cherry|cinnamon|coconut|raspberry|strawberry|blueberry|watermelon|pineapple|mango|honey|caramel|banana|orange)\s+(vodka|whiskey|whisky|rum|tequila|gin|schnapps)/i,
+        
+        // Cream liqueurs
+        /\b(baileys|kahlua|amaretto|frangelico|sambuca)\b/i,
+        
+        // Flavored rums
+        /\b(captain morgan|bacardi|malibu)\s+(spiced|coconut|vanilla|cherry|pineapple)/i,
+        
+        // Flavored vodkas
+        /\b(absolut|smirnoff|grey goose|titos|pinnacle)\s+(citron|vanilla|cherry|raspberry|peach|apple|coconut)/i
+    ];
+    
+    return flavoredPatterns.some(pattern => pattern.test(query));
+}
 
 // Type for Gemini API response
 interface GeminiApiResponse {
@@ -25,15 +50,35 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         throw new Error('API key for Gemini service is not configured.');
     }
 
-    // Determine the type of query based on predefined lists
+    // Determine the type of query based on predefined lists and pattern matching
     const isFood = isFoodItem(query);
     const isLiquor = isLiquorType(query);
+    const isFlavoredFromList = isFlavoredLiquor(query); // From constants file
+    const isFlavoredFromPattern = isFlavoredSpirit(query); // From pattern matching
+    const isFlavoredLiquorQuery = isFlavoredFromList || isFlavoredFromPattern;
     
-    console.log(`Query: "${query}", isFood: ${isFood}, isLiquor: ${isLiquor}`);
+    console.log(`Query: "${query}", isFood: ${isFood}, isLiquor: ${isLiquor}, isFlavoredFromList: ${isFlavoredFromList}, isFlavoredFromPattern: ${isFlavoredFromPattern}, isFlavoredLiquorQuery: ${isFlavoredLiquorQuery}`);
     
     let promptText = '';
     
-    if (isFood) {
+    if (isFlavoredLiquorQuery) {
+        promptText = `You are a helpful search assistant specializing in shooters and shots.
+For the flavored liquor "${query}":
+    - Provide EXACTLY 2-3 shooter/shot recommendations that feature "${query}"
+    - Focus on simple, quick-drinking recipes perfect for shots
+    - Include both layered shots and mixed shots
+    
+    For each shooter:
+    - Title format: "[Shot Name] - ${query} Shooter"
+    - Snippet format: "Ingredients: [list]. Instructions: [how to make/layer]. Serving: Serve in shot glass, [any special notes]."
+    
+    Examples of good shooter styles:
+    - Simple mixed shots (spirit + one mixer)
+    - Layered shots (using density differences)
+    - Chilled shots (served cold)
+    
+    The entire output MUST be a single, valid JSON array of objects with "title", "snippet", and "filePath" (null).`;
+    } else if (isFood) {
         // Handle food items - return beverage pairings
         promptText = `You are a helpful search assistant specializing in beverage pairings.
 For the food item "${query}":
@@ -89,14 +134,15 @@ For the liquor type "${query}":
     - Snippet format: "Ingredients: [full list]. Instructions: [complete step-by-step instructions]."
     
     FOOD PAIRING (provide 1):
-    - Recommend a specific food dish that pairs excellently with "${query}" when sipped neat or on the rocks
-    - Focus on classic, well-known pairings (like bourbon with BBQ, scotch with smoked salmon, etc.)
+    - Randomly choose ONE of the following categories for each response: a main dish, an appetizer, or a dessert (do not always pick the same type)
+    - Recommend a specific, appetizing dish from the chosen category that pairs excellently with "${query}" when sipped neat or on the rocks
+    - Avoid pickled vegetables, plain vegetables, or unappetizing sides—choose appealing, classic, or creative options
     - Title format: "[Specific Food Dish] - Food Pairing for ${query}"
     - Snippet format: "Pairing Notes: [explain why this food complements ${query}'s flavor profile]. Serving Suggestion: [how to serve the ${query} - neat, on rocks, temperature, etc.]"
     - Examples of good pairings:
       * Bourbon: Nashville-style smoked brisket, dark chocolate, pecan pie
       * Scotch: Smoked salmon, aged cheddar, dark chocolate
-      * Vodka: Caviar, smoked fish, pickled vegetables  
+      * Vodka: Roast chicken, smoked fish, blini with crème fraîche and caviar
       * Gin: Oysters, cucumber sandwiches, citrus-based dishes
       * Rum: Tropical fruits, coconut desserts, spiced dishes
       * Tequila: Mexican cuisine, lime-based dishes, spicy foods
