@@ -44,6 +44,8 @@ export const LIQUOR_TYPES = [
     // Western Spirits
     "vodka", "rum", "gin", "tequila", "whiskey", "scotch", "bourbon", 
     "brandy", "cognac", "mezcal", "vermouth", "amaro", "liqueur",
+    // Sparkling Wines
+    "prosecco",
     
     // Whisky/Whiskey Categories
     "irish whiskey", "canadian whisky", "japanese whisky", "rye whiskey",
