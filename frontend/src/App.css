@@ -19,12 +19,12 @@
   padding-bottom: clamp(80px, 12vh, 120px);
 }
 
-/* Logo positioned at bottom left of the background image */
+/* Logo positioned to the left of the search bar */
 .bottom-left-logo {
-  position: fixed;
-  bottom: 8%;
-  left: calc(50vw - 35vw);
-  width: clamp(50px, 6vw, 80px);
+  position: absolute;
+  left: calc(50% - clamp(200px, 52vw, 270px));
+  bottom: calc(clamp(80px, 12vh, 120px) + 10px);
+  width: clamp(45px, 6vw, 70px);
   height: auto;
   z-index: 1000;
   opacity: 0.8;
@@ -38,17 +38,25 @@
 /* Responsive adjustments for the logo positioning */
 @media (max-width: 768px) {
   .bottom-left-logo {
-    left: calc(50vw - 45vw);
-    bottom: 12%;
-    width: clamp(40px, 8vw, 60px);
+    left: calc(50% - clamp(195px, 47vw, 235px));
+    bottom: calc(clamp(80px, 12vh, 120px) + 25px);
+    width: clamp(40px, 7vw, 55px);
   }
 }
 
 @media (max-width: 480px) {
   .bottom-left-logo {
-    left: calc(50vw - 47vw);
-    bottom: 15%;
-    width: clamp(35px, 10vw, 50px);
+    left: calc(50% - clamp(185px, 45vw, 215px));
+    bottom: calc(clamp(80px, 12vh, 120px) + 35px);
+    width: clamp(35px, 8vw, 50px);
+  }
+}
+
+@media (max-width: 320px) {
+  .bottom-left-logo {
+    left: calc(50% - clamp(175px, 43vw, 200px));
+    bottom: calc(clamp(80px, 12vh, 120px) + 40px);
+    width: clamp(32px, 9vw, 45px);
   }
 }
 

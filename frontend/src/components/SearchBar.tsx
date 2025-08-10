@@ -56,8 +56,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
             <form onSubmit={handleSubmit} style={{ 
                 display: 'inline-block', 
                 position: 'relative', 
-                width: 'clamp(280px, 80vw, 390px)',
-                maxWidth: '90vw'
+                width: 'clamp(280px, 70vw, 390px)',
+                maxWidth: 'calc(100vw - 80px)' // Leave space for logo on mobile
             }}>
                 <input
                     type="text"
