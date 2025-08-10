@@ -3,7 +3,6 @@ import React, { useState, useRef } from 'react';
 import CameraCapture from './CameraCapture';
 import type { CameraCaptureHandle } from './CameraCapture';
 
-
 // All-seeing eye SVG icon
 const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
     <span
@@ -12,10 +11,9 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
             display: 'inline-block',
             verticalAlign: 'middle',
             cursor: disabled ? 'not-allowed' : 'pointer',
-            marginLeft: '8px',
             opacity: disabled ? 0.5 : 1,
-            width: 32,
-            height: 32
+            width: 28,
+            height: 28
         }}
     >
         <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -31,8 +29,11 @@ interface SearchBarProps {
     isLoading: boolean;
 }
 
-
 const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
+    const [query, setQuery] = useState('');
+    const [showCamera, setShowCamera] = useState(false);
+    const cameraRef = useRef<CameraCaptureHandle>(null);
+
     const handleCameraCapture = (imageData: string) => {
         if (cameraRef.current) cameraRef.current.stopCamera();
         setShowCamera(false);
@@ -40,9 +41,6 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
             onSearch(imageData);
         }
     };
-    const [query, setQuery] = useState('');
-    const [showCamera, setShowCamera] = useState(false);
-    const cameraRef = useRef<CameraCaptureHandle>(null);
 
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setQuery(event.target.value);
@@ -52,35 +50,41 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
         event.preventDefault();
         onSearch(query);
     };
+
     return (
-        <div style={{ marginBottom: '20px', marginLeft: '-20px', marginTop: '-5px' }}>
-            <form onSubmit={handleSubmit} style={{ display: 'inline-block', marginRight: '10px', position: 'relative', width: 390 }}>
+        <div style={{ marginBottom: '20px' }}>
+            <form onSubmit={handleSubmit} style={{ 
+                display: 'inline-block', 
+                position: 'relative', 
+                width: 'clamp(280px, 80vw, 390px)',
+                maxWidth: '90vw'
+            }}>
                 <input
                     type="text"
                     value={query}
                     onChange={handleInputChange}
                     placeholder="Blind Pig Service..."
                     style={{
-                        padding: '10px 40px 10px 10px',
-                        width: '350px',
+                        padding: 'clamp(8px, 2vw, 10px) clamp(40px, 12vw, 50px) clamp(8px, 2vw, 10px) clamp(8px, 2vw, 10px)',
+                        width: '100%',
                         boxSizing: 'border-box',
-                        position: 'relative',
-                        zIndex: 1
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        fontSize: 'clamp(14px, 4vw, 16px)'
                     }}
                     disabled={isLoading}
                     autoComplete="off"
                 />
-                <span style={{
+                <div style={{
                     position: 'absolute',
-                    right: 20,
+                    right: 'clamp(8px, 2vw, 10px)',
                     top: '50%',
                     transform: 'translateY(-50%)',
                     zIndex: 2,
                     pointerEvents: isLoading ? 'none' : 'auto',
-                    background: 'transparent',
-                    height: '28px',
                     display: 'flex',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    justifyContent: 'center'
                 }}>
                     <EyeIcon
                         onClick={() => {
@@ -89,7 +93,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
                         }}
                         disabled={isLoading}
                     />
-                </span>
+                </div>
             </form>
             {showCamera && (
                 <div

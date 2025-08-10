@@ -1,13 +1,10 @@
 import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
-// Import SearchResult type from ResultsPopup
 import type { SearchResult } from './components/ResultsPopup';
-// Import BackendResponse type
 import { fetchSearchResultsFromBackend } from './services/searchService';
 import type { BackendResponse } from './services/searchService';
-// Remove the incorrect import of BestRecipe as a component
-// import BestRecipe from './components/ResultsPopup'; 
+
 import './App.css';
 
 function App() {
@@ -56,11 +53,19 @@ function App() {
 
     return (
         <div className="app-container">
+            {/* Bottom left corner image */}
+            <img 
+                src="/c3r.png" 
+                alt="Logo" 
+                className="bottom-left-logo"
+            />
+            
             <h1></h1>
             <SearchBar onSearch={handleSearch} isLoading={isLoading} />
             {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
+            
             <ResultsPopup
-                searchQuery={currentQuery} // Pass currentQuery as a prop
+                searchQuery={currentQuery}
                 results={results}
                 formattedRecipe={formattedRecipe}
                 error={error && isPopupVisible ? error : null}
