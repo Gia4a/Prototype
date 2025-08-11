@@ -1,155 +1,140 @@
 // filepath: gemini-ai-search-app/backend/src/server.ts
-import express from 'express';
+
+import express, { Request, Response } from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
+import path from 'path';
+import fs from 'fs';
 import { MongoClient } from 'mongodb';
+
 import { configureSearchRoutes } from './routes/searchRoutes';
+import { fetchAndProcessGeminiResults } from './geminiService';
+import { extractBestRecipe } from './cocktail';
+import { getShooterFromLiquor } from './shooters';
 import { isFoodItem, isLiquorType } from '../../shared/constants';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = Number(process.env.PORT) || 3000;
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
 
-const frontendURL = process.env.FRONTEND_URL || 'http://localhost:5173';
-app.use(cors({
-    origin: frontendURL
-}));
-
-// Serve frontend static files in production
-import path from 'path';
-import fs from 'fs';
-
-// Try different possible paths for the frontend build
-let frontendDistPath = '';
-const possiblePaths = [
-    path.resolve(__dirname, '../../frontend/dist'),
-    path.resolve(__dirname, '../frontend/dist'),
-    path.resolve(__dirname, './frontend/dist'),
-    path.resolve(process.cwd(), 'frontend/dist'),
-    path.resolve(process.cwd(), 'dist'),
-    path.resolve(process.cwd(), 'build')
-];
-
-for (const possiblePath of possiblePaths) {
-    if (fs.existsSync(path.join(possiblePath, 'index.html'))) {
-        frontendDistPath = possiblePath;
-        console.log(`Found frontend files at: ${frontendDistPath}`);
-        break;
-    }
-}
-
-if (process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true') {
-    if (frontendDistPath && fs.existsSync(path.join(frontendDistPath, 'index.html'))) {
-        console.log(`Serving frontend static files from: ${frontendDistPath}`);
-        app.use(express.static(frontendDistPath));
-        app.get('*', (req, res) => {
-            res.sendFile(path.join(frontendDistPath, 'index.html'));
-        });
-    } else {
-        console.warn('Frontend files not found. Running in API-only mode.');
-        console.log('Searched paths:', possiblePaths);
-    }
-}
-
+app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json({ limit: '10mb' }));
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017';
-const DB_NAME = 'cocktailAppCache';
-
-if (!GEMINI_API_KEY) {
-    console.error("FATAL ERROR: GEMINI_API_KEY is not defined in .env file.");
-}
-if (!process.env.MONGODB_URI && !process.env.MONGO_URI) {
-    console.warn("WARNING: MONGODB_URI is not set. Defaulting to localhost. This will fail on cloud platforms like Render. Set MONGODB_URI in your environment variables.");
-}
-
 async function startServer() {
-    try {
-        const client = new MongoClient(MONGO_URI);
-        await client.connect();
-        const db = client.db(DB_NAME);
-        console.log(`Successfully connected to MongoDB: ${DB_NAME}`);
+  // 1. Validate env
+  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+  if (!GEMINI_API_KEY) {
+    console.error('FATAL ERROR: GEMINI_API_KEY is not defined.');
+    process.exit(1);
+  }
 
-        // Configure and use routes
-        const searchRouter = configureSearchRoutes(db, GEMINI_API_KEY || '');
-        app.use('/api', searchRouter);
+  const MONGO_URI =
+    process.env.MONGODB_URI ??
+    process.env.MONGO_URI ??
+    'mongodb://localhost:27017';
 
-        // Add GET /api/search for browser testing
-        app.get('/api/search', async (req, res) => {
-            const query = req.query.q;
-            if (!query) {
-                return res.status(400).json({ error: 'Query parameter "q" is required.' });
-            }
+  // 2. Connect to MongoDB
+  let client: MongoClient;
+  try {
+    client = new MongoClient(MONGO_URI);
+    await client.connect();
+    console.log('✅ Connected to MongoDB');
+  } catch (err) {
+    console.error('❌ Failed to connect to MongoDB', err);
+    process.exit(1);
+  }
 
-            let queryStr: string;
-            if (typeof query === 'string') {
-                queryStr = query;
-            } else if (Array.isArray(query)) {
-                queryStr = query[0] as string;
-            } else {
-                queryStr = String(query);
-            }
+  const db = client.db('cocktailAppCache');
 
-            // Use shared logic to determine query type
-            const normalizedQuery = queryStr.trim().toLowerCase();
-            const isFood = isFoodItem(normalizedQuery);
-            const isLiquor = isLiquorType(normalizedQuery);
+  // 3. Mount your main API router
+  app.use('/api', configureSearchRoutes(db, GEMINI_API_KEY));
 
-            console.log(`Server - Query: "${normalizedQuery}", isFood: ${isFood}, isLiquor: ${isLiquor}`);
+  // 4. Quick GET /api/search for spot-testing
+  type Query = { q?: string | string[] };
+  app.get(
+    '/api/search',
+    async (req: Request<{}, {}, {}, Query>, res: Response) => {
+      try {
+        // Normalize q param into a single trimmed string
+        const raw = req.query.q;
+        let queryStr = '';
+        if (Array.isArray(raw)) {
+          queryStr = raw[0];
+        } else if (typeof raw === 'string') {
+          queryStr = raw;
+        }
+        queryStr = queryStr.trim();
+        if (!queryStr) {
+          return res
+            .status(400)
+            .json({ error: 'Query parameter "q" is required.' });
+        }
 
-            try {
-                const { fetchAndProcessGeminiResults } = require('./geminiService');
-                const { extractBestRecipe } = require('./cocktail');
-                
-                // Dynamically import shooters logic
-                let shooterRecipe = null;
-                try {
-                    const { getShooterFromLiquor } = require('./shooters');
-                    const fullShooter = await getShooterFromLiquor(normalizedQuery);
-                    if (fullShooter && fullShooter.name && fullShooter.ingredients) {
-                        shooterRecipe = {
-                            name: fullShooter.name,
-                            ingredients: fullShooter.ingredients
-                        };
-                    }
-                } catch (e) {
-                    console.log('Shooters not available or error:', e);
-                    shooterRecipe = null;
-                }
+        const normalized = queryStr.toLowerCase();
 
-                const resultsFromApi = await fetchAndProcessGeminiResults(queryStr, GEMINI_API_KEY);
-                const bestRecipeDetails = extractBestRecipe(resultsFromApi);
+        // Call the Gemini fetch + cocktail logic
+        const apiResults = await fetchAndProcessGeminiResults(
+          queryStr,
+          GEMINI_API_KEY
+        );
+        const bestRecipe = extractBestRecipe(apiResults);
 
-                if (isFood) {
-                    // Food items return beverage pairings
-                    return res.json({ results: resultsFromApi, formattedRecipe: null });
-                } else if (isLiquor) {
-                    // Liquor types return cocktail recipes (with common ingredients)
-                    return res.json({ results: [], formattedRecipe: bestRecipeDetails, shooterRecipe });
-                } else {
-                    // Everything else is treated as a cocktail name - search for that specific recipe
-                    return res.json({ results: [], formattedRecipe: bestRecipeDetails, shooterRecipe });
-                }
-            } catch (error) {
-                const errorMessage = (error instanceof Error) ? error.message : String(error);
-                return res.status(500).json({ error: errorMessage });
-            }
+        // Try shooter logic
+        let shooterRecipe: { name: string; ingredients: string[] } | null =
+          null;
+        try {
+          const s = await getShooterFromLiquor(normalized);
+          if (s?.name && s?.ingredients) {
+            shooterRecipe = { name: s.name, ingredients: s.ingredients };
+          }
+        } catch {
+          /* ignore */
+        }
+
+        const food = isFoodItem(normalized);
+        const liquor = isLiquorType(normalized);
+
+        if (food) {
+          return res.json({ results: apiResults, formattedRecipe: null });
+        }
+
+        // For liquor types or cocktail names
+        return res.json({
+          results: liquor ? [] : apiResults,
+          formattedRecipe: bestRecipe,
+          shooterRecipe,
         });
-
-        app.listen(PORT, () => {
-            console.log(`Backend server is running on http://localhost:${PORT}`);
-            if (GEMINI_API_KEY) {
-                console.log("Gemini API Key loaded.");
-            } else {
-                console.warn("Gemini API Key is MISSING. The /api/search endpoint will not work correctly.");
-            }
-        });
-    } catch (error) {
-        console.error("Failed to connect to MongoDB", error);
-        process.exit(1);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        return res.status(500).json({ error: msg });
+      }
     }
+  );
+
+  // 5. Serve frontend in prod or when flagged
+  const distPath = path.resolve(__dirname, '../../frontend/dist');
+  const serveFrontend =
+    process.env.NODE_ENV === 'production' ||
+    process.env.SERVE_FRONTEND === 'true';
+
+  if (serveFrontend && fs.existsSync(path.join(distPath, 'index.html'))) {
+    console.log(`📂 Serving frontend from ${distPath}`);
+    app.use(express.static(distPath));
+
+    // Only fallback for non-API GETs
+    app.get(/^(?!\/api).*/, (_req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
+  } else {
+    console.warn('⚠️ Frontend dist not found or SERVE_FRONTEND not enabled.');
+  }
+
+  // 6. Start server
+  app.listen(PORT, () =>
+    console.log(`🚀 Server listening on http://localhost:${PORT}`)
+  );
 }
 
 startServer();

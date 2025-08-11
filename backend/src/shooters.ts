@@ -1,43 +1,43 @@
 import axios from 'axios';
 
-// Type for the Gemini Vision API response (simplified)
-interface GeminiVisionResponse {
+// The type for the Gemini API text generation response.
+interface GeminiTextResponse {
     candidates: Array<{
         content: { parts: Array<{ text: string }> }
     }>;
 }
 
-export interface ShooterResult {
-    query: string;
-    description: string;
-    detectedItems?: string[];
+// Defines the structure for the shooter recipe that will be returned.
+export interface ShooterRecipe {
+    name: string;
+    ingredients: string[];
 }
 
 /**
- * Calls Gemini Vision API with an image and returns a structured shooter result.
- * @param imageBase64 - The image as a base64 string (no data: prefix)
- * @returns ShooterResult or null if not found
+ * Calls a Gemini API to get a shooter recipe based on a liquor name.
+ * @param liquorName - The name of the liquor to search for.
+ * @returns A ShooterRecipe object or null if not found.
  */
-export async function getShooterFromImage(imageBase64: string): Promise<ShooterResult | null> {
-    // Replace with your actual Gemini API endpoint and key
+export async function getShooterFromLiquor(liquorName: string): Promise<ShooterRecipe | null> {
     const GEMINI_API_URL = process.env.GEMINI_API_URL || '';
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY || '';
 
     if (!GEMINI_API_URL || !GEMINI_API_KEY) {
-        throw new Error('Gemini API URL or KEY not set');
+        // Log an error but don't stop the application
+        console.error('Gemini API URL or KEY not set');
+        return null;
     }
 
     try {
-        const response = await axios.post<GeminiVisionResponse>(
+        const prompt =
+            `Recommend a shooter recipe that uses ${liquorName}. ` +
+            `Include the recipe title, a list of ingredients, and instructions. ` +
+            `Format the response strictly as:\nShooter: [Recipe Title]\nIngredients:\n[Ingredient 1]\n[Ingredient 2]\n...\nInstructions: [Step 1] [Step 2]...`;
+
+        const response = await axios.post<GeminiTextResponse>(
             GEMINI_API_URL,
             {
-                instances: [
-                    {
-                        image: { base64: imageBase64 },
-                        prompt:
-                            'Identify the liquor (brand/type) in this image. Then recommend a shooter recipe that uses this liquor, including the recipe title, ingredients, and instructions. Format the response as:\nLiquor: ...\nShooter: ...\nIngredients: ...\nInstructions: ...'
-                    }
-                ]
+                contents: [{ parts: [{ text: prompt }] }],
             },
             {
                 headers: {
@@ -48,32 +48,34 @@ export async function getShooterFromImage(imageBase64: string): Promise<ShooterR
         );
 
         const text = response.data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-        if (!text) return null;
+        if (!text) {
+            console.error('Gemini API returned no text.');
+            return null;
+        }
 
-        // Parse the Gemini response for liquor, shooter, ingredients, and instructions
-        const liquorMatch = text.match(/Liquor:\s*(.*)/i);
+        // Parse the Gemini response using regular expressions.
         const shooterMatch = text.match(/Shooter:\s*(.*)/i);
         const ingredientsMatch = text.match(/Ingredients:\s*([\s\S]*?)(?=\nInstructions:|$)/i);
         const instructionsMatch = text.match(/Instructions:\s*([\s\S]*)/i);
 
-        const liquor = liquorMatch ? liquorMatch[1].trim() : '';
         const shooter = shooterMatch ? shooterMatch[1].trim() : '';
-        const ingredients = ingredientsMatch ? ingredientsMatch[1].trim() : '';
-        const instructions = instructionsMatch ? instructionsMatch[1].trim() : '';
+        const ingredientsText = ingredientsMatch ? ingredientsMatch[1].trim() : '';
+        // The instructions are not used in the server.ts response but are
+        // good to have for debugging or future use.
+        // const instructions = instructionsMatch ? instructionsMatch[1].trim() : '';
 
-        // Compose a description and detectedItems
-        const description = `Shooter: ${shooter}\nIngredients:\n${ingredients}\n\nInstructions:\n${instructions}`.trim();
-        let detectedItems: string[] | undefined = undefined;
-        if (ingredients) {
-            detectedItems = ingredients.split(/,|\n|\*/).map((s: string) => s.trim()).filter(Boolean);
+        if (!shooter || !ingredientsText) {
+            console.warn(`Could not parse shooter recipe from Gemini response for "${liquorName}".`);
+            return null;
         }
 
-        // Use liquor as the query, or fallback to shooter
-        const query = liquor || shooter || 'Unknown';
+        // Split the ingredients string into an array, filter out empty strings.
+        const ingredients = ingredientsText.split(/,|\n|\*/).map((s: string) => s.trim()).filter(Boolean);
 
-        return { query, description, detectedItems };
+        return { name: shooter, ingredients };
+
     } catch (err) {
-        console.error('Gemini Vision API error:', err);
+        console.error(`Gemini API error while fetching shooter for "${liquorName}":`, err);
         return null;
     }
 }
