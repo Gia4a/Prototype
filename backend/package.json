@@ -5,8 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "start": "node dist/server.js",
-    "build": "tsc"
+    "prebuild": "echo 'Current directory:' && pwd && echo 'Contents:' && ls -la",
+    "build": "tsc && echo 'After build:' && ls -la dist/",
+    "prestart": "echo 'Starting from:' && pwd && echo 'Looking for:' && ls -la dist/ || echo 'No dist folder found'",
+    "start": "node ./dist/server.js"
   },
   "keywords": [],
   "author": "",
