@@ -226,11 +226,11 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
             try {
                 resultsFromApi = JSON.parse(responseText);
                 console.log("Raw Data Before Cache:", resultsFromApi);
-            } catch (parseError) {
+            } catch (parseError: unknown) {
                 if (parseError instanceof Error) {
                     console.error("Error parsing Gemini response in service:", parseError.message);
                 } else {
-                    console.error("Error parsing Gemini response in service:", parseError);
+                    console.error("Error parsing Gemini response in service:", String(parseError));
                 }
                 console.error("Original responseText that failed parsing in service:", responseText);
                 throw new Error('Failed to parse Gemini API response JSON.');
