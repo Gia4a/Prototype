@@ -5,7 +5,6 @@ interface SearchResultItem {
     snippet: string;
 }
 
-// Helper function to parse snippet for ingredients and instructions
 function parseSnippetForRecipe(snippet: string): string | null {
     let ingredientsSection = "";
     let instructionsSection = "";
