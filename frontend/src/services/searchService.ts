@@ -28,12 +28,17 @@ export const fetchSearchResultsFromBackend = async (query: string, imageData?: s
         // Use /api/search to match backend route
         const response = await axios.post<BackendResponse>('/api/search', payload);
         return response.data;
-    } catch (error) {
-        console.error('Error fetching search results from backend:', error);
-        if (axios.isAxiosError(error) && error.response) {
-            const errorMessage = error.response.data?.message || error.response.data?.details || 'Failed to fetch results from backend';
+    } catch (error: unknown) {
+        if ((error as any)?.isAxiosError) {
+            const axiosError = error as any;
+            const errorMessage = axiosError.response?.data?.message || axiosError.response?.data?.details || 'Failed to fetch results from backend';
             throw new Error(errorMessage);
+        } else if (error instanceof Error) {
+            console.error('Error fetching search results from backend:', error.message);
+            throw error;
+        } else {
+            console.error('Unknown error fetching search results from backend:', String(error));
+            throw new Error('Unknown error fetching search results from backend');
         }
-        throw new Error('An unknown error occurred while fetching results.');
     }
 };
