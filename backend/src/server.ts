@@ -114,8 +114,13 @@ async function startServer() {
   );
 
   // 5. Serve frontend in prod or when flagged
-  const distPath = path.join(process.cwd(), 'frontend', 'dist');
+  // FIXED: Go up two levels from backend/src to reach the root, then to frontend/dist
+  const distPath = path.join(process.cwd(), '..', '..', 'frontend', 'dist');
   console.log('DEBUG: Resolved distPath:', distPath);
+  console.log('DEBUG: process.cwd():', process.cwd());
+  console.log('DEBUG: Does dist path exist?', fs.existsSync(distPath));
+  console.log('DEBUG: Does index.html exist?', fs.existsSync(path.join(distPath, 'index.html')));
+  
   const serveFrontend =
     process.env.NODE_ENV === 'production' ||
     process.env.SERVE_FRONTEND === 'true';
@@ -130,6 +135,9 @@ async function startServer() {
     });
   } else {
     console.warn('⚠️ Frontend dist not found or SERVE_FRONTEND not enabled.');
+    if (serveFrontend) {
+      console.warn('Frontend serving is enabled but files not found at:', distPath);
+    }
   }
 
   // 6. Start server
