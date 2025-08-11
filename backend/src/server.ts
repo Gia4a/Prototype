@@ -112,15 +112,21 @@ async function startServer() {
       }
     }
   );
-  
-  const distPath = path.resolve(__dirname, '../../../frontend/dist');
+
+  // 5. Serve frontend in prod or when flagged
+  // SIMPLIFIED: Frontend is now built directly into backend/dist/frontend
+  // Compiled server is at: backend/dist/backend/src/server.js
+  // Frontend is at: backend/dist/frontend/
+  // So we go up 2 levels: ../../frontend
+  const distPath = path.resolve(__dirname, '../../frontend');
   
   const serveFrontend =
     process.env.NODE_ENV === 'production' ||
     process.env.SERVE_FRONTEND === 'true';
 
   if (serveFrontend) {
-    // Add debug logging
+    // Debug logging
+    console.log(`🔍 Current directory: ${__dirname}`);
     console.log(`🔍 Looking for frontend at: ${distPath}`);
     console.log(`📁 index.html exists: ${fs.existsSync(path.join(distPath, 'index.html'))}`);
     
@@ -134,7 +140,7 @@ async function startServer() {
       });
     } else {
       console.warn(`⚠️ Frontend dist not found at ${distPath}`);
-      console.warn('   Make sure to build the frontend first!');
+      console.warn('   Make sure to build the frontend first with: npm run build:frontend');
     }
   } else {
     console.log('ℹ️ Frontend serving disabled (set SERVE_FRONTEND=true to enable)');
