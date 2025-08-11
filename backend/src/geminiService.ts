@@ -241,7 +241,6 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
             throw new Error('No valid content returned from Gemini API.');
         }
         
-        // Map Results to Standard Format
         const mappedResults = resultsFromApi.map((item: any, index: number) => ({
             id: item.id || `gemini-result-${index}-${Date.now()}`,
             title: item.title || 'Untitled Result',
@@ -258,8 +257,6 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         return mappedResults;
 
     } catch (error: unknown) {
-        // Fixed: Check if the error is an AxiosError to safely access its properties
-    // Fallback for isAxiosError if not available
     const isAxiosError = (err: any) => err?.isAxiosError === true;
     if (isAxiosError(error)) {
     const axiosError = error as any;
