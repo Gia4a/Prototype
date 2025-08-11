@@ -226,11 +226,12 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
             try {
                 resultsFromApi = JSON.parse(responseText);
                 console.log("Raw Data Before Cache:", resultsFromApi);
-            } catch (parseError: unknown) {
-                if (parseError instanceof Error) {
-                    console.error("Error parsing Gemini response in service:", parseError.message);
+            } catch (error: unknown) {
+                // Ensure a safe type check for the unknown error
+                if (error instanceof Error) {
+                    console.error("Error parsing Gemini response in service:", error.message);
                 } else {
-                    console.error("Error parsing Gemini response in service:", String(parseError));
+                    console.error("Error parsing Gemini response in service:", String(error));
                 }
                 console.error("Original responseText that failed parsing in service:", responseText);
                 throw new Error('Failed to parse Gemini API response JSON.');
@@ -256,7 +257,7 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
 
         return mappedResults;
 
-    } catch (error) {
+    } catch (error: unknown) {
         // Fixed: Check if the error is an AxiosError to safely access its properties
     // Fallback for isAxiosError if not available
     const isAxiosError = (err: any) => err?.isAxiosError === true;
