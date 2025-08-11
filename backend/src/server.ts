@@ -115,6 +115,7 @@ async function startServer() {
 
   // 5. Serve frontend in prod or when flagged
   const distPath = path.resolve(__dirname, '../../frontend/dist');
+  console.log('DEBUG: Resolved distPath:', distPath);
   const serveFrontend =
     process.env.NODE_ENV === 'production' ||
     process.env.SERVE_FRONTEND === 'true';
