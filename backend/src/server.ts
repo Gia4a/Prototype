@@ -1,17 +1,10 @@
-// filepath: gemini-ai-search-app/backend/src/server.ts
+// filepath: backend/src/server.ts
 
-import express, { Request, Response } from 'express';
+import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { MongoClient } from 'mongodb';
-
-import { configureSearchRoutes } from './routes/searchRoutes';
-import { fetchAndProcessGeminiResults } from './geminiService';
-import { extractBestRecipe } from './cocktail';
-import { getShooterFromLiquor } from './shooters';
-import { isFoodItem, isLiquorType } from '../../shared/constants';
 
 dotenv.config();
 
@@ -23,127 +16,36 @@ app.use(cors({ origin: FRONTEND_URL }));
 app.use(express.json({ limit: '10mb' }));
 
 async function startServer() {
-  // 1. Validate env
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  if (!GEMINI_API_KEY) {
-    console.error('FATAL ERROR: GEMINI_API_KEY is not defined.');
-    process.exit(1);
-  }
+  console.log('🚀 Starting server...');
 
-  const MONGO_URI =
-    process.env.MONGODB_URI ??
-    process.env.MONGO_URI ??
-    'mongodb://localhost:27017';
+  // Basic API endpoint for testing
+  app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
 
-  // 2. Connect to MongoDB
-  let client: MongoClient;
-  try {
-    client = new MongoClient(MONGO_URI);
-    await client.connect();
-    console.log('✅ Connected to MongoDB');
-  } catch (err) {
-    console.error('❌ Failed to connect to MongoDB', err);
-    process.exit(1);
-  }
-
-  const db = client.db('cocktailAppCache');
-
-  // 3. Mount your main API router
-  app.use('/api', configureSearchRoutes(db, GEMINI_API_KEY));
-
-  // 4. Quick GET /api/search for spot-testing
-  type Query = { q?: string | string[] };
-  app.get(
-    '/api/search',
-    async (req: Request<{}, {}, {}, Query>, res: Response) => {
-      try {
-        // Normalize q param into a single trimmed string
-        const raw = req.query.q;
-        let queryStr = '';
-        if (Array.isArray(raw)) {
-          queryStr = raw[0];
-        } else if (typeof raw === 'string') {
-          queryStr = raw;
-        }
-        queryStr = queryStr.trim();
-        if (!queryStr) {
-          return res
-            .status(400)
-            .json({ error: 'Query parameter "q" is required.' });
-        }
-
-        const normalized = queryStr.toLowerCase();
-
-        // Call the Gemini fetch + cocktail logic
-        const apiResults = await fetchAndProcessGeminiResults(
-          queryStr,
-          GEMINI_API_KEY
-        );
-        const bestRecipe = extractBestRecipe(apiResults);
-
-        // Try shooter logic
-        let shooterRecipe: { name: string; ingredients: string[] } | null =
-          null;
-        try {
-          const s = await getShooterFromLiquor(normalized);
-          if (s?.name && s?.ingredients) {
-            shooterRecipe = { name: s.name, ingredients: s.ingredients };
-          }
-        } catch {
-          /* ignore */
-        }
-
-        const food = isFoodItem(normalized);
-        const liquor = isLiquorType(normalized);
-
-        if (food) {
-          return res.json({ results: apiResults, formattedRecipe: null });
-        }
-
-        // For liquor types or cocktail names
-        return res.json({
-          results: liquor ? [] : apiResults,
-          formattedRecipe: bestRecipe,
-          shooterRecipe,
-        });
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        return res.status(500).json({ error: msg });
-      }
-    }
-  );
-
-  // 5. Serve frontend in prod or when flagged
-  // FIXED: Go up two levels from backend/src to reach the root, then to frontend/dist
+  // Serve frontend in production
   const distPath = path.join(process.cwd(), '..', '..', 'frontend', 'dist');
   console.log('DEBUG: Resolved distPath:', distPath);
   console.log('DEBUG: process.cwd():', process.cwd());
   console.log('DEBUG: Does dist path exist?', fs.existsSync(distPath));
   console.log('DEBUG: Does index.html exist?', fs.existsSync(path.join(distPath, 'index.html')));
   
-  const serveFrontend =
-    process.env.NODE_ENV === 'production' ||
-    process.env.SERVE_FRONTEND === 'true';
+  const serveFrontend = process.env.NODE_ENV === 'production' || process.env.SERVE_FRONTEND === 'true';
 
   if (serveFrontend && fs.existsSync(path.join(distPath, 'index.html'))) {
     console.log(`📂 Serving frontend from ${distPath}`);
     app.use(express.static(distPath));
 
-    // Only fallback for non-API GETs
     app.get(/^(?!\/api).*/, (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });
   } else {
     console.warn('⚠️ Frontend dist not found or SERVE_FRONTEND not enabled.');
-    if (serveFrontend) {
-      console.warn('Frontend serving is enabled but files not found at:', distPath);
-    }
   }
 
-  // 6. Start server
   app.listen(PORT, () =>
     console.log(`🚀 Server listening on http://localhost:${PORT}`)
   );
 }
 
-startServer();
+startServer().catch(console.error);
