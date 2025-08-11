@@ -112,23 +112,32 @@ async function startServer() {
       }
     }
   );
-
-  // 5. Serve frontend in prod or when flagged
-  const distPath = path.resolve(__dirname, '../../frontend/dist');
+  
+  const distPath = path.resolve(__dirname, '../../../frontend/dist');
+  
   const serveFrontend =
     process.env.NODE_ENV === 'production' ||
     process.env.SERVE_FRONTEND === 'true';
 
-  if (serveFrontend && fs.existsSync(path.join(distPath, 'index.html'))) {
-    console.log(`📂 Serving frontend from ${distPath}`);
-    app.use(express.static(distPath));
+  if (serveFrontend) {
+    // Add debug logging
+    console.log(`🔍 Looking for frontend at: ${distPath}`);
+    console.log(`📁 index.html exists: ${fs.existsSync(path.join(distPath, 'index.html'))}`);
+    
+    if (fs.existsSync(path.join(distPath, 'index.html'))) {
+      console.log(`📂 Serving frontend from ${distPath}`);
+      app.use(express.static(distPath));
 
-    // Only fallback for non-API GETs
-    app.get(/^(?!\/api).*/, (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+      // Only fallback for non-API GETs
+      app.get(/^(?!\/api).*/, (_req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    } else {
+      console.warn(`⚠️ Frontend dist not found at ${distPath}`);
+      console.warn('   Make sure to build the frontend first!');
+    }
   } else {
-    console.warn('⚠️ Frontend dist not found or SERVE_FRONTEND not enabled.');
+    console.log('ℹ️ Frontend serving disabled (set SERVE_FRONTEND=true to enable)');
   }
 
   // 6. Start server
