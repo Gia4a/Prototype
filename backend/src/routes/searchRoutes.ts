@@ -27,8 +27,8 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 const { getShooterFromImage } = await import('../shooters');
                 const base64 = image.split(',')[1] || image;
                 shooterResult = await getShooterFromImage(base64);
-                if (shooterResult && shooterResult.query) {
-                    detectedQuery = shooterResult.query;
+                if (shooterResult && shooterResult.name) {
+                    detectedQuery = shooterResult.name;
                 }
             }
             if (!detectedQuery) {

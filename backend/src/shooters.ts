@@ -1,3 +1,12 @@
+/**
+ * Stub for getShooterFromImage. Accepts image data and returns null or a dummy shooter recipe.
+ * Replace with actual image recognition logic as needed.
+ */
+export async function getShooterFromImage(imageData: string): Promise<{ name: string; ingredients: string[] } | null> {
+    // TODO: Implement image recognition and Gemini API call
+    // For now, return null or a dummy value for testing
+    return null;
+}
 import axios from 'axios';
 
 // The type for the Gemini API text generation response.
