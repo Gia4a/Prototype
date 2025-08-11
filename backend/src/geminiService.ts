@@ -227,7 +227,6 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
                 resultsFromApi = JSON.parse(responseText);
                 console.log("Raw Data Before Cache:", resultsFromApi);
             } catch (parseError) {
-                // Fixed: Check type before accessing properties
                 if (parseError instanceof Error) {
                     console.error("Error parsing Gemini response in service:", parseError.message);
                 } else {
