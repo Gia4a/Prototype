@@ -53,16 +53,27 @@ function App() {
 
     return (
         <div className="app-container">
-            {/* Bottom left corner image */}
-            <img 
-                src="/c3r.png" 
-                alt="Logo" 
-                className="bottom-left-logo"
-            />
-            
-            <h1></h1>
-            <SearchBar onSearch={handleSearch} isLoading={isLoading} />
-            {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
+            {/* Image container with overlaid search elements */}
+            <div className="image-container">
+                <img 
+                    src="/Bar_pig.png" 
+                    alt="Blind Pig Bar" 
+                    className="main-background-image"
+                />
+                
+                {/* Logo positioned over the image */}
+                <img 
+                    src="/c3r.png" 
+                    alt="Logo" 
+                    className="overlay-logo"
+                />
+                
+                {/* Search bar positioned over the image */}
+                <div className="overlay-search">
+                    <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+                    {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
+                </div>
+            </div>
             
             <ResultsPopup
                 searchQuery={currentQuery}

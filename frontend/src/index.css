@@ -18,11 +18,7 @@ body {
   padding: 0;
   height: 100vh;
   overflow: hidden;
-  background-image: url('Bar_pig.png');
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-attachment: fixed;
+  background-color: #242424; /* Solid background color instead of image */
 }
 
 #root {
@@ -70,78 +66,13 @@ button:focus-visible {
     color: #213547;
     background-color: #ffffff;
   }
+  body {
+    background-color: #ffffff;
+  }
   a:hover {
     color: #747bff;
   }
   button {
     background-color: #f9f9f9;
-  }
-}
-
-/* Responsive background adjustments */
-@media (max-width: 1200px) {
-  body {
-    background-size: cover;
-    background-position: center center;
-  }
-}
-
-@media (max-width: 768px) {
-  body {
-    background-size: contain;
-    background-position: center bottom;
-  }
-}
-
-@media (max-width: 480px) {
-  body {
-    background-size: contain;
-    background-position: center bottom;
-  }
-  
-  h1 {
-    font-size: 2em;
-  }
-  button {
-    padding: 0.8em 1.4em;
-  }
-}
-
-/* For very wide screens, you might want to contain the image */
-@media (min-width: 1920px) {
-  body {
-    background-size: contain;
-    background-position: center center;
-  }
-}
-
-/* For portrait orientation on mobile devices */
-@media (orientation: portrait) and (max-width: 768px) {
-  body {
-    background-size: contain;
-    background-position: center center;
-  }
-}
-
-/* For landscape orientation on mobile devices */
-@media (orientation: landscape) and (max-height: 600px) {
-  body {
-    background-size: cover;
-    background-position: center center;
-  }
-}
-
-/* Extra small mobile devices */
-@media (max-width: 375px) {
-  body {
-    background-size: auto 100vh;
-    background-position: center center;
-  }
-}
-
-@media (max-width: 320px) {
-  body {
-    background-size: auto 100vh;
-    background-position: center bottom;
   }
 }
