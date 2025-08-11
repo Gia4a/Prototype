@@ -1,5 +1,6 @@
 import axios from 'axios';
-import { FOOD_ITEMS, LIQUOR_TYPES, isFoodItem, isLiquorType, isFlavoredLiquor, isShooterQuery } from '../../shared/constants';
+
+import { isFoodItem, isLiquorType, isFlavoredLiquor, isShooterQuery } from '../../shared/constants';
 
 // Constants
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
@@ -110,7 +111,7 @@ For the food item "${query}":
           * "Cutwater Tequila Margarita - Ready-to-Drink Pairing for tacos" NOT just "Margarita"
         - Snippet format: "Pairing Notes: [explain why this specific product from willowpark.net works with the food]. Serving Suggestion: [temperature, glass type, ice recommendation, etc.]."
     
-    - ALWAYS PROVIDE 3 TOTAL RECOMMENDATIONS using the above formats.
+    - ALWAYS PROVIDE EXACTLY 3 TOTAL RECOMMENDATIONS using the above formats.
     - The entire output MUST be a single, valid JSON array of objects. Each object should have: "title", "snippet", and "filePath" (use null for filePath). Do not include any text outside of this JSON array.`;
 
 const getLiquorPrompt = (query: string): string => `You are a helpful search assistant specializing in cocktails and food pairings.
@@ -226,7 +227,12 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
                 resultsFromApi = JSON.parse(responseText);
                 console.log("Raw Data Before Cache:", resultsFromApi);
             } catch (parseError) {
-                console.error("Error parsing Gemini response in service:", parseError);
+                // Fixed: Check type before accessing properties
+                if (parseError instanceof Error) {
+                    console.error("Error parsing Gemini response in service:", parseError.message);
+                } else {
+                    console.error("Error parsing Gemini response in service:", parseError);
+                }
                 console.error("Original responseText that failed parsing in service:", responseText);
                 throw new Error('Failed to parse Gemini API response JSON.');
             }
@@ -251,12 +257,21 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
 
         return mappedResults;
 
-    } catch (error: any) {
-        console.error('Error calling Gemini API in service:', error.response?.data || error.message);
-        
-        if (error && typeof error === 'object' && 'isAxiosError' in error && (error as any).isAxiosError) {
-            throw new Error(`Gemini API request failed: ${error.response?.data?.error?.message || error.message}`);
+    } catch (error) {
+        // Fixed: Check if the error is an AxiosError to safely access its properties
+    // Fallback for isAxiosError if not available
+    const isAxiosError = (err: any) => err?.isAxiosError === true;
+    if (isAxiosError(error)) {
+    const axiosError = error as any;
+        const message = axiosError.response?.data?.error?.message || axiosError.message;
+        console.error('Error calling Gemini API in service:', message);
+        throw new Error(`Gemini API request failed: ${message}`);
+        } else if (error instanceof Error) {
+            console.error('An unexpected error occurred:', error.message);
+            throw error;
+        } else {
+            console.error('An unknown error occurred:', error);
+            throw new Error('An unknown error occurred during the API call.');
         }
-        throw error;
     }
 }
