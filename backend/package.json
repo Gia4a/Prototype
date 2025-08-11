@@ -5,10 +5,10 @@
   "main": "dist/server.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "prebuild": "echo 'Current directory:' && pwd && echo 'Contents:' && ls -la",
-    "build": "tsc && echo 'After build:' && ls -la dist/",
-    "prestart": "echo 'Starting from:' && pwd && echo 'Looking for:' && ls -la dist/ || echo 'No dist folder found'",
-    "start": "node ./dist/server.js"
+    "prebuild": "echo '=== PRE-BUILD DEBUG ===' && pwd && echo 'Node version:' && node -v && echo 'NPM version:' && npm -v && echo 'TypeScript version:' && npx tsc -v && echo 'Source files:' && find src -name '*.ts' 2>/dev/null || echo 'No src folder'",
+    "build": "echo '=== BUILDING ===' && npx tsc --version && npx tsc --listFiles --verbose && echo '=== BUILD RESULT ===' && ls -la && echo '=== DIST CONTENTS ===' && ls -la dist/ 2>/dev/null || echo 'No dist folder created'",
+    "prestart": "echo '=== PRE-START DEBUG ===' && pwd && echo 'All files in backend:' && ls -la && echo 'Dist folder check:' && test -d dist && echo 'Dist exists' || echo 'Dist missing' && echo 'Server.js check:' && test -f dist/server.js && echo 'server.js exists' || echo 'server.js missing'",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +19,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
-    "mongodb": "^6.18.0"
+    "mongodb": "^6.18.0",
+    "typescript": "^5.0.0"
   },
   "devDependencies": {
     "@types/axios": "^0.9.36",
@@ -29,7 +30,6 @@
     "@types/mongodb": "^4.0.6",
     "@types/node": "^20.19.9",
     "nodemon": "^3.0.0",
-    "ts-node": "^10.9.1",
-    "typescript": "^5.0.0"
+    "ts-node": "^10.9.1"
   }
 }
