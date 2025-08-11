@@ -61,13 +61,6 @@ function App() {
                     className="main-background-image"
                 />
                 
-                {/* Logo positioned over the image */}
-                <img 
-                    src="/c3r.png" 
-                    alt="Logo" 
-                    className="overlay-logo"
-                />
-                
                 {/* Search bar positioned over the image */}
                 <div className="overlay-search">
                     <SearchBar onSearch={handleSearch} isLoading={isLoading} />
