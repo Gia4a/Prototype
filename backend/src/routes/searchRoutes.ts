@@ -43,6 +43,24 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 detectedQuery,
                 shooter: shooterResult
             };
+
+            // Log failed search terms to MongoDB if no drink or liquor is found
+            const failedSearchCollection = db.collection('failedSearches');
+            // Check if results are empty or do not contain a drink/liquor
+            const isDrinkOrLiquorFound = Array.isArray(resultsFromApi) && resultsFromApi.some(r => {
+                if (!r || !r.title) return false;
+                const title = r.title.toLowerCase();
+                return LIQUOR_TYPES.some(type => title.includes(type)) || title.includes('drink') || title.includes('cocktail') || title.includes('liquor');
+            });
+            if (!isDrinkOrLiquorFound) {
+                await failedSearchCollection.insertOne({
+                    query: detectedQuery,
+                    timestamp: new Date(),
+                    results: resultsFromApi
+                });
+                console.log(`Logged failed search term to MongoDB: ${detectedQuery}`);
+            }
+
             return res.json(responsePayloadFromApi);
         } catch (error: any) {
             console.error('Error during search:', error.message);

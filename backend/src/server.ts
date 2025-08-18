@@ -114,30 +114,36 @@ async function startServer() {
   );
 
   // 5. Serve frontend in prod or when flagged
-  // FIXED: Go up two levels from backend/src to reach the root, then to frontend/dist
-  const distPath = path.join(process.cwd(), '..', '..', 'frontend', 'dist');
-  console.log('DEBUG: Resolved distPath:', distPath);
-  console.log('DEBUG: process.cwd():', process.cwd());
-  console.log('DEBUG: Does dist path exist?', fs.existsSync(distPath));
-  console.log('DEBUG: Does index.html exist?', fs.existsSync(path.join(distPath, 'index.html')));
+  // SIMPLIFIED: Frontend is now built directly into backend/dist/frontend
+  // Compiled server is at: backend/dist/backend/src/server.js
+  // Frontend is at: backend/dist/frontend/
+  // So we go up 2 levels: ../../frontend
+  const distPath = path.resolve(__dirname, '../../frontend');
   
   const serveFrontend =
     process.env.NODE_ENV === 'production' ||
     process.env.SERVE_FRONTEND === 'true';
 
-  if (serveFrontend && fs.existsSync(path.join(distPath, 'index.html'))) {
-    console.log(`📂 Serving frontend from ${distPath}`);
-    app.use(express.static(distPath));
+  if (serveFrontend) {
+    // Debug logging
+    console.log(`🔍 Current directory: ${__dirname}`);
+    console.log(`🔍 Looking for frontend at: ${distPath}`);
+    console.log(`📁 index.html exists: ${fs.existsSync(path.join(distPath, 'index.html'))}`);
+    
+    if (fs.existsSync(path.join(distPath, 'index.html'))) {
+      console.log(`📂 Serving frontend from ${distPath}`);
+      app.use(express.static(distPath));
 
-    // Only fallback for non-API GETs
-    app.get(/^(?!\/api).*/, (_req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
-  } else {
-    console.warn('⚠️ Frontend dist not found or SERVE_FRONTEND not enabled.');
-    if (serveFrontend) {
-      console.warn('Frontend serving is enabled but files not found at:', distPath);
+      // Only fallback for non-API GETs
+      app.get(/^(?!\/api).*/, (_req, res) => {
+        res.sendFile(path.join(distPath, 'index.html'));
+      });
+    } else {
+      console.warn(`⚠️ Frontend dist not found at ${distPath}`);
+      console.warn('   Make sure to build the frontend first with: npm run build:frontend');
     }
+  } else {
+    console.log('ℹ️ Frontend serving disabled (set SERVE_FRONTEND=true to enable)');
   }
 
   // 6. Start server
