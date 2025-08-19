@@ -6,19 +6,20 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "prebuild": "echo '=== PRE-BUILD DEBUG ===' && pwd && echo 'Node version:' && node -v && echo 'NPM version:' && npm -v && echo 'TypeScript version:' && npx tsc -v && echo 'Source files:' && find src -name '*.ts' 2>/dev/null || echo 'No src folder'",
-  "build": "echo '=== BUILDING ===' && npx tsc --version && npx tsc && echo '=== BUILD RESULT ===' && node -e \"const fs=require('fs');const p='./dist';if(fs.existsSync(p)){console.log('dist contents:');fs.readdirSync(p).forEach(f=>console.log(f));}else{console.log('No dist folder created');}\"",
+    "build": "echo '=== BUILDING ===' && npx tsc --version && npx tsc && echo '=== BUILD RESULT ===' && node -e \"const fs=require('fs');const p='./dist';if(fs.existsSync(p)){console.log('dist contents:');fs.readdirSync(p).forEach(f=>console.log(f));}else{console.log('No dist folder created');}\"",
     "prestart": "echo '=== PRE-START DEBUG ===' && pwd && echo 'All files in backend:' && ls -la && echo 'Dist folder check:' && test -d dist && echo 'Dist exists' || echo 'Dist missing' && echo 'Server.js check:' && test -f dist/server.js && echo 'server.js exists' || echo 'server.js missing'",
-  "start": "node dist/backend/src/server.js"
+    "start": "node dist/backend/src/server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@google/genai": "^1.13.0",
-        "axios": "^1.11.0",
+    "axios": "^1.11.0",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
+    "firebase-admin": "^13.4.0",
     "mongodb": "^6.18.0",
     "typescript": "^5.0.0"
   },
