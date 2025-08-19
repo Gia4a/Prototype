@@ -5,7 +5,9 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
-import { MongoClient } from 'mongodb';
+
+import admin from 'firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 import { configureSearchRoutes } from './routes/searchRoutes';
 import { fetchAndProcessGeminiResults } from './geminiService';
@@ -30,23 +32,15 @@ async function startServer() {
     process.exit(1);
   }
 
-  const MONGO_URI =
-    process.env.MONGODB_URI ??
-    process.env.MONGO_URI ??
-    'mongodb://localhost:27017';
 
-  // 2. Connect to MongoDB
-  let client: MongoClient;
-  try {
-    client = new MongoClient(MONGO_URI);
-    await client.connect();
-    console.log('✅ Connected to MongoDB');
-  } catch (err) {
-    console.error('❌ Failed to connect to MongoDB', err);
-    process.exit(1);
+  // 2. Initialize Firebase Admin SDK
+  if (!admin.apps.length) {
+    admin.initializeApp({
+      credential: admin.credential.applicationDefault(),
+    });
+    console.log('✅ Initialized Firebase Admin SDK');
   }
-
-  const db = client.db('cocktailAppCache');
+  const db = getFirestore();
 
   // 3. Mount your main API router
   app.use('/api', configureSearchRoutes(db, GEMINI_API_KEY));

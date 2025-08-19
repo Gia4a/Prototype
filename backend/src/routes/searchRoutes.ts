@@ -3,12 +3,14 @@ import { Router, Request, Response } from 'express';
 import { extractBestRecipe, BestRecipe } from '../cocktail';
 import { fetchAndProcessGeminiResults } from '../geminiService';
 import { FOOD_ITEMS, LIQUOR_TYPES } from '../../../shared/constants';
-import { Db } from 'mongodb';
+
 
 const router = Router();
 const COLLECTION_NAME = 'searchResults';
 
-export function configureSearchRoutes(db: Db, apiKey: string) {
+import { Firestore } from 'firebase-admin/firestore';
+
+export function configureSearchRoutes(db: Firestore, apiKey: string) {
     // POST /search for text, image, or both
     router.post('/search', async (req: Request, res: Response) => {
         const { image, query } = req.body;
@@ -44,7 +46,8 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 shooter: shooterResult
             };
 
-            // Log failed search terms to MongoDB if no drink or liquor is found
+
+            // Log failed search terms to Firestore if no drink or liquor is found
             const failedSearchCollection = db.collection('failedSearches');
             // Check if results are empty or do not contain a drink/liquor
             const isDrinkOrLiquorFound = Array.isArray(resultsFromApi) && resultsFromApi.some(r => {
@@ -53,12 +56,12 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 return LIQUOR_TYPES.some(type => title.includes(type)) || title.includes('drink') || title.includes('cocktail') || title.includes('liquor');
             });
             if (!isDrinkOrLiquorFound) {
-                await failedSearchCollection.insertOne({
+                await failedSearchCollection.add({
                     query: detectedQuery,
                     timestamp: new Date(),
                     results: resultsFromApi
                 });
-                console.log(`Logged failed search term to MongoDB: ${detectedQuery}`);
+                console.log(`Logged failed search term to Firestore: ${detectedQuery}`);
             }
 
             return res.json(responsePayloadFromApi);
@@ -95,8 +98,9 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 } else {
                     // This is NOT a special query, so check the cache.
                     console.log(`Query "${lowercasedQuery}" is NOT a special type. Checking cache.`);
-                    const cachedData = await collection.findOne({ query: lowercasedQuery });
-                    if (cachedData) {
+                    const cachedSnapshot = await collection.where('query', '==', lowercasedQuery).limit(1).get();
+                    if (!cachedSnapshot.empty) {
+                        const cachedData = cachedSnapshot.docs[0].data();
                         console.log(`Serving query from cache: ${lowercasedQuery}`);
                         const responsePayload = {
                             results: cachedData.results || [],
@@ -121,7 +125,7 @@ export function configureSearchRoutes(db: Db, apiKey: string) {
                 // Only save to cache if it's NOT a special query
                 if (!isLiquorQuery && !isFoodQuery) {
                     console.log(`Saving regular query "${lowercasedQuery}" to cache.`);
-                    await collection.insertOne({ 
+                    await collection.add({ 
                         query: lowercasedQuery, 
                         results: resultsFromApi, 
                         formattedRecipe: bestRecipeDetails,
