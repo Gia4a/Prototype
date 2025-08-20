@@ -1,7 +1,22 @@
-// filepath: gemini-ai-search-app/frontend/src/components/SearchBar.tsx
 import React, { useState, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import CameraCapture from './CameraCapture';
 import type { CameraCaptureHandle } from './CameraCapture';
+
+const firebaseConfig = {
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, // Should be blind-pig-bar.firebaseapp.com
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,   // Should be blind-pig-bar
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // Should be blind-pig-bar.appspot.com
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
+    // Add others if needed: messagingSenderId, measurementId
+};
+
+
+// Initialize Firebase App once outside the component to avoid re-initialization
+const app = initializeApp(firebaseConfig);
+const functions = getFunctions(app);
 
 // All-seeing eye SVG icon
 const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
@@ -24,21 +39,70 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
     </span>
 );
 
+// Define the props that SearchBar will receive from App.tsx
 interface SearchBarProps {
-    onSearch: (query: string) => void;
+    // Cloud Function props
+    onNewSuggestion: (suggestion: string, error: string | null) => void;
+    onLoadingChange: (isLoading: boolean) => void;
+    onError: (errorMessage: string) => void;
+    onQueryChange?: (query: string) => void;
     isLoading: boolean;
 }
 
-const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
+const SearchBar: React.FC<SearchBarProps> = ({ 
+    onNewSuggestion, 
+    onLoadingChange, 
+    onError, 
+    onQueryChange,
+    isLoading 
+}) => {
     const [query, setQuery] = useState('');
     const [showCamera, setShowCamera] = useState(false);
     const cameraRef = useRef<CameraCaptureHandle>(null);
+
+    // Handle Cloud Function mixologist request
+    const callMixologist = async (searchQuery: string) => {
+        if (!searchQuery.trim()) {
+            onError("Please enter something to ask the mixologist!");
+            return;
+        }
+
+        onLoadingChange(true); // Notify App.tsx that loading has started
+        
+        // Update query in parent component for popup title
+        if (onQueryChange) {
+            onQueryChange(searchQuery.trim());
+        }
+
+        try {
+            const callMixologistFunction = httpsCallable(functions, 'getMixologistSuggestion');
+            const result = await callMixologistFunction({ query: searchQuery.trim() });
+
+            const suggestion = (result.data as any).mixologistSuggestion;
+            const originalQuery = (result.data as any).originalQuery;
+            const generatedPrompt = (result.data as any).generatedPrompt;
+
+            // Pass the result back up to App.tsx
+            onNewSuggestion(suggestion, null);
+            console.log("Full Cloud Function Response:", { originalQuery, generatedPrompt, suggestion });
+
+        } catch (err: any) {
+            console.error("Error calling mixologist function:", err);
+            const errorMessage = `Error: ${err.message || 'Couldn\'t get a suggestion from the mixologist.'}`;
+            onError(errorMessage);
+            onNewSuggestion("", errorMessage);
+        } finally {
+            onLoadingChange(false); // Notify App.tsx that loading has finished
+        }
+    };
 
     const handleCameraCapture = (imageData: string) => {
         if (cameraRef.current) cameraRef.current.stopCamera();
         setShowCamera(false);
         if (imageData) {
-            onSearch(imageData);
+            // For camera captures, you might want to handle differently
+            // For now, treating it as a text query - you may need to modify this
+            callMixologist("Image captured - please analyze this drink/food item");
         }
     };
 
@@ -48,7 +112,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
 
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
-        onSearch(query);
+        callMixologist(query);
     };
 
     return (
@@ -63,7 +127,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
                     type="text"
                     value={query}
                     onChange={handleInputChange}
-                    placeholder="Blind Pig Service..."
+                    placeholder="Ask the Mixologist (e.g., Pho, vodka, Old Fashioned recipe)"
                     style={{
                         padding: 'clamp(8px, 2vw, 10px) clamp(40px, 12vw, 50px) clamp(8px, 2vw, 10px) clamp(8px, 2vw, 10px)',
                         width: '100%',
@@ -95,6 +159,8 @@ const SearchBar: React.FC<SearchBarProps> = ({ onSearch, isLoading }) => {
                     />
                 </div>
             </form>
+
+            {/* Camera Modal */}
             {showCamera && (
                 <div
                     style={{

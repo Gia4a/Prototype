@@ -1,6 +1,5 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 
-
 export interface CameraCaptureHandle {
   stopCamera: () => void;
 }
@@ -9,106 +8,295 @@ interface CameraCaptureProps {
   onCapture: (imageData: string) => void;
 }
 
-
 const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onCapture }, ref) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [streaming, setStreaming] = useState(false);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [cameraReady, setCameraReady] = useState(false);
+  const [isCapturing, setIsCapturing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Stop camera when component unmounts
-  useEffect(() => {
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
-          .getTracks()
-          .forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, []);
+  // Cleanup function to properly stop camera
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setCameraReady(false);
+  };
 
-  // Start camera automatically on mount, and expose stopCamera to parent
-  useEffect(() => {
-    let active = true;
-    const startCamera = async () => {
-      setError(null);
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' }
-        });
-        if (videoRef.current && active) {
-          videoRef.current.srcObject = stream;
-          setStreaming(true);
-        }
-      } catch (err) {
-        setError('Camera access denied or not available.');
-      }
-    };
-    startCamera();
-    return () => {
-      active = false;
-      stopCamera();
-    };
-    // eslint-disable-next-line
-  }, []);
-
+  // Expose stopCamera to parent component
   useImperativeHandle(ref, () => ({
     stopCamera
   }));
-  // Stop camera when component unmounts
+
+  // Initialize camera on mount
   useEffect(() => {
-    return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        (videoRef.current.srcObject as MediaStream)
-          .getTracks()
-          .forEach((track) => track.stop());
-        videoRef.current.srcObject = null;
+    let isActive = true;
+    
+    const initCamera = async () => {
+      setError(null);
+      try {
+        // Prioritize back camera for better bottle/label recognition
+        const constraints = { 
+          video: { 
+            facingMode: 'environment', // Back camera for product scanning
+            width: { ideal: 1280, max: 1920 }, // Higher resolution for better text recognition
+            height: { ideal: 720, max: 1080 }
+          } 
+        };
+        
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        if (isActive && videoRef.current) {
+          streamRef.current = stream;
+          videoRef.current.srcObject = stream;
+          
+          // Wait for video to load
+          videoRef.current.onloadedmetadata = () => {
+            if (isActive) {
+              setCameraReady(true);
+            }
+          };
+        } else if (!isActive) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+      } catch (err) {
+        if (isActive) {
+          console.error('Camera initialization failed:', err);
+          setError('Camera access required for alcohol recognition. Please allow camera permissions.');
+        }
       }
+    };
+
+    initCamera();
+
+    return () => {
+      isActive = false;
+      stopCamera();
     };
   }, []);
 
-  function stopCamera() {
-    if (videoRef.current && videoRef.current.srcObject) {
-      (videoRef.current.srcObject as MediaStream)
-        .getTracks()
-        .forEach((track) => track.stop());
-      videoRef.current.srcObject = null;
+  const capturePhoto = async () => {
+    if (!videoRef.current || !canvasRef.current || !cameraReady) {
+      setError('Camera not ready. Please wait...');
+      return;
     }
-    setStreaming(false);
-  }
 
-  const scanFrame = () => {
-    if (videoRef.current && canvasRef.current) {
+    setIsCapturing(true);
+    setError(null);
+
+    try {
       const video = videoRef.current;
       const canvas = canvasRef.current;
+      
+      // Use high resolution for better text/label recognition
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      
       const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = canvas.toDataURL('image/png');
-        onCapture(imageData); // Do NOT stop camera, allow repeated scans
+      if (!ctx) {
+        throw new Error('Could not access canvas');
       }
+
+      // Capture the frame
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      
+      // Convert to high-quality JPEG for AI analysis
+      const imageData = canvas.toDataURL('image/jpeg', 0.9);
+      
+      // Stop camera after capture (one-time use)
+      stopCamera();
+      
+      // Send image to parent for AI processing
+      onCapture(imageData);
+      
+    } catch (err) {
+      console.error('Photo capture failed:', err);
+      setError('Failed to capture photo. Please try again.');
+    } finally {
+      setIsCapturing(false);
     }
   };
 
+  const handleCancel = () => {
+    stopCamera();
+    onCapture(''); // Signal cancellation
+  };
+
   return (
-    <div style={{ marginTop: '10px' }}>
-      <div>
-        <video ref={videoRef} autoPlay playsInline style={{ width: 240, height: 180, border: '1px solid #ccc', background: '#000' }} />
-        <br />
-        <button type="button" onClick={scanFrame} style={{ marginRight: '10px' }} disabled={!streaming}>
-          Scan
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column', 
+      alignItems: 'center',
+      gap: '15px',
+      padding: '10px',
+      backgroundColor: '#1a1a1a',
+      borderRadius: '12px'
+    }}>
+      {/* Camera Preview */}
+      <div style={{ 
+        position: 'relative',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: '2px solid #333'
+      }}>
+        <video 
+          ref={videoRef} 
+          autoPlay 
+          playsInline 
+          muted
+          style={{ 
+            width: '300px', 
+            height: '400px', // Portrait for bottle scanning
+            backgroundColor: '#000',
+            display: 'block',
+            objectFit: 'cover'
+          }} 
+        />
+        
+        {/* Scanning Guide Overlay */}
+        {cameraReady && (
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '200px',
+            height: '280px',
+            border: '2px solid #00ff00',
+            borderRadius: '8px',
+            pointerEvents: 'none'
+          }}>
+            <div style={{
+              position: 'absolute',
+              top: '-30px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              color: '#00ff00',
+              fontSize: '12px',
+              backgroundColor: 'rgba(0,0,0,0.7)',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              whiteSpace: 'nowrap'
+            }}>
+              Position bottle here
+            </div>
+          </div>
+        )}
+        
+        {/* Loading State */}
+        {!cameraReady && !error && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.8)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'white',
+            gap: '10px'
+          }}>
+            <div style={{
+              width: '30px',
+              height: '30px',
+              border: '3px solid #333',
+              borderTop: '3px solid #00ff00',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }} />
+            <div>Initializing camera...</div>
+          </div>
+        )}
+      </div>
+
+      {/* Instructions */}
+      {cameraReady && !error && (
+        <div style={{ 
+          color: '#ccc', 
+          fontSize: '13px',
+          textAlign: 'center',
+          maxWidth: '280px',
+          lineHeight: '1.4'
+        }}>
+          📸 Point camera at bottle label for best recognition
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div style={{ 
+        display: 'flex', 
+        gap: '12px',
+        alignItems: 'center'
+      }}>
+        <button 
+          type="button" 
+          onClick={capturePhoto}
+          disabled={!cameraReady || isCapturing}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: cameraReady && !isCapturing ? '#00ff00' : '#555',
+            color: cameraReady && !isCapturing ? '#000' : '#ccc',
+            border: 'none',
+            borderRadius: '25px',
+            cursor: cameraReady && !isCapturing ? 'pointer' : 'not-allowed',
+            fontSize: '14px',
+            fontWeight: 'bold',
+            minWidth: '120px',
+            transition: 'all 0.2s'
+          }}
+        >
+          {isCapturing ? '📸 Processing...' : cameraReady ? '📸 Identify Drink' : 'Loading...'}
         </button>
-        <button type="button" onClick={() => { stopCamera(); onCapture(''); }}>
+        
+        <button 
+          type="button" 
+          onClick={handleCancel}
+          style={{
+            padding: '12px 20px',
+            backgroundColor: 'transparent',
+            color: '#ff4444',
+            border: '1px solid #ff4444',
+            borderRadius: '25px',
+            cursor: 'pointer',
+            fontSize: '14px'
+          }}
+        >
           Cancel
         </button>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div style={{ 
+          color: '#ff4444', 
+          fontSize: '13px',
+          textAlign: 'center',
+          backgroundColor: 'rgba(255,68,68,0.1)',
+          padding: '10px',
+          borderRadius: '6px',
+          border: '1px solid rgba(255,68,68,0.3)',
+          maxWidth: '280px'
+        }}>
+          {error}
+        </div>
+      )}
+
+      {/* Hidden canvas for processing */}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-      {error && <div style={{ color: 'red' }}>{error}</div>}
     </div>
   );
 });
+
+CameraCapture.displayName = 'CameraCapture';
 
 export default CameraCapture;

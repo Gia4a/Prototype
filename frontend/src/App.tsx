@@ -1,54 +1,51 @@
 import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
-import type { SearchResult } from './components/ResultsPopup';
-import { fetchSearchResultsFromBackend } from './services/searchService';
-import type { BackendResponse } from './services/searchService';
-
 import './App.css';
 
 function App() {
-    const [results, setResults] = useState<SearchResult[]>([]);
-    // Use 'any' or define BestRecipe type locally if needed, otherwise use the correct type from the backend response
-    const [formattedRecipe, setFormattedRecipe] = useState<any | null>(null);
+    // State for mixologist suggestions from Cloud Function
+    const [mixologistSuggestion, setMixologistSuggestion] = useState<string | null>(null);
+    const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isPopupVisible, setIsPopupVisible] = useState(false);
-    const [currentQuery, setCurrentQuery] = useState<string>(""); // Add state for the current query
+    const [currentQuery, setCurrentQuery] = useState<string>("");
 
-    const handleSearch = async (query: string) => {
-        if (!query.trim()) {
-            setResults([]);
-            setFormattedRecipe(null);
-            setIsPopupVisible(false);
-            setError(null);
-            setCurrentQuery(""); // Clear current query
-            return;
-        }
-        setIsLoading(true);
-        setError(null);
-        setFormattedRecipe(null);
-        setCurrentQuery(query); // Set the current query
-
-        try {
-            const backendResponse: BackendResponse = await fetchSearchResultsFromBackend(query);
-            setResults(backendResponse.results || []);
-            setFormattedRecipe(backendResponse.formattedRecipe ?? null);
-            setIsPopupVisible(true);
-        } catch (err: any) {
-            setError(err.message || 'Failed to fetch results. Is the backend running?');
-            setResults([]);
-            setFormattedRecipe(null);
-            setIsPopupVisible(true);
-        } finally {
-            setIsLoading(false);
-        }
+    // This function will be passed down to SearchBar.tsx
+    // SearchBar.tsx will call this when it gets a response from the Cloud Function
+    const handleNewMixologistSuggestion = (suggestion: string, queryError: string | null) => {
+        setMixologistSuggestion(suggestion);
+        setError(queryError);
+        setIsPopupVisible(true); // Open the popup when a new suggestion comes in
+        setIsLoading(false); // Make sure loading is off
     };
 
     const closePopup = () => {
         setIsPopupVisible(false);
-        // Optionally clear currentQuery when closing if you want the title gone next time
-        // setCurrentQuery(""); 
+        setMixologistSuggestion(null); // Clear previous suggestion when closing
+        setError(null); // Clear error too
+    };
+
+    const handleLoadingChange = (loadingState: boolean) => {
+        setIsLoading(loadingState);
+        if (loadingState) { 
+            // Clear previous results when new search starts
+            setMixologistSuggestion(null);
+            setError(null);
+            setIsPopupVisible(false);
+        }
+    };
+
+    const handleErrorFromSearchBar = (errorMessage: string) => {
+        setError(errorMessage);
+        setMixologistSuggestion(null);
+        setIsPopupVisible(true); // Show popup even for errors
+        setIsLoading(false);
+    };
+
+    // Handle search query updates
+    const handleSearchQuery = (query: string) => {
+        setCurrentQuery(query);
     };
 
     return (
@@ -63,19 +60,28 @@ function App() {
                 
                 {/* Search bar positioned over the image */}
                 <div className="overlay-search">
-                    <SearchBar onSearch={handleSearch} isLoading={isLoading} />
+                    <SearchBar
+                        onNewSuggestion={handleNewMixologistSuggestion}
+                        onLoadingChange={handleLoadingChange}
+                        onError={handleErrorFromSearchBar}
+                        onQueryChange={handleSearchQuery}
+                        isLoading={isLoading} // Pass loading state to SearchBar for disabling input/button
+                    />
                     {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
                 </div>
             </div>
             
-            <ResultsPopup
-                searchQuery={currentQuery}
-                results={results}
-                formattedRecipe={formattedRecipe}
-                error={error && isPopupVisible ? error : null}
-                onClose={closePopup}
-                visible={isPopupVisible}
-            />
+            {/* The ResultsPopup will only render if isPopupVisible is true */}
+            {isPopupVisible && (
+                <ResultsPopup
+                    searchQuery={currentQuery}
+                    isOpen={isPopupVisible}
+                    onClose={closePopup}
+                    suggestion={mixologistSuggestion}
+                    error={error}
+                    visible={isPopupVisible}
+                />
+            )}
         </div>
     );
 }
