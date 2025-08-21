@@ -2,15 +2,12 @@ import React, { useEffect } from 'react';
 import './ResultsPopup.css';
 
 interface ResultsPopupProps {
-    // Props for Cloud Function mixologist
     isOpen: boolean;
     onClose: () => void;
     suggestion: string | null;
     error: string | null;
-    
-    // Props to maintain compatibility with your existing App.tsx
     searchQuery?: string;
-    visible?: boolean; // Alternative to isOpen
+    visible?: boolean;
 }
 
 const ResultsPopup: React.FC<ResultsPopupProps> = ({ 
@@ -21,7 +18,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     searchQuery,
     visible 
 }) => {
-    // Handle both isOpen and visible props
     const isVisible = isOpen || visible || false;
 
     useEffect(() => {
@@ -33,8 +29,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
         if (isVisible) {
             document.addEventListener('keydown', handleKeyDown);
-        } else {
-            document.removeEventListener('keydown', handleKeyDown);
         }
 
         return () => {
@@ -52,63 +46,88 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         }
     };
 
-    // Function to capitalize first letter of each word for the title
     const capitalizeTitle = (title: string) => {
         return title.toLowerCase().split(' ').map(word => 
             word.charAt(0).toUpperCase() + word.slice(1)
         ).join(' ');
     };
 
-    // Format the mixologist suggestion for better readability using your existing CSS classes
-    const formatMixologistSuggestion = (text: string) => {
-        // Split the text into logical sections
-        const sections = text.split(/(?:\n\n|\n(?=[A-Z][^a-z]*:)|(?<=:)\s*\n)/).filter(section => section.trim());
-        
-        return sections.map((section, index) => {
-            const trimmed = section.trim();
-            if (!trimmed) return null;
+    // Parse mixologist response into structured parts
+    const parseResponse = (text: string) => {
+        // Extract drink name (first sentence or specific pattern)
+        const drinkNameMatch = text.match(/(?:"|“)([^"”]+)(?:"|”)/);
+        const drinkName = drinkNameMatch ? drinkNameMatch[1] : 'Unnamed Drink';
+
+        // Extract description (everything before ingredients/steps)
+        let description = text;
+        let ingredients: string[] = [];
+        let steps: string[] = [];
+
+        // Find ingredients section
+        const ingredientsMatch = text.match(/ingredients?:?\s*([\s\S]*?)(?=(?:steps?|instructions?|method):|$)/i);
+        if (ingredientsMatch) {
+            const ingredientsText = ingredientsMatch[1].trim();
+            ingredients = ingredientsText
+                .split(/[,\n]/)
+                .map(item => item.trim())
+                .filter(item => item && item.length > 2)
+                .slice(0, 6); // Limit to 6 ingredients to fit
+
+            // Remove ingredients section from description
+            description = text.replace(ingredientsMatch[0], '').trim();
+        }
+
+        // Find steps/instructions section
+        const stepsMatch = text.match(/(?:steps?|instructions?|method):?\s*([\s\S]*?)$/i);
+        if (stepsMatch) {
+            const stepsText = stepsMatch[1].trim();
+            steps = stepsText
+                .split(/(?:\d+\.|\n)/)
+                .map(step => step.trim())
+                .filter(step => step && step.length > 5)
+                .slice(0, 5); // Limit to 5 steps to fit
+
+            // Remove steps section from description
+            description = description.replace(stepsMatch[0], '').trim();
+        }
+
+        // If no structured ingredients/steps found, try to extract from general text
+        if (ingredients.length === 0 || steps.length === 0) {
+            const lines = text.split('\n').filter(line => line.trim());
             
-            // Check if it's a header (ends with colon, contains common headers, or is short and uppercase-heavy)
-            const isHeader = trimmed.endsWith(':') || 
-                           /^(ingredients|instructions|recipe|pairing|notes|garnish|preparation|method):/i.test(trimmed) ||
-                           (trimmed.length < 60 && trimmed.split(':').length > 1);
-            
-            if (isHeader) {
-                return (
-                    <div key={index} className="mixologist-section-header">
-                        <h4>{trimmed}</h4>
-                    </div>
-                );
+            // Look for lines that might be ingredients (contain measurements, common ingredients)
+            const possibleIngredients = lines.filter(line => {
+                const lower = line.toLowerCase();
+                return /\d+\s*(oz|ounce|ml|cl|cup|tbsp|tsp|splash|dash)/.test(lower) ||
+                       /(rum|vodka|gin|whiskey|bourbon|tequila|beer|wine|lime|lemon|sugar|syrup)/.test(lower);
+            }).slice(0, 4);
+
+            if (possibleIngredients.length > 0 && ingredients.length === 0) {
+                ingredients = possibleIngredients;
             }
-            
-            // Regular content - format as structured content like pairing items
-            const lines = trimmed.split('\n').filter(line => line.trim());
-            
-            return (
-                <div key={index} className="mixologist-content-section">
-                    {lines.map((line, lineIndex) => {
-                        const cleanLine = line.trim();
-                        if (!cleanLine) return null;
-                        
-                        // Check if line looks like a list item (starts with -, *, number, or bullet)
-                        if (/^[-*•]\s/.test(cleanLine) || /^\d+\.\s/.test(cleanLine)) {
-                            return (
-                                <div key={lineIndex} className="mixologist-list-item">
-                                    {cleanLine}
-                                </div>
-                            );
-                        }
-                        
-                        // Regular paragraph content
-                        return (
-                            <div key={lineIndex} className="mixologist-paragraph">
-                                {cleanLine}
-                            </div>
-                        );
-                    }).filter(Boolean)}
-                </div>
-            );
-        }).filter(Boolean);
+
+            // Look for action words that indicate steps
+            const possibleSteps = lines.filter(line => {
+                const lower = line.toLowerCase();
+                return /(add|pour|fill|shake|stir|mix|garnish|serve|top|strain)/.test(lower) && 
+                       line.length > 10;
+            }).slice(0, 4);
+
+            if (possibleSteps.length > 0 && steps.length === 0) {
+                steps = possibleSteps;
+            }
+        }
+
+        // Clean up description - take first meaningful paragraph
+        const descriptionParagraphs = description.split(/\n\n|\. /).filter(p => p.trim().length > 20);
+        const cleanDescription = descriptionParagraphs[0]?.trim() || text.split('\n')[0] || text.substring(0, 200) + '...';
+
+        return {
+            drinkName,
+            description: cleanDescription,
+            ingredients: ingredients.length > 0 ? ingredients : ['Information not available in structured format'],
+            steps: steps.length > 0 ? steps : ['Please refer to the description above for preparation details']
+        };
     };
 
     return (
@@ -118,59 +137,64 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                     &times;
                 </button>
 
-                {/* Display the search query as a title if available */}
                 {searchQuery && (
                     <h2 className="popup-main-title">
                         <strong>{capitalizeTitle(searchQuery)}</strong>
                     </h2>
                 )}
 
-                {/* Main content area */}
                 <div className="popup-body">
                     {error ? (
                         <div className="error-section">
-                            <h3 style={{ color: '#e74c3c', marginBottom: '15px' }}>
-                                Something went wrong
-                            </h3>
-                            <p style={{ 
-                                color: '#e74c3c', 
-                                backgroundColor: '#fdf2f2', 
-                                padding: '15px', 
-                                borderRadius: '8px', 
-                                border: '1px solid #fecaca',
-                                margin: 0
-                            }}>
-                                {error}
-                            </p>
+                            <h3>Something went wrong</h3>
+                            <p>{error}</p>
                         </div>
                     ) : suggestion ? (
-                        <div className="mixologist-results">
-                            <div className="pairing-item mixologist-suggestion-container">
-                                <h4 style={{ 
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '10px',
-                                    marginTop: 0
-                                }}>
-                                    🍸 Mixologist's Suggestion
-                                </h4>
-                                <div className="pairing-content mixologist-content">
-                                    {formatMixologistSuggestion(suggestion)}
+                        <>
+                            {/* Drink Name */}
+                            <div className="drink-name">
+                                <h3>{parseResponse(suggestion).drinkName}</h3>
+                            </div>
+
+                            {/* Top Row - Description */}
+                            <div className="mixologist-description">
+                                <h4>🍸 Mixologist's Suggestion</h4>
+                                <div className="mixologist-description-text">
+                                    {parseResponse(suggestion).description}
                                 </div>
                             </div>
-                        </div>
-                    ) : (
-                        <div className="no-results-message">
-                            <h3>Getting mixologist's suggestion...</h3>
-                            <div style={{ 
-                                display: 'flex', 
-                                justifyContent: 'center', 
-                                alignItems: 'center',
-                                height: '60px',
-                                marginTop: '20px'
-                            }}>
-                                <div className="loading-spinner" />
+
+                            {/* Bottom Row - Ingredients & Steps */}
+                            <div className="recipe-container">
+                                {/* Ingredients (2/5 width) */}
+                                <div className="ingredients-section">
+                                    <h4>📝 Ingredients</h4>
+                                    <div className="ingredients-list">
+                                        {parseResponse(suggestion).ingredients.map((ingredient, index) => (
+                                            <div key={index} className="ingredient-item">
+                                                <span>{ingredient}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Steps (3/5 width) */}
+                                <div className="steps-section">
+                                    <h4>🔄 Steps</h4>
+                                    <div className="steps-list">
+                                        {parseResponse(suggestion).steps.map((step, index) => (
+                                            <div key={index} className="step-item">
+                                                <span>{step}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
+                        </>
+                    ) : (
+                        <div className="loading-container">
+                            <h3>Getting mixologist's suggestion...</h3>
+                            <div className="loading-spinner" />
                         </div>
                     )}
                 </div>

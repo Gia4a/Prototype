@@ -9,7 +9,7 @@ node_modules/              # All Node.js dependencies
 npm-debug.log              # npm debug log
 yarn-error.log             # Yarn error log
 .env*                      # Environment variables - CRITICAL for sensitive data!
-						   # Example: .env, .env.local, .env.development.local, .env.production.local
+Functions/.env						   # Example: .env, .env.local, .env.development.local, .env.production.local
 dist/                      # Common directory for compiled/transpiled code (e.g., for web app builds)
 build/                     # Another common directory for compiled/transpiled code
 
