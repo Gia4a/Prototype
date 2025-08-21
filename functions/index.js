@@ -1,24 +1,29 @@
 // functions/index.js
+require('dotenv').config();
 
 const functions = require('firebase-functions');
-const axios = require('axios'); // Import axios for making HTTP requests
+const axios = require('axios');
 
-// You'll need to initialize your Firebase Admin SDK if you haven't already
-// admin.initializeApp(); // Uncomment if you need it for other Firebase services
+exports.getMixologistSuggestion = functions
+    .region('us-central1')
+    .runWith({
+        memory: '256MB',
+        timeoutSeconds: 60
+    })
+    .https.onCall(async (data, context) => {
+    console.log('Received function call with data:', data);
+    console.log('Context:', context);
 
-/**
- * Cloud Function to act as our "Mixologist AI".
- * It takes a user's query, enriches it, and sends it to Gemini.
- */
-exports.getMixologistSuggestion = functions.https.onCall(async (data, context) => {
     const userQuery = data.query;
 
     if (!userQuery) {
+        console.error('No query provided in data:', data);
         throw new functions.https.HttpsError('invalid-argument', 'The "query" parameter is required.');
     }
 
-    // --- 1. Smart Prompt Engineering (as discussed) ---
-    // This logic determines what prompt to send to Gemini based on user's input.
+    console.log('Processing query:', userQuery);
+
+    // --- 1. Smart Prompt Engineering ---
     let promptText = `As an expert mixologist, please provide a suggestion for: "${userQuery}".`;
 
     const lowerCaseQuery = userQuery.toLowerCase();
@@ -29,38 +34,51 @@ exports.getMixologistSuggestion = functions.https.onCall(async (data, context) =
     } else if (lowerCaseQuery.includes('recipe')) {
         promptText = `You are an expert mixologist. Provide a detailed recipe for: "${userQuery}".`;
     } else {
-        // Fallback for general queries
         promptText = `You are an expert mixologist for a liquor delivery app. Based on the user's query "${userQuery}", provide a creative drink suggestion or pairing. For food, include a non-standardized pairing. For drinks, offer a unique twist or suggestion.`;
     }
 
     // --- 2. Call the Gemini API ---
-    let geminiResponseText = "Sorry, I couldn't get a suggestion right now. Please try again later!"; // Default error message
+    let geminiResponseText = "Sorry, I couldn't get a suggestion right now. Please try again later!";
 
     try {
-        // IMPORTANT: Replace this with the actual Gemini API endpoint you are using.
-        // This is a placeholder as the exact URL can vary by model/version.
-        // Example: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent'
-        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-        const GEMINI_API_KEY = functions.config().gemini.key; // Get API key from environment config
+        const GEMINI_API_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent';
+        
+        // Get API key from environment variable (preferred method)
+        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+        
+        if (!GEMINI_API_KEY) {
+            console.error('GEMINI_API_KEY not found in environment variables');
+            throw new Error('API key not configured. Please set GEMINI_API_KEY in your .env file');
+        }
+
+        console.log('Calling Gemini API with prompt:', promptText.substring(0, 100) + '...');
 
         const response = await axios.post(
-            GEMINI_API_ENDPOINT,
+            `${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`,
             {
                 contents: [{ parts: [{ text: promptText }] }],
+                generationConfig: {
+                    temperature: 0.7,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 1024,
+                }
             },
             {
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-goog-api-key': GEMINI_API_KEY, // Use your API key here
                 },
+                timeout: 30000, // 30 second timeout
             }
         );
 
+        console.log('Gemini API response status:', response.status);
+        console.log('Gemini API response data structure:', JSON.stringify(response.data, null, 2));
+
         // Parse the response from Gemini
-        // The structure can vary slightly depending on the Gemini API version/model.
-        // You might need to adjust this based on the actual response format.
-        if (response.data && response.data.candidates && response.data.candidates[0] && response.data.candidates[0].content && response.data.candidates[0].content.parts[0]) {
+        if (response.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
             geminiResponseText = response.data.candidates[0].content.parts[0].text;
+            console.log('Successfully extracted response text');
         } else {
             console.warn('Unexpected Gemini API response structure:', response.data);
             geminiResponseText = "Hmm, the mixologist is thinking... try asking in a different way!";
@@ -68,18 +86,28 @@ exports.getMixologistSuggestion = functions.https.onCall(async (data, context) =
 
     } catch (error) {
         console.error("Error calling Gemini API:", error.message);
-        // Log more details if available (e.g., error.response.data for axios errors)
         if (error.response) {
-            console.error("Gemini API error details:", error.response.status, error.response.data);
+            console.error("Gemini API error details:", {
+                status: error.response.status,
+                statusText: error.response.statusText,
+                data: error.response.data
+            });
         }
-        geminiResponseText = "Apologies, the mixologist is currently restocking! Please try again soon.";
+        if (error.code === 'ECONNABORTED') {
+            geminiResponseText = "The mixologist is taking too long to respond. Please try again!";
+        } else {
+            geminiResponseText = "Apologies, the mixologist is currently restocking! Please try again soon.";
+        }
     }
 
     // --- 3. Return the response to the client ---
-    return {
+    const result = {
         originalQuery: userQuery,
-        generatedPrompt: promptText, // We still return the generated prompt for your logging/analysis
+        generatedPrompt: promptText,
         mixologistSuggestion: geminiResponseText,
         timestamp: new Date().toISOString()
     };
+
+    console.log('Returning result to client');
+    return result;
 });
