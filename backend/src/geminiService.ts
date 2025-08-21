@@ -3,6 +3,14 @@ import { isFoodItem, isLiquorType, isFlavoredLiquor, isShooterQuery } from '../.
 
 // Constants
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const CLASSIC_COCKTAILS = [
+    'moscow mule', 'old fashioned', 'manhattan', 'martini', 'margarita', 
+    'mojito', 'daiquiri', 'whiskey sour', 'cosmopolitan', 'mai tai',
+    'piña colada', 'bloody mary', 'mimosa', 'negroni', 'aperol spritz',
+    'gin and tonic', 'vodka tonic', 'rum and coke', 'cuba libre',
+    'long island iced tea', 'amaretto sour', 'white russian', 'black russian',
+    'screwdriver', 'tom collins', 'john collins', 'mint julep', 'sazerac'
+];
 
 // Types
 interface GeminiApiResponse {
@@ -425,21 +433,26 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         throw new Error('API key for Gemini service is not configured.');
     }
 
-    // Query Detection - All constants together
+    // Query Detection - Check for classic cocktails first
+    const isClassicCocktail = isClassicCocktailRequest(query);
     const isFood = isFoodItem(query);
     const isLiquor = isLiquorType(query);
     const isFlavoredFromList = isFlavoredLiquor(query);
     const isFlavoredFromPattern = isFlavoredSpirit(query);
     const isShooter = isShooterQuery(query);
     const isFlavoredLiquorQuery = isFlavoredFromList || isFlavoredFromPattern || isShooter;
-    
-    // Debug logging
-    console.log(`Query: "${query}", isFood: ${isFood}, isLiquor: ${isLiquor}, isFlavoredFromList: ${isFlavoredFromList}, isFlavoredFromPattern: ${isFlavoredFromPattern}, isShooter: ${isShooter}, isFlavoredLiquorQuery: ${isFlavoredLiquorQuery}`);
-    
-    // Determine prompt based on query type
+
+    console.log(`Query: "${query}", isClassicCocktail: ${isClassicCocktail}, isFood: ${isFood}, isLiquor: ${isLiquor}, isFlavoredLiquorQuery: ${isFlavoredLiquorQuery}`);
+
+    // Determine prompt based on query type - CLASSIC COCKTAILS GET PRIORITY
     let promptText = '';
-    if (isFlavoredLiquorQuery) {
-        // 70% chance of a themed prompt, 30% for a regular one
+    let useReducedRandomness = false;
+
+    if (isClassicCocktail) {
+        console.log("Using classic cocktail prompt");
+        promptText = getClassicCocktailPrompt(query);
+        useReducedRandomness = true; // Flag to reduce randomness
+    } else if (isFlavoredLiquorQuery) {
         if (Math.random() > 0.3) {
             const theme = getThemeForCurrentDate();
             console.log(`Using themed shooter prompt: ${theme}`);
@@ -453,7 +466,6 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
     } else if (isLiquor) {
         promptText = getLiquorPrompt(query);
     } else {
-        // 40% chance of a themed prompt, 60% for a regular one
         if (Math.random() > 0.6) {
             const theme = getThemeForCurrentDate();
             console.log(`Using themed prompt: ${theme}`);
@@ -464,14 +476,19 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         }
     }
 
-    // API Request Configuration (keeping your original settings for randomness)
+    // API Request Configuration - REDUCE RANDOMNESS FOR CLASSIC COCKTAILS
     const requestBody = {
         contents: [{
             parts: [{
                 text: promptText
             }]
         }],
-        generationConfig: {
+        generationConfig: useReducedRandomness ? {
+            temperature: 0.1,  // Even lower for maximum consistency
+            topK: 5,          // Very low for most predictable results
+            topP: 0.7,        // Lower for focused responses
+            maxOutputTokens: 1024  // Shorter responses for simple recipes
+        } : {
             temperature: 1.0,
             topK: 40,
             topP: 0.95,
@@ -561,3 +578,41 @@ export async function fetchAndProcessGeminiResults(query: string, apiKey: string
         }
     }
 }
+
+// Add isClassicCocktailRequest helper function
+function isClassicCocktailRequest(query: string): boolean {
+    const normalizedQuery = query.toLowerCase().trim();
+    return CLASSIC_COCKTAILS.some(cocktail => 
+        normalizedQuery === cocktail || 
+        normalizedQuery === cocktail + ' recipe' ||
+        normalizedQuery.startsWith(cocktail + ' ') ||
+        normalizedQuery.endsWith(' ' + cocktail)
+    );
+}
+
+// Add getClassicCocktailPrompt function
+const getClassicCocktailPrompt = (query: string): string => `STRICT INSTRUCTION: Provide ONLY the standard, traditional recipe for "${query}". No creativity, no variations, no elevations - just the classic recipe that every bartender knows.
+
+You must return exactly this JSON format with NO additional text:
+
+[
+  {
+    "title": "Classic ${query}",
+    "snippet": "Ingredients: [exact traditional recipe]. Instructions: [standard method].",
+    "filePath": null,
+    "why": "This is the standard ${query} recipe."
+  },
+  {
+    "title": "${query} - Easy Version",
+    "snippet": "Ingredients: [same recipe with convenience store substitutes]. Instructions: [same method].",
+    "filePath": null,
+    "why": "Same recipe using easily available ingredients."
+  }
+]
+
+FOR MOSCOW MULE SPECIFICALLY:
+- Classic: 2 oz vodka, 4-6 oz ginger beer, 0.5 oz lime juice, lime wedge
+- Method: Build in copper mug with ice, stir gently
+- Easy version: Use ginger ale instead of ginger beer, bottled lime juice
+
+DO NOT add creative language, elevated descriptions, or variations. Just provide the standard recipe exactly as written in cocktail recipe books.`;
