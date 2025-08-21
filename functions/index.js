@@ -2,8 +2,9 @@
 require('dotenv').config();
 
 const functions = require('firebase-functions');
-const { fetchAndProcessGeminiResults } = require('./geminiService'); // Import your service
-const { extractBestRecipe } = require('./cocktail'); // Import recipe extraction
+const { fetchAndProcessGeminiResults } = require('./geminiService');
+const { extractBestRecipe } = require('./cocktail');
+const { isFoodItem, isShooterQuery } = require('./constants');
 
 exports.getMixologistSuggestion = functions
     .region('us-central1')
@@ -44,21 +45,26 @@ exports.getMixologistSuggestion = functions
             console.log('Gemini service returned results:', geminiResults);
 
             if (geminiResults && geminiResults.length > 0) {
-                // Try to extract a complete recipe first
-                const bestRecipe = extractBestRecipe(geminiResults);
-                
-                if (bestRecipe) {
-                    // Format as a complete recipe
-                    mixologistSuggestion = `🍸 ${bestRecipe.title}\n\n${bestRecipe.recipe}`;
+                // Determine response formatting based on query type
+                const isFood = isFoodItem(userQuery);
+                const isShooter = isShooterQuery(userQuery);
+
+                if (isFood) {
+                    // Format as beverage pairings
+                    mixologistSuggestion = formatFoodPairings(geminiResults);
+                } else if (isShooter) {
+                    // Format as shooter recipes
+                    mixologistSuggestion = formatShooterRecipes(geminiResults);
                 } else {
-                    // Format the first result as a suggestion
-                    const firstResult = geminiResults[0];
-                    mixologistSuggestion = `🍸 ${firstResult.title}\n\n${firstResult.snippet}`;
+                    // Try to extract a complete cocktail recipe first
+                    const bestRecipe = extractBestRecipe(geminiResults);
                     
-                    // Add second result if available
-                    if (geminiResults[1]) {
-                        const secondResult = geminiResults[1];
-                        mixologistSuggestion += `\n\n🍸 ${secondResult.title}\n\n${secondResult.snippet}`;
+                    if (bestRecipe) {
+                        // Format as a complete recipe
+                        mixologistSuggestion = `🍸 ${bestRecipe.title}\n\n${bestRecipe.recipe}`;
+                    } else {
+                        // Format as general suggestions
+                        mixologistSuggestion = formatGeneralSuggestions(geminiResults);
                     }
                 }
             } else {
@@ -93,3 +99,61 @@ exports.getMixologistSuggestion = functions
         console.log('Returning result to client');
         return result;
     });
+
+// Format food pairings (wine, spirit, beer)
+function formatFoodPairings(results) {
+    if (!results || results.length === 0) {
+        return "No beverage pairings found. Please try again!";
+    }
+
+    let formattedResponse = "🍷 Beverage Pairings\n\n";
+    
+    results.forEach((result, index) => {
+        formattedResponse += `${result.title}\n`;
+        formattedResponse += `${result.snippet}\n`;
+        
+        if (index < results.length - 1) {
+            formattedResponse += "\n";
+        }
+    });
+    
+    return formattedResponse;
+}
+
+// Format shooter recipes
+function formatShooterRecipes(results) {
+    if (!results || results.length === 0) {
+        return "No shooter recipes found. Please try again!";
+    }
+
+    let formattedResponse = "🥃 Shooter Recipes\n\n";
+    
+    results.forEach((result, index) => {
+        formattedResponse += `🍸 ${result.title}\n\n${result.snippet}`;
+        
+        if (index < results.length - 1) {
+            formattedResponse += "\n\n";
+        }
+    });
+    
+    return formattedResponse;
+}
+
+// Format general cocktail suggestions
+function formatGeneralSuggestions(results) {
+    if (!results || results.length === 0) {
+        return "No suggestions found. Please try again!";
+    }
+
+    let formattedResponse = "";
+    
+    results.forEach((result, index) => {
+        formattedResponse += `🍸 ${result.title}\n\n${result.snippet}`;
+        
+        if (index < results.length - 1) {
+            formattedResponse += "\n\n";
+        }
+    });
+    
+    return formattedResponse;
+}

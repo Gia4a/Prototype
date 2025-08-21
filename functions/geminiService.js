@@ -230,7 +230,11 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
     const isFlavoredFromList = isFlavoredLiquor(query);
     const isShooter = isShooterQuery(query);
 
-    console.log(`Query: "${query}", isClassicCocktail: ${isClassicCocktail}, isFood: ${isFood}, isLiquor: ${isLiquor}, isShooter: ${isShooter}`);
+    console.log(`Query: "${query}"`);
+    console.log(`isClassicCocktail: ${isClassicCocktail}`);
+    console.log(`isFood: ${isFood}`);
+    console.log(`isLiquor: ${isLiquor}`);
+    console.log(`isShooter: ${isShooter}`);
 
     // Determine prompt based on query type - CLASSIC COCKTAILS GET PRIORITY
     let promptText = '';
