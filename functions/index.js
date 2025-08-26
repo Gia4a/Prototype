@@ -1,159 +1,185 @@
-// functions/index.js
-require('dotenv').config();
-
+// functions/index.js - Firebase Functions API
 const functions = require('firebase-functions');
-const { fetchAndProcessGeminiResults } = require('./geminiService');
-const { extractBestRecipe } = require('./cocktail');
-const { isFoodItem, isShooterQuery } = require('./constants');
+const cors = require('cors')({ origin: true });
 
-exports.getMixologistSuggestion = functions
-    .region('us-central1')
-    .runWith({
-        memory: '256MB',
-        timeoutSeconds: 60
-    })
-    .https.onCall(async (data, context) => {
-        console.log('Received function call with data:', data);
-        console.log('Context:', context);
+// Import your recipe system
+const { 
+  getRecipe, 
+  getCurrentRecipe, 
+  getAllRecipesForSign, 
+  generateDailyMessage,
+  getStats,
+  BASE_RECIPES,
+  SIGNS,
+  PLANETARY_MODIFIERS 
+} = require('./recipeSystem');
 
-        const userQuery = data.query;
-
-        if (!userQuery) {
-            console.error('No query provided in data:', data);
-            throw new functions.https.HttpsError('invalid-argument', 'The "query" parameter is required.');
-        }
-
-        console.log('Processing query:', userQuery);
-
-        // Get API key from environment variable
-        const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-        
-        if (!GEMINI_API_KEY) {
-            console.error('GEMINI_API_KEY not found in environment variables');
-            throw new functions.https.HttpsError('failed-precondition', 'API key not configured. Please set GEMINI_API_KEY in your .env file');
-        }
-
-        let geminiResults = [];
-        let mixologistSuggestion = "Sorry, I couldn't get a suggestion right now. Please try again later!";
-
-        try {
-            console.log('Calling new Gemini service with enhanced prompt engineering...');
-            
-            // Use your sophisticated service instead of direct API call
-            geminiResults = await fetchAndProcessGeminiResults(userQuery, GEMINI_API_KEY);
-            
-            console.log('Gemini service returned results:', geminiResults);
-
-            if (geminiResults && geminiResults.length > 0) {
-                // Determine response formatting based on query type
-                const isFood = isFoodItem(userQuery);
-                const isShooter = isShooterQuery(userQuery);
-
-                if (isFood) {
-                    // Format as beverage pairings
-                    mixologistSuggestion = formatFoodPairings(geminiResults);
-                } else if (isShooter) {
-                    // Format as shooter recipes
-                    mixologistSuggestion = formatShooterRecipes(geminiResults);
-                } else {
-                    // Try to extract a complete cocktail recipe first
-                    const bestRecipe = extractBestRecipe(geminiResults);
-                    
-                    if (bestRecipe) {
-                        // Format as a complete recipe
-                        mixologistSuggestion = `🍸 ${bestRecipe.title}\n\n${bestRecipe.recipe}`;
-                    } else {
-                        // Format as general suggestions
-                        mixologistSuggestion = formatGeneralSuggestions(geminiResults);
-                    }
-                }
-            } else {
-                console.warn('No results returned from Gemini service');
-                mixologistSuggestion = "Hmm, the mixologist is thinking... try asking in a different way!";
-            }
-
-        } catch (error) {
-            console.error("Error calling Gemini service:", error.message);
-            
-            if (error.message.includes('API key')) {
-                mixologistSuggestion = "API configuration error. Please check the setup.";
-            } else if (error.message.includes('timeout') || error.code === 'ECONNABORTED') {
-                mixologistSuggestion = "The mixologist is taking too long to respond. Please try again!";
-            } else if (error.message.includes('JSON')) {
-                mixologistSuggestion = "The mixologist is having trouble organizing their thoughts. Please try rephrasing your request!";
-            } else {
-                mixologistSuggestion = "Apologies, the mixologist is currently restocking! Please try again soon.";
-            }
-        }
-
-        // Return the response to the client
-        const result = {
-            originalQuery: userQuery,
-            mixologistSuggestion: mixologistSuggestion,
-            timestamp: new Date().toISOString(),
-            resultsCount: geminiResults.length,
-            // Optional: include raw results for debugging
-            // rawResults: geminiResults
-        };
-
-        console.log('Returning result to client');
-        return result;
-    });
-
-// Format food pairings (wine, spirit, beer)
-function formatFoodPairings(results) {
-    if (!results || results.length === 0) {
-        return "No beverage pairings found. Please try again!";
+// API Endpoint: Get specific recipe
+exports.getRecipe = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    const { sign, moonPhase } = req.query;
+    
+    if (!sign || !moonPhase) {
+      return res.status(400).json({
+        error: 'Missing required parameters: sign and moonPhase'
+      });
     }
-
-    let formattedResponse = "🍷 Beverage Pairings\n\n";
     
-    results.forEach((result, index) => {
-        formattedResponse += `${result.title}\n`;
-        formattedResponse += `${result.snippet}\n`;
-        
-        if (index < results.length - 1) {
-            formattedResponse += "\n";
-        }
+    const recipe = getRecipe(sign, moonPhase);
+    
+    if (!recipe) {
+      return res.status(404).json({
+        error: 'Recipe not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      data: recipe
     });
+  });
+});
+
+// API Endpoint: Get current recipe for user's sign
+exports.getCurrentRecipe = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    const { sign } = req.query;
     
-    return formattedResponse;
+    if (!sign) {
+      return res.status(400).json({
+        error: 'Missing required parameter: sign'
+      });
+    }
+    
+    const recipe = getCurrentRecipe(sign);
+    
+    res.json({
+      success: true,
+      data: recipe,
+      current_moon_phase: getCurrentMoonPhase()
+    });
+  });
+});
+
+// API Endpoint: Get all recipes for a sign (8 moon phases)
+exports.getAllRecipesForSign = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    const { sign } = req.query;
+    
+    if (!sign) {
+      return res.status(400).json({
+        error: 'Missing required parameter: sign'
+      });
+    }
+    
+    const recipes = getAllRecipesForSign(sign);
+    
+    res.json({
+      success: true,
+      data: recipes,
+      total_recipes: recipes.length
+    });
+  });
+});
+
+// API Endpoint: Generate daily message using Gemini
+exports.getDailyMessage = functions.https.onCall(async (data, context) => {
+  const { sign, moonPhase } = data;
+  
+  if (!sign || !moonPhase) {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing sign or moonPhase');
+  }
+  
+  try {
+    const recipe = getRecipe(sign, moonPhase);
+    const prompt = generateDailyMessage(sign, recipe);
+    
+    // Call Gemini API here
+    const geminiResponse = await callGeminiAPI(prompt);
+    
+    return {
+      success: true,
+      message: geminiResponse,
+      recipe_name: recipe.final_recipe.name,
+      sign: sign,
+      moon_phase: moonPhase
+    };
+  } catch (error) {
+    throw new functions.https.HttpsError('internal', 'Failed to generate message');
+  }
+});
+
+// API Endpoint: Get system stats
+exports.getStats = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    const stats = getStats();
+    
+    res.json({
+      success: true,
+      data: stats,
+      available_signs: Object.keys(SIGNS),
+      moon_phases: [
+        'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
+        'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
+      ]
+    });
+  });
+});
+
+// API Endpoint: Get all base recipes (for debugging)
+exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    res.json({
+      success: true,
+      data: BASE_RECIPES,
+      total_base_recipes: Object.keys(BASE_RECIPES).length
+    });
+  });
+});
+
+// Helper function for current moon phase
+function getCurrentMoonPhase() {
+  // Replace with real moon phase API or calculation
+  const phases = [
+    'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
+    'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
+  ];
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
+  return phases[phaseIndex];
 }
 
-// Format shooter recipes
-function formatShooterRecipes(results) {
-    if (!results || results.length === 0) {
-        return "No shooter recipes found. Please try again!";
-    }
-
-    let formattedResponse = "🥃 Shooter Recipes\n\n";
-    
-    results.forEach((result, index) => {
-        formattedResponse += `🍸 ${result.title}\n\n${result.snippet}`;
-        
-        if (index < results.length - 1) {
-            formattedResponse += "\n\n";
-        }
-    });
-    
-    return formattedResponse;
+// Gemini API integration (placeholder)
+async function callGeminiAPI(prompt) {
+  // Your Gemini API call here
+  // const response = await gemini.generateContent(prompt);
+  // return response.text;
+  
+  return "Today's cosmic energies align perfectly with this cocktail choice!";
 }
 
-// Format general cocktail suggestions
-function formatGeneralSuggestions(results) {
-    if (!results || results.length === 0) {
-        return "No suggestions found. Please try again!";
-    }
-
-    let formattedResponse = "";
+// Batch function for multiple signs
+exports.getBatchRecipes = functions.https.onRequest((req, res) => {
+  cors(req, res, () => {
+    const { signs, moonPhase } = req.body;
     
-    results.forEach((result, index) => {
-        formattedResponse += `🍸 ${result.title}\n\n${result.snippet}`;
-        
-        if (index < results.length - 1) {
-            formattedResponse += "\n\n";
-        }
+    if (!signs || !Array.isArray(signs) || !moonPhase) {
+      return res.status(400).json({
+        error: 'Missing required parameters: signs (array) and moonPhase'
+      });
+    }
+    
+    const recipes = {};
+    signs.forEach(sign => {
+      recipes[sign] = getRecipe(sign, moonPhase);
     });
     
-    return formattedResponse;
-}
+    res.json({
+      success: true,
+      data: recipes,
+      moon_phase: moonPhase,
+      processed_signs: signs.length
+    });
+  });
+});
