@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
+import DailyHoroscope from './components/Horoscope';
 import './App.css';
 
 function App() {
