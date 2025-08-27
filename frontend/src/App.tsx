@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
-import DailyHoroscope from './components/Horoscope';
+import HoroscopeGrid from './components/Horoscope';
 import './App.css';
 
 function App() {
@@ -11,6 +11,13 @@ function App() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [currentQuery, setCurrentQuery] = useState<string>("");
+
+    // State for controlling the visibility of the zodiac sign grid
+    const [isHoroscopeGridVisible, setIsHoroscopeGridVisible] = useState(false);
+
+    const toggleHoroscopeGrid = () => {
+        setIsHoroscopeGridVisible(!isHoroscopeGridVisible);
+    };
 
     // This function will be passed down to SearchBar.tsx
     // SearchBar.tsx will call this when it gets a response from the Cloud Function
@@ -50,28 +57,41 @@ function App() {
     };
 
     return (
-        <div className="app-container">
-            {/* Image container with overlaid search elements */}
-            <div className="image-container">
-                <img 
-                    src="/Bar_pig.png" 
-                    alt="Blind Pig Bar" 
-                    className="main-background-image"
-                />
+    <div className="app-container">
+        {/* Image container with overlaid search elements */}
+        <div className="image-container">
+            <img 
+                src="/Bar_pig.png" 
+                alt="Blind Pig Bar" 
+                className="main-background-image"
+            />
+           {/* Search bar positioned over the image */}
+<div className="overlay-search">
+    <SearchBar
+        onNewSuggestion={handleNewMixologistSuggestion}
+        onLoadingChange={handleLoadingChange}
+        onError={handleErrorFromSearchBar}
+        onQueryChange={handleSearchQuery}
+        isLoading={isLoading}
+    />
+    {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
+</div>
+
+{/* Separate positioning for Daily Horoscope Button */}
+<div className="daily-horoscope-container">
+    <button onClick={toggleHoroscopeGrid} className="daily-horoscope-button">
+        {isHoroscopeGridVisible ? 'Daily Horoscope' : 'Daily Horoscope'}
+    </button>
+</div>
+
+{/* Separate positioning for Zodiac Sign Grid */}
+{isHoroscopeGridVisible && (
+    <div className="horoscope-grid-container">
+        <HoroscopeGrid onSignSelect={() => { /* No action needed for now */ }} />
+    </div>
+)}
                 
-                {/* Search bar positioned over the image */}
-                <div className="overlay-search">
-                    <SearchBar
-                        onNewSuggestion={handleNewMixologistSuggestion}
-                        onLoadingChange={handleLoadingChange}
-                        onError={handleErrorFromSearchBar}
-                        onQueryChange={handleSearchQuery}
-                        isLoading={isLoading} // Pass loading state to SearchBar for disabling input/button
-                    />
-                    {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
-                </div>
-            </div>
-            
+                {error && !isPopupVisible && <p className="error-message" style={{ color: 'red' }}>{error}</p>}
             {/* The ResultsPopup will only render if isPopupVisible is true */}
             {isPopupVisible && (
                 <ResultsPopup
@@ -80,11 +100,11 @@ function App() {
                     onClose={closePopup}
                     suggestion={mixologistSuggestion}
                     error={error}
-                    visible={isPopupVisible}
                 />
             )}
         </div>
-    );
+    </div>
+);
 }
 
 export default App;

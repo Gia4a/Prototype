@@ -145,3 +145,61 @@
 .read-the-docs {
   color: #888;
 }
+
+.overlay-horoscope {
+  position: absolute;
+  left: 50%;
+  top: 80px; /* Position below the search bar */
+  transform: translateX(-50%);
+  z-index: 1001;
+}
+
+.daily-horoscope-button {
+  width: 95px;
+  height: 95px;
+  border-radius: 50%;
+  background-color: #1a1a2e;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: bold;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s;
+  transform: rotate(-12deg); /* Slant the text */
+  border: 4px solid blue; /* Add blue border */
+  position: fixed; /* Ensure positioning is relative */
+  z-index: 1002; /* Ensure it stays above other elements */
+}
+
+.daily-horoscope-button:hover {
+  transform: scale(1.1) rotate(-10deg);
+  background-color: #333;
+}
+
+/* Styling for the daily horoscope button container */
+.daily-horoscope-container {
+  position: fixed;
+  top: 10%;
+  left: 25%;
+  z-index: 1002;
+}
+
+@media (max-width: 1080px) {
+  .daily-horoscope-container {
+    position: absolute;
+    top: 30px; /* Align with the search bar */
+    left: 20px; /* Move to the left beside the search bar */
+    z-index: 1002;
+  }
+}
+
+/* Styling for the zodiac sign grid container */
+.horoscope-grid-container {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+}
