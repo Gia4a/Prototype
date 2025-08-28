@@ -60,6 +60,7 @@ const PLANETARY_MODIFIERS = {
 };
 
 // Get Recipe for Any Sign/Moon Phase
+// Update getRecipe to include a shortened 4-line idiom description
 function getRecipe(sign, moonPhase) {
   if (!SIGNS[sign]) {
     throw new Error(`Invalid sign: ${sign}`);
@@ -76,23 +77,22 @@ function getRecipe(sign, moonPhase) {
   const planetaryModifier = PLANETARY_MODIFIERS[signData.ruler];
 
   return {
-    sign: sign,
-    element: signData.element,
-    moon_phase: moonPhase,
-    planetary_ruler: signData.ruler,
-    recipe: {
-      name: `${sign.charAt(0).toUpperCase() + sign.slice(1)}'s ${baseRecipe.name}`,
-      base_spirit: `${planetaryModifier.spirit_modifier}_${baseRecipe.base_spirit}`.replace('_undefined', ''),
-      mixer: baseRecipe.mixer,
-      instructions: baseRecipe.instructions,
-      theme: `${baseRecipe.theme} with ${signData.ruler} influence`
-    },
-    planetary_influence: {
-      spirit_style: planetaryModifier.spirit_modifier,
-      color_theme: planetaryModifier.color,
-      energy_level: planetaryModifier.intensity
-    },
-    astrological_note: `Perfect for ${sign.charAt(0).toUpperCase() + sign.slice(1)} during ${moonPhase.replace('_', ' ')}`
+    title: `${sign.charAt(0).toUpperCase() + sign.slice(1)} Cosmic Cocktail`,
+    subtitle: `${moonPhase.replace('_', ' ')} • ${signData.ruler}`,
+    drinkName: `${sign.charAt(0).toUpperCase() + sign.slice(1)}'s ${baseRecipe.name}`,
+    description: `${baseRecipe.theme} with ${signData.ruler} influence.\n` +
+                 `Spirit style: ${planetaryModifier.spirit_modifier}.\n` +
+                 `Color theme: ${planetaryModifier.color}.\n` +
+                 `Energy level: ${planetaryModifier.intensity}.`,
+    ingredients: [
+      `Base: ${planetaryModifier.spirit_modifier}_${baseRecipe.base_spirit}`.replace('_undefined', ''),
+      baseRecipe.mixer ? `Mixer: ${baseRecipe.mixer}` : null,
+      baseRecipe.citrus ? `Citrus: ${baseRecipe.citrus}` : null,
+      baseRecipe.sweetener ? `Sweetener: ${baseRecipe.sweetener}` : null,
+      baseRecipe.cream ? `Cream: ${baseRecipe.cream}` : null,
+      baseRecipe.seasoning ? `Seasoning: ${baseRecipe.seasoning}` : null
+    ].filter(Boolean),
+    instructions: baseRecipe.instructions.join(' ')
   };
 }
 
@@ -111,16 +111,17 @@ function generateDailyMessage(sign, recipe) {
   // The KEY is to add instructions for the AI to format its response as JSON.
   const prompt = `
     Create a cosmic cocktail horoscope for the zodiac sign ${sign}.
-    The cocktail is called "${name}".
+    The cocktail is called \"${name}\".
     The ingredients are: ${base}, ${mixer}, ${citrus}, and ${garnish}.
     The sign's ruling planet is ${ruler} and its element is ${element}.
 
     Analyze these details and generate a creative, insightful, and slightly mystical horoscope message.
 
     IMPORTANT: Respond ONLY with a valid JSON object. Do not include any text before or after the JSON object.
+
     The JSON object must have the following structure:
     {
-      "insight": "A detailed astrological insight for the user based on the sign, planet, and cocktail theme. This should be 2-4 sentences.",
+      "insight": "A concise astrological insight for the user based on the sign, planet, and cocktail theme. This should be formatted as a 4-line idiom. Do not include any additional sentences or explanations.",
       "theme": "A short, catchy theme or motto for the day, like 'Quiet reflection with mercury influence'.",
       "instructions": "Simple, clear instructions to make the cocktail."
     }
@@ -155,7 +156,7 @@ function displayRecipe(recipe) {
   console.log('\nIngredients:');
   console.log(`- ${recipe.final_recipe.base_spirit}`);
   if (recipe.base_recipe.mixer) console.log(`- ${recipe.final_recipe.mixer}`);
-  if (recipe.base_recipe.citrus) console.log(`- ${recipe.base_recipe.citrus}`);
+  if (recipe.base_recipe.citrus) console.log(`- ${recipe.final_recipe.citrus}`);
   console.log('\nInstructions:');
   recipe.final_recipe.instructions.forEach((step, i) => {
     console.log(`${i + 1}. ${step}`);

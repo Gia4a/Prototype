@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import './ResultsPopup.css';
 import CompactHoroscopeCard from './CompactHoroscopeCard';
-
-
+import type { HoroscopeData } from './CompactHoroscopeCard';
 
 interface ResultsPopupProps {
     isOpen: boolean;
@@ -55,8 +54,15 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         ).join(' ');
     };
 
-    // Force everything through CompactHoroscopeCard - no exceptions!
-    const createCompactData = (rawData: any, query?: string) => {
+    // Helper function to format ingredient names
+    const formatIngredientName = (ingredient: string): string => {
+        return ingredient
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
+    };
+
+    // Create proper data format for CompactHoroscopeCard
+    const createCompactData = (rawData: any, query?: string): HoroscopeData => {
         console.log('Raw suggestion data:', rawData);
         console.log('Search query:', query);
 
@@ -74,95 +80,41 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             };
         }
 
-        // If it's already a proper object with the right structure
-        if (typeof rawData === 'object' && rawData.sign && rawData.cocktailName) {
-            return {
-                sign: rawData.sign,
-                cocktailName: rawData.cocktailName,
-                moonPhase: rawData.moonPhase || 'current phase',
-                ruler: rawData.ruler || 'Mercury',
-                element: rawData.element || 'Spirit',
-                ingredients: [
-                    rawData.base || 'Base Spirit',
-                    rawData.mixer || 'Mixer',
-                    rawData.citrus || 'Garnish'
-                ],
-                instructions: Array.isArray(rawData.instructions) 
-                    ? rawData.instructions.join(', ') 
-                    : rawData.instructions || 'Mix well',
-                theme: rawData.theme || 'Cosmic influence',
-                insight: rawData.insight || 'Enjoy responsibly'
-            };
+        // Ensure insight is limited to 2 sentences max for compact display
+        let insight = rawData.insight || 'A carefully crafted cocktail recommendation.';
+        if (insight) {
+            const sentences = insight.split(/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s+/).filter((s: string) => s.trim().length > 0);
+            insight = sentences.slice(0, 2).join(' ').trim();
         }
 
-        // If it's a string (most common case)
-        const dataString = typeof rawData === 'string' ? rawData : JSON.stringify(rawData);
-        
-        // Extract sign from query or default
-        let sign = 'Mixologist';
-        if (query && query.includes('Cosmic Cocktail')) {
-            sign = query.replace(' Cosmic Cocktail', '');
+        // Create proper ingredients array from individual components
+        const ingredients = [];
+        if (rawData.base && rawData.base !== 'Premium Spirit') {
+            ingredients.push(`2oz ${formatIngredientName(rawData.base)}`);
+        }
+        if (rawData.mixer && rawData.mixer !== 'Quality Mixer') {
+            ingredients.push(formatIngredientName(rawData.mixer));
+        }
+        if (rawData.citrus && rawData.citrus !== 'Fresh Garnish') {
+            ingredients.push(formatIngredientName(rawData.citrus));
         }
 
-        // Try to extract cocktail name from the string
-        let cocktailName = 'Special Cocktail';
-        
-        // Look for common cocktail patterns
-        const cocktailPatterns = [
-            /([A-Za-z\s']+(?:Martini|Manhattan|Old Fashioned|Negroni|Daiquiri|Margarita|Mojito|Cosmopolitan|Sidecar|Gimlet))/gi,
-            /([A-Za-z\s']+Cocktail)/gi,
-            /([A-Za-z\s']+Sour)/gi,
-            /([A-Za-z\s']+Fizz)/gi
-        ];
-
-        for (const pattern of cocktailPatterns) {
-            const match = dataString.match(pattern);
-            if (match && match[0]) {
-                cocktailName = match[0].trim();
-                break;
-            }
-        }
-
-        // If no cocktail found, create one based on query
-        if (cocktailName === 'Special Cocktail' && query) {
-            cocktailName = `${sign}'s Special`;
-        }
-
-        // Extract basic ingredients and instructions
-        let ingredients = ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'];
-        let instructions = 'Mix according to mixologist recommendations';
-        
-        // Try to find ingredients in the string
-        const ingredientKeywords = ['vodka', 'gin', 'whiskey', 'rum', 'tequila', 'bourbon', 'scotch'];
-        const foundSpirit = ingredientKeywords.find(spirit => 
-            dataString.toLowerCase().includes(spirit)
-        );
-        
-        if (foundSpirit) {
-            ingredients[0] = foundSpirit.charAt(0).toUpperCase() + foundSpirit.slice(1);
-        }
-
-        // Create a clean insight from the beginning of the string
-        let insight = 'A carefully crafted cocktail recommendation.';
-        if (dataString.length > 50) {
-            // Take first meaningful sentence or up to 120 characters
-            const sentences = dataString.split('.').filter(s => s.trim().length > 20);
-            if (sentences.length > 0) {
-                insight = sentences[0].trim() + '.';
-            } else {
-                insight = dataString.substring(0, 120).trim() + '...';
-            }
+        // Fallback ingredients if none found
+        if (ingredients.length === 0) {
+            ingredients.push('Premium Spirits', 'Quality Mixers', 'Fresh Garnish');
         }
 
         return {
-            sign: sign,
-            cocktailName: cocktailName,
-            moonPhase: 'current phase',
-            ruler: 'Mercury',
-            element: 'Spirit',
-            ingredients: ingredients,
-            instructions: instructions,
-            theme: 'Mixologist recommendation',
+            sign: rawData.sign || 'Mixologist',
+            cocktailName: rawData.cocktailName || 'Special Recommendation',
+            moonPhase: rawData.moonPhase || 'current phase',
+            ruler: rawData.ruler || 'Mercury',
+            element: rawData.element || 'Spirit',
+            ingredients,
+            instructions: Array.isArray(rawData.instructions) 
+                ? rawData.instructions.join(', ') 
+                : rawData.instructions || 'Mix well',
+            theme: rawData.theme || 'Cosmic influence',
             insight: insight
         };
     };

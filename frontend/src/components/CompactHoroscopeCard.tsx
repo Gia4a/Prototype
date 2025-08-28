@@ -17,10 +17,9 @@ interface CompactHoroscopeCardProps {
 }
 
 const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => {
-  // Provide default data if none is passed
   const defaultData: HoroscopeData = {
-    sign: "Gemini",
-    cocktailName: "Gemini's Vodka Soda",
+    sign: "Default", // Added missing 'sign' property
+    cocktailName: "Vodka Soda",
     moonPhase: "waning crescent",
     ruler: "Mercury",
     element: "Air",
@@ -37,7 +36,7 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
       <div className="w-[95%] max-w-md bg-gray-800 rounded-lg border border-blue-400 overflow-hidden">
         {/* Header */}
         <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 text-center">
-          <h2 className="text-lg font-bold">{horoscopeData.sign} Cosmic Cocktail</h2>
+          <h2 className="text-lg font-bold">{horoscopeData.cocktailName}</h2>
           <div className="flex justify-center items-center gap-2 mt-1 text-sm">
             <span>🌙 {horoscopeData.moonPhase}</span>
             <span>•</span>
@@ -47,11 +46,6 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
 
         {/* Content */}
         <div className="p-3 space-y-3">
-          {/* Drink Title */}
-          <div className="text-center">
-            <h3 className="text-yellow-400 font-semibold text-base">✨ {horoscopeData.cocktailName}</h3>
-          </div>
-
           {/* 4-Line Idiom Style Description */}
           <div className="text-center text-sm leading-relaxed bg-gray-700 rounded p-2">
             <p className="italic text-blue-200">
@@ -67,7 +61,7 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
           <div className="grid grid-cols-4 gap-2 text-sm">
             {/* Ingredients Column (1 width) */}
             <div className="col-span-1">
-              <h4 className="font-semibold text-green-400 mb-1">🍹 Mix:</h4>
+              <h4 className="font-semibold text-green-400 mb-1">🍹 Ingredients:</h4>
               <ul className="text-xs space-y-0.5">
                 {horoscopeData.ingredients.map((ingredient, index) => (
                   <li key={index} className="text-gray-300">• {ingredient}</li>
@@ -89,4 +83,5 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
   );
 };
 
+export type { HoroscopeData };
 export default CompactHoroscopeCard;

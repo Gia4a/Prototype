@@ -10,17 +10,28 @@ interface AstrologySign {
   displayName: string;
 }
 
-// Add the HoroscopeSuggestion interface (should match ResultsPopup)
+// Updated HoroscopeSuggestion interface to match CompactHoroscopeCard expectations
 interface HoroscopeSuggestion {
     sign: string;
     cocktailName: string;
     moonPhase: string;
     ruler: string;
     element: string;
-    base: string;
-    mixer: string;
-    citrus: string;
-    instructions: string[];
+    ingredients: string[];  // Changed to match CompactHoroscopeCard
+    instructions: string;   // Changed to string to match CompactHoroscopeCard
+    theme: string;
+    insight: string;
+}
+
+// HoroscopeResult interface that matches what Horoscope component returns
+interface HoroscopeResult {
+    sign: string;
+    cocktailName: string;
+    moonPhase: string;
+    ruler: string;
+    element: string;
+    ingredients: string[];  // Updated to match the fixed Horoscope.tsx
+    instructions: string;   // Updated to match the fixed Horoscope.tsx
     theme: string;
     insight: string;
 }
@@ -56,15 +67,13 @@ function App() {
         
         // Fallback: create a basic horoscope structure from string result
         return {
-            sign: query?.includes('Cosmic Cocktail') ? query.replace(' Cosmic Cocktail', '') : 'Unknown',
+            sign: query?.includes('Cosmic Cocktail') ? query.replace(' Cosmic Cocktail', '') : 'Mixologist',
             cocktailName: query || 'Mixologist Special',
             moonPhase: 'current phase',
             ruler: 'Mercury',
-            element: 'Unknown',
-            base: 'Spirits',
-            mixer: 'Mixers',
-            citrus: 'Garnish',
-            instructions: [result || 'No instructions available'],
+            element: 'Spirit',
+            ingredients: ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'],  // Changed to array
+            instructions: result || 'No instructions available',  // Keep as string
             theme: 'Mixologist recommendation',
             insight: result || 'No insight available'
         };
@@ -110,17 +119,21 @@ function App() {
     };
 
     // Function to handle sign selection from Horoscope
-    const handleSignSelect = (sign: AstrologySign, result: string) => {
-        try {
-            // Try to parse the result as JSON first
-            const parsedResult = JSON.parse(result);
-            setApiResult(parsedResult as HoroscopeSuggestion);
-        } catch (e) {
-            // If parsing fails, use the parseStringToHoroscope function
-            const horoscopeData = parseStringToHoroscope(result, `${sign.displayName} Cosmic Cocktail`);
-            setApiResult(horoscopeData);
-        }
+    const handleSignSelect = (sign: AstrologySign, result: HoroscopeResult) => {
+        // Now the interfaces match perfectly, so we can pass the result directly
+        const parsedResult: HoroscopeSuggestion = {
+            sign: result.sign,
+            cocktailName: result.cocktailName,
+            moonPhase: result.moonPhase,
+            ruler: result.ruler,
+            element: result.element,
+            ingredients: result.ingredients,      // Now both are string[]
+            instructions: result.instructions,   // Now both are string
+            theme: result.theme,
+            insight: result.insight,
+        };
         
+        setApiResult(parsedResult);
         setSearchQuery(`${sign.displayName} Cosmic Cocktail`);
         setError(null);
         setIsPopupVisible(true);
