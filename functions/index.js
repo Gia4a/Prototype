@@ -1,6 +1,7 @@
 // functions/index.js - Firebase Functions API
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
+const axios = require('axios');
 
 // Import your recipe system
 const { 
@@ -12,7 +13,7 @@ const {
   BASE_RECIPES,
   SIGNS,
   PLANETARY_MODIFIERS 
-} = require('./recipeSystem');
+} = require('./horescopeRecipe');
 
 // API Endpoint: Get specific recipe
 exports.getRecipe = functions.https.onRequest((req, res) => {
@@ -91,21 +92,46 @@ exports.getDailyMessage = functions.https.onCall(async (data, context) => {
   }
   
   try {
-    const recipe = getRecipe(sign, moonPhase);
-    const prompt = generateDailyMessage(sign, recipe);
+    const recipe = getRecipe(sign, moonPhase); // You already have the recipe data
+    const prompt = generateDailyMessage(sign, recipe); // This now asks for JSON
     
     // Call Gemini API here
-    const geminiResponse = await callGeminiAPI(prompt);
+    const geminiResponseString = await callGeminiAPI(prompt); // This is now a JSON string
     
-    return {
-      success: true,
-      message: geminiResponse,
-      recipe_name: recipe.final_recipe.name,
-      sign: sign,
-      moon_phase: moonPhase
+    // --- START OF CHANGES ---
+
+    // 1. Parse the JSON string from Gemini
+    const parsedGeminiData = JSON.parse(geminiResponseString);
+
+    // 2. Combine your local recipe data with the AI-generated text
+    const finalResponseObject = {
+        sign: sign,
+        cocktailName: recipe.final_recipe.name,
+        moonPhase: moonPhase,
+        ruler: SIGNS[sign].ruler,
+        element: SIGNS[sign].element,
+        ingredients: [
+            recipe.final_recipe.base,
+            recipe.final_recipe.mixer,
+            recipe.final_recipe.citrus,
+            recipe.final_recipe.garnish
+        ].filter(Boolean), // .filter(Boolean) removes any null/empty ingredients
+        
+        // Use the parsed data from Gemini
+        instructions: parsedGeminiData.instructions,
+        theme: parsedGeminiData.theme,
+        insight: parsedGeminiData.insight
     };
+
+    // 3. Return the complete, structured object
+    return finalResponseObject;
+
+    // --- END OF CHANGES ---
+
   } catch (error) {
-    throw new functions.https.HttpsError('internal', 'Failed to generate message');
+    console.error("Error in getDailyMessage:", error);
+    // Add more descriptive error logging
+    throw new functions.https.HttpsError('internal', 'Failed to generate and parse daily message.', error.message);
   }
 });
 
@@ -150,13 +176,24 @@ function getCurrentMoonPhase() {
   return phases[phaseIndex];
 }
 
-// Gemini API integration (placeholder)
+// Gemini API integration
 async function callGeminiAPI(prompt) {
-  // Your Gemini API call here
-  // const response = await gemini.generateContent(prompt);
-  // return response.text;
-  
-  return "Today's cosmic energies align perfectly with this cocktail choice!";
+  try {
+    const response = await axios.post(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      { prompt },
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
+        },
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error('Error calling Gemini API:', error.response || error.message);
+    throw error;
+  }
 }
 
 // Batch function for multiple signs
@@ -182,4 +219,21 @@ exports.getBatchRecipes = functions.https.onRequest((req, res) => {
       processed_signs: signs.length
     });
   });
+});
+
+// API Endpoint: Get mixologist suggestion
+exports.getMixologistSuggestion = functions.https.onCall(async (data, context) => {
+  const query = data.query;
+
+  if (!query) {
+    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a query.');
+  }
+
+  // Example logic for generating a mixologist suggestion
+  const suggestion = `Based on your query '${query}', we suggest trying a classic Mojito!`;
+
+  return {
+    originalQuery: query,
+    mixologistSuggestion: suggestion
+  };
 });

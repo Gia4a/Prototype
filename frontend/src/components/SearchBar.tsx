@@ -39,13 +39,11 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
     </span>
 );
 
-// Define the props that SearchBar will receive from App.tsx
+// Updated SearchBarProps interface
 interface SearchBarProps {
-    // Cloud Function props
-    onNewSuggestion: (suggestion: string, error: string | null) => void;
-    onLoadingChange: (isLoading: boolean) => void;
-    onError: (errorMessage: string) => void;
-    onQueryChange?: (query: string) => void;
+    onNewSuggestion: (suggestion: string | null, query?: string) => void;
+    onLoadingChange: (loading: boolean) => void;
+    onError: (error: string) => void;
     isLoading: boolean;
 }
 
@@ -53,7 +51,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     onNewSuggestion, 
     onLoadingChange, 
     onError, 
-    onQueryChange,
     isLoading 
 }) => {
     const [query, setQuery] = useState('');
@@ -68,11 +65,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
         }
 
         onLoadingChange(true); // Notify App.tsx that loading has started
-        
-        // Update query in parent component for popup title
-        if (onQueryChange) {
-            onQueryChange(searchQuery.trim());
-        }
 
         try {
             const callMixologistFunction = httpsCallable(functions, 'getMixologistSuggestion');
@@ -80,17 +72,16 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
             const suggestion = (result.data as any).mixologistSuggestion;
             const originalQuery = (result.data as any).originalQuery;
-            const generatedPrompt = (result.data as any).generatedPrompt;
 
-            // Pass the result back up to App.tsx
-            onNewSuggestion(suggestion, null);
-            console.log("Full Cloud Function Response:", { originalQuery, generatedPrompt, suggestion });
+            // Pass the result and query back up to App.tsx
+            onNewSuggestion(suggestion, searchQuery.trim());
+            console.log("Full Cloud Function Response:", { originalQuery, suggestion });
 
         } catch (err: any) {
             console.error("Error calling mixologist function:", err);
             const errorMessage = `Error: ${err.message || 'Couldn\'t get a suggestion from the mixologist.'}`;
             onError(errorMessage);
-            onNewSuggestion("", errorMessage);
+            onNewSuggestion(null, searchQuery.trim());
         } finally {
             onLoadingChange(false); // Notify App.tsx that loading has finished
         }

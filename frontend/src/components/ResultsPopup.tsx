@@ -1,10 +1,13 @@
 import React, { useEffect } from 'react';
 import './ResultsPopup.css';
+import CompactHoroscopeCard from './CompactHoroscopeCard';
+
+
 
 interface ResultsPopupProps {
     isOpen: boolean;
     onClose: () => void;
-    suggestion: string | null;
+    suggestion: any; // Accept any type
     error: string | null;
     searchQuery?: string;
     visible?: boolean;
@@ -52,83 +55,120 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         ).join(' ');
     };
 
-    // Parse mixologist response into structured parts
-    const parseResponse = (text: string) => {
-        // Extract drink name (first sentence or specific pattern)
-        const drinkNameMatch = text.match(/(?:"|“)([^"”]+)(?:"|”)/);
-        const drinkName = drinkNameMatch ? drinkNameMatch[1] : 'Unnamed Drink';
+    // Force everything through CompactHoroscopeCard - no exceptions!
+    const createCompactData = (rawData: any, query?: string) => {
+        console.log('Raw suggestion data:', rawData);
+        console.log('Search query:', query);
 
-        // Extract description (everything before ingredients/steps)
-        let description = text;
-        let ingredients: string[] = [];
-        let steps: string[] = [];
-
-        // Find ingredients section
-        const ingredientsMatch = text.match(/ingredients?:?\s*([\s\S]*?)(?=(?:steps?|instructions?|method):|$)/i);
-        if (ingredientsMatch) {
-            const ingredientsText = ingredientsMatch[1].trim();
-            ingredients = ingredientsText
-                .split(/[,\n]/)
-                .map(item => item.trim())
-                .filter(item => item && item.length > 2)
-                .slice(0, 6); // Limit to 6 ingredients to fit
-
-            // Remove ingredients section from description
-            description = text.replace(ingredientsMatch[0], '').trim();
+        if (!rawData) {
+            return {
+                sign: 'Mixologist',
+                cocktailName: 'Special Recommendation',
+                moonPhase: 'current phase',
+                ruler: 'Mercury',
+                element: 'Spirit',
+                ingredients: ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'],
+                instructions: 'Mix according to preferences',
+                theme: 'Professional recommendation',
+                insight: 'No recommendation available at this time.'
+            };
         }
 
-        // Find steps/instructions section
-        const stepsMatch = text.match(/(?:steps?|instructions?|method):?\s*([\s\S]*?)$/i);
-        if (stepsMatch) {
-            const stepsText = stepsMatch[1].trim();
-            steps = stepsText
-                .split(/(?:\d+\.|\n)/)
-                .map(step => step.trim())
-                .filter(step => step && step.length > 5)
-                .slice(0, 5); // Limit to 5 steps to fit
-
-            // Remove steps section from description
-            description = description.replace(stepsMatch[0], '').trim();
+        // If it's already a proper object with the right structure
+        if (typeof rawData === 'object' && rawData.sign && rawData.cocktailName) {
+            return {
+                sign: rawData.sign,
+                cocktailName: rawData.cocktailName,
+                moonPhase: rawData.moonPhase || 'current phase',
+                ruler: rawData.ruler || 'Mercury',
+                element: rawData.element || 'Spirit',
+                ingredients: [
+                    rawData.base || 'Base Spirit',
+                    rawData.mixer || 'Mixer',
+                    rawData.citrus || 'Garnish'
+                ],
+                instructions: Array.isArray(rawData.instructions) 
+                    ? rawData.instructions.join(', ') 
+                    : rawData.instructions || 'Mix well',
+                theme: rawData.theme || 'Cosmic influence',
+                insight: rawData.insight || 'Enjoy responsibly'
+            };
         }
 
-        // If no structured ingredients/steps found, try to extract from general text
-        if (ingredients.length === 0 || steps.length === 0) {
-            const lines = text.split('\n').filter(line => line.trim());
-            
-            // Look for lines that might be ingredients (contain measurements, common ingredients)
-            const possibleIngredients = lines.filter(line => {
-                const lower = line.toLowerCase();
-                return /\d+\s*(oz|ounce|ml|cl|cup|tbsp|tsp|splash|dash)/.test(lower) ||
-                       /(rum|vodka|gin|whiskey|bourbon|tequila|beer|wine|lime|lemon|sugar|syrup)/.test(lower);
-            }).slice(0, 4);
+        // If it's a string (most common case)
+        const dataString = typeof rawData === 'string' ? rawData : JSON.stringify(rawData);
+        
+        // Extract sign from query or default
+        let sign = 'Mixologist';
+        if (query && query.includes('Cosmic Cocktail')) {
+            sign = query.replace(' Cosmic Cocktail', '');
+        }
 
-            if (possibleIngredients.length > 0 && ingredients.length === 0) {
-                ingredients = possibleIngredients;
+        // Try to extract cocktail name from the string
+        let cocktailName = 'Special Cocktail';
+        
+        // Look for common cocktail patterns
+        const cocktailPatterns = [
+            /([A-Za-z\s']+(?:Martini|Manhattan|Old Fashioned|Negroni|Daiquiri|Margarita|Mojito|Cosmopolitan|Sidecar|Gimlet))/gi,
+            /([A-Za-z\s']+Cocktail)/gi,
+            /([A-Za-z\s']+Sour)/gi,
+            /([A-Za-z\s']+Fizz)/gi
+        ];
+
+        for (const pattern of cocktailPatterns) {
+            const match = dataString.match(pattern);
+            if (match && match[0]) {
+                cocktailName = match[0].trim();
+                break;
             }
-
-            // Look for action words that indicate steps
-            const possibleSteps = lines.filter(line => {
-                const lower = line.toLowerCase();
-                return /(add|pour|fill|shake|stir|mix|garnish|serve|top|strain)/.test(lower) && 
-                       line.length > 10;
-            }).slice(0, 4);
-
-            if (possibleSteps.length > 0 && steps.length === 0) {
-                steps = possibleSteps;
-            }
         }
 
-        // Clean up description - take first meaningful paragraph
-        const descriptionParagraphs = description.split(/\n\n|\. /).filter(p => p.trim().length > 20);
-        const cleanDescription = descriptionParagraphs[0]?.trim() || text.split('\n')[0] || text.substring(0, 200) + '...';
+        // If no cocktail found, create one based on query
+        if (cocktailName === 'Special Cocktail' && query) {
+            cocktailName = `${sign}'s Special`;
+        }
+
+        // Extract basic ingredients and instructions
+        let ingredients = ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'];
+        let instructions = 'Mix according to mixologist recommendations';
+        
+        // Try to find ingredients in the string
+        const ingredientKeywords = ['vodka', 'gin', 'whiskey', 'rum', 'tequila', 'bourbon', 'scotch'];
+        const foundSpirit = ingredientKeywords.find(spirit => 
+            dataString.toLowerCase().includes(spirit)
+        );
+        
+        if (foundSpirit) {
+            ingredients[0] = foundSpirit.charAt(0).toUpperCase() + foundSpirit.slice(1);
+        }
+
+        // Create a clean insight from the beginning of the string
+        let insight = 'A carefully crafted cocktail recommendation.';
+        if (dataString.length > 50) {
+            // Take first meaningful sentence or up to 120 characters
+            const sentences = dataString.split('.').filter(s => s.trim().length > 20);
+            if (sentences.length > 0) {
+                insight = sentences[0].trim() + '.';
+            } else {
+                insight = dataString.substring(0, 120).trim() + '...';
+            }
+        }
 
         return {
-            drinkName,
-            description: cleanDescription,
-            ingredients: ingredients.length > 0 ? ingredients : ['Information not available in structured format'],
-            steps: steps.length > 0 ? steps : ['Please refer to the description above for preparation details']
+            sign: sign,
+            cocktailName: cocktailName,
+            moonPhase: 'current phase',
+            ruler: 'Mercury',
+            element: 'Spirit',
+            ingredients: ingredients,
+            instructions: instructions,
+            theme: 'Mixologist recommendation',
+            insight: insight
         };
     };
+
+    const compactData = createCompactData(suggestion, searchQuery);
+    console.log('Final compact data:', compactData);
 
     return (
         <div className="results-popup-overlay" onClick={handleOverlayClick}>
@@ -149,52 +189,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                             <h3>Something went wrong</h3>
                             <p>{error}</p>
                         </div>
-                    ) : suggestion ? (
-                        <>
-                            {/* Drink Name */}
-                            <div className="drink-name">
-                                <h3>{parseResponse(suggestion).drinkName}</h3>
-                            </div>
-
-                            {/* Top Row - Description */}
-                            <div className="mixologist-description">
-                                <h4>🍸 Mixologist's Suggestion</h4>
-                                <div className="mixologist-description-text">
-                                    {parseResponse(suggestion).description}
-                                </div>
-                            </div>
-
-                            {/* Bottom Row - Ingredients & Steps */}
-                            <div className="recipe-container">
-                                {/* Ingredients (2/5 width) */}
-                                <div className="ingredients-section">
-                                    <h4>📝 Ingredients</h4>
-                                    <div className="ingredients-list">
-                                        {parseResponse(suggestion).ingredients.map((ingredient, index) => (
-                                            <div key={index} className="ingredient-item">
-                                                <span>{ingredient}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Steps (3/5 width) */}
-                                <div className="steps-section">
-                                    <h4>🔄 Steps</h4>
-                                    <div className="steps-list">
-                                        {parseResponse(suggestion).steps.map((step, index) => (
-                                            <div key={index} className="step-item">
-                                                <span>{step}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-                        </>
                     ) : (
-                        <div className="loading-container">
-                            <h3>Getting mixologist's suggestion...</h3>
-                            <div className="loading-spinner" />
+                        <div className="compact-card-container">
+                            <CompactHoroscopeCard data={compactData} />
                         </div>
                     )}
                 </div>

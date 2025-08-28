@@ -61,42 +61,38 @@ const PLANETARY_MODIFIERS = {
 
 // Get Recipe for Any Sign/Moon Phase
 function getRecipe(sign, moonPhase) {
-  const signData = SIGNS[sign];
-  const element = signData.element;
-  const planet = signData.ruler;
-  
-  // Get base recipe
-  const baseRecipeKey = `${element}_${moonPhase}`;
-  const baseRecipe = BASE_RECIPES[baseRecipeKey];
-  
-  if (!baseRecipe) {
-    return null;
+  if (!SIGNS[sign]) {
+    throw new Error(`Invalid sign: ${sign}`);
   }
-  
-  // Apply planetary modifier
-  const modifier = PLANETARY_MODIFIERS[planet];
-  
+
+  const signData = SIGNS[sign];
+  const baseRecipeKey = `${signData.element}_${moonPhase}`;
+  const baseRecipe = BASE_RECIPES[baseRecipeKey];
+
+  if (!baseRecipe) {
+    throw new Error(`No recipe found for ${signData.element} ${moonPhase}`);
+  }
+
+  const planetaryModifier = PLANETARY_MODIFIERS[signData.ruler];
+
   return {
     sign: sign,
-    element: element,
+    element: signData.element,
     moon_phase: moonPhase,
-    planetary_ruler: planet,
-    base_recipe: baseRecipe,
-    modifications: {
-      spirit_style: modifier.spirit_modifier,
-      color_theme: modifier.color,
-      intensity: modifier.intensity,
-      suggested_garnish: modifier.garnish,
-      personalized_name: `${sign.charAt(0).toUpperCase() + sign.slice(1)}'s ${baseRecipe.name}`
-    },
-    final_recipe: {
+    planetary_ruler: signData.ruler,
+    recipe: {
       name: `${sign.charAt(0).toUpperCase() + sign.slice(1)}'s ${baseRecipe.name}`,
-      base_spirit: `${modifier.spirit_modifier}_${baseRecipe.base_spirit}`.replace('_undefined', ''),
+      base_spirit: `${planetaryModifier.spirit_modifier}_${baseRecipe.base_spirit}`.replace('_undefined', ''),
       mixer: baseRecipe.mixer,
       instructions: baseRecipe.instructions,
-      theme: `${baseRecipe.theme} with ${planet} influence`,
-      astrological_note: `Perfect for ${sign} during ${moonPhase.replace('_', ' ')}`
-    }
+      theme: `${baseRecipe.theme} with ${signData.ruler} influence`
+    },
+    planetary_influence: {
+      spirit_style: planetaryModifier.spirit_modifier,
+      color_theme: planetaryModifier.color,
+      energy_level: planetaryModifier.intensity
+    },
+    astrological_note: `Perfect for ${sign.charAt(0).toUpperCase() + sign.slice(1)} during ${moonPhase.replace('_', ' ')}`
   };
 }
 
@@ -106,15 +102,30 @@ function getCurrentRecipe(userSign) {
   return getRecipe(userSign, currentMoonPhase);
 }
 
-// Generate Daily Message (for Gemini AI)
+// In your recipeSystem.js file
+
 function generateDailyMessage(sign, recipe) {
-  const signData = SIGNS[sign];
-  const planet = signData.ruler;
-  
-  const prompt = `Write a 2-3 sentence daily horoscope message for ${sign} about why "${recipe.final_recipe.name}" is perfect for them today. 
-  Mention ${planet}'s influence and the current moon phase energy. Keep it mystical but friendly.`;
-  
-  return prompt; // Send this to Gemini API
+  const { name, base, mixer, citrus, garnish } = recipe.final_recipe;
+  const { ruler, element, quality } = SIGNS[sign];
+
+  // The KEY is to add instructions for the AI to format its response as JSON.
+  const prompt = `
+    Create a cosmic cocktail horoscope for the zodiac sign ${sign}.
+    The cocktail is called "${name}".
+    The ingredients are: ${base}, ${mixer}, ${citrus}, and ${garnish}.
+    The sign's ruling planet is ${ruler} and its element is ${element}.
+
+    Analyze these details and generate a creative, insightful, and slightly mystical horoscope message.
+
+    IMPORTANT: Respond ONLY with a valid JSON object. Do not include any text before or after the JSON object.
+    The JSON object must have the following structure:
+    {
+      "insight": "A detailed astrological insight for the user based on the sign, planet, and cocktail theme. This should be 2-4 sentences.",
+      "theme": "A short, catchy theme or motto for the day, like 'Quiet reflection with mercury influence'.",
+      "instructions": "Simple, clear instructions to make the cocktail."
+    }
+  `;
+  return prompt;
 }
 
 // All Moon Phases
@@ -128,13 +139,12 @@ function getAllRecipesForSign(sign) {
   return MOON_PHASES.map(phase => getRecipe(sign, phase));
 }
 
-// Mock Moon Phase Function (replace with real API)
+// Update getCurrentMoonPhase to align with Horoscope.tsx
 function getCurrentMoonPhase() {
-  const phases = MOON_PHASES;
   const now = new Date();
   const dayOfMonth = now.getDate();
   const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
-  return phases[phaseIndex];
+  return MOON_PHASES[phaseIndex];
 }
 
 // Example Usage Functions
@@ -167,8 +177,8 @@ function getStats() {
   };
 }
 
-// Export for use in app
-export {
+// Replace existing exports with updated functions
+module.exports = {
   getRecipe,
   getCurrentRecipe,
   getAllRecipesForSign,
@@ -177,7 +187,8 @@ export {
   getStats,
   BASE_RECIPES,
   SIGNS,
-  PLANETARY_MODIFIERS
+  PLANETARY_MODIFIERS,
+  getCurrentMoonPhase
 };
 
 // Example usage:
