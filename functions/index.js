@@ -2,6 +2,9 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true }); // Temporarily allow all origins for testing
 const axios = require('axios');
+const admin = require('firebase-admin');
+
+admin.initializeApp();
 
 // Import your recipe system
 const { 

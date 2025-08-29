@@ -403,9 +403,7 @@ class HoroscopeRecipes {
   }
 }
 
-const FIREBASE_FUNCTION_URL = process.env.NODE_ENV === 'development' 
-  ? "/api/getAllRecipesForSign" 
-  : "https://us-central1-blind-pig-bar.cloudfunctions.net/getAllRecipesForSign";
+const FIREBASE_FUNCTION_URL = "https://us-central1-blind-pig-bar.cloudfunctions.net/getAllRecipesForSign";
 // Updated to use proxy for development and direct URL for production
 
 const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) => void }) => {
