@@ -1,8 +1,9 @@
 // functions/index.js - Firebase Functions API
 const functions = require('firebase-functions');
-const cors = require('cors')({ origin: true }); // Temporarily allow all origins for testing
-const axios = require('axios');
+const cors = require('cors')({ origin: true }); // Allow all origins for development
 const admin = require('firebase-admin');
+const { VertexAI } = require('@google-cloud/vertexai');
+const axios = require('axios'); // Revert back to axios for Gemini API calls
 
 admin.initializeApp();
 
@@ -66,30 +67,69 @@ exports.getCurrentRecipe = functions.https.onRequest((req, res) => {
 });
 
 // API Endpoint: Get all recipes for a sign (8 moon phases)
-exports.getAllRecipesForSign = functions.https.onRequest((req, res) => {
-  // Handle CORS
-  return cors(req, res, () => {
-    // Only allow POST requests
-    if (req.method !== 'POST') {
-      return res.status(405).json({ error: 'Method not allowed' });
+exports.getAllRecipesForSign = functions.https.onRequest((request, response) => {
+  cors(request, response, async () => {
+    console.log("Request received for getAllRecipesForSign!"); // Log the request
+
+    if (request.method !== 'POST') {
+      // Handle non-POST methods
+      return response.status(405).send('Method Not Allowed');
     }
 
     try {
-      const { sign, displayName, date } = req.body;
-      
-      // Your existing logic here
-      // For now, I'll provide a mock response
-      const mockResponse = {
-        moonPhase: "waning_gibbous",
-        fourLineIdiom: `${displayName}, the moon begins its gentle retreat. Time to harvest what you've carefully sown. Your cosmic journey bears sweet fruit. Gratitude fills the celestial spaces within.`,
-        dailyTheme: "Releasing thoughts with cosmic influence",
-        planetaryAlignments: `${displayName}'s ruling planet aligns favorably with current lunar energies`
-      };
+      const { sign, displayName, date } = request.body; // 'date' is typically an ISO string from frontend
+      console.log("Received data:", request.body);
 
-      res.status(200).json(mockResponse);
+      // --- NEW LOGIC: Call Gemini for Astrological Data ---
+      // Craft a prompt to get the specific data points from Gemini
+      const geminiPrompt = `
+        Given the zodiac sign "${sign}" and the current date "${new Date(date).toDateString()}", 
+        provide the following astrological information in a JSON object:
+        - The current moon phase (use a format like "new_moon", "full_moon", "waxing_crescent").
+        - A four-line idiom or insightful verse for this sign based on today's astrological energies.
+        - A concise daily theme for this sign.
+        - Any relevant current planetary alignments or influences that generally apply to this sign.
+
+        Respond ONLY with a valid JSON object. Do not include any text before or after the JSON object.
+        The JSON object must have the following structure:
+        {
+          "moonPhase": "string",
+          "fourLineIdiom": "string",
+          "dailyTheme": "string",
+          "planetaryAlignments": "string"
+        }
+      `;
+
+      console.log("Sending prompt to Gemini:", geminiPrompt);
+      const geminiResponseRaw = await callGeminiAPI(geminiPrompt);
+
+      // --- IMPORTANT: Adapt this line based on the actual structure of Gemini's response ---
+      // Gemini's generateContent typically returns results in candidates[0].content.parts[0].text
+      const geminiResponseText = geminiResponseRaw.candidates[0].content.parts[0].text;
+      console.log("Raw Gemini response text:", geminiResponseText);
+
+      // Parse the JSON string received from Gemini
+      const astrologyDataFromGemini = JSON.parse(geminiResponseText);
+      console.log("Parsed Gemini data:", astrologyDataFromGemini);
+      // --- END NEW LOGIC ---
+
+      response.status(200).json({
+        success: true,
+        // Pass the data directly from Gemini to the frontend
+        moonPhase: astrologyDataFromGemini.moonPhase,
+        fourLineIdiom: astrologyDataFromGemini.fourLineIdiom,
+        dailyTheme: astrologyDataFromGemini.dailyTheme,
+        planetaryAlignments: astrologyDataFromGemini.planetaryAlignments,
+      });
+
     } catch (error) {
-      console.error('Error:', error);
-      res.status(500).json({ error: 'Internal server error' });
+      console.error("Full error caught in getAllRecipesForSign:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+      // More robust error response for frontend
+      response.status(500).json({
+          success: false,
+          error: "Failed to get astrological insights from Gemini.",
+          details: error.message
+      });
     }
   });
 });
@@ -187,22 +227,31 @@ function getCurrentMoonPhase() {
   return phases[phaseIndex];
 }
 
-// Gemini API integration
+// Updated Gemini API integration
 async function callGeminiAPI(prompt) {
   try {
+    const apiKey = process.env.GENERATIVE_LANGUAGE_API_KEY; // Ensure this is set in your environment variables
+
     const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-      { prompt },
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', // Updated to gemini-2.5-flash
+      { contents: [{ parts: [{ text: prompt }] }] },
       {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.GEMINI_API_KEY}`,
         },
+        params: {
+          key: apiKey
+        }
       }
     );
-    return response.data;
+
+    if (response.data && response.data.candidates && response.data.candidates.length > 0) {
+      return response.data.candidates[0].content.parts[0].text;
+    } else {
+      throw new Error("Gemini response was empty or malformed.");
+    }
   } catch (error) {
-    console.error('Error calling Gemini API:', error.response || error.message);
+    console.error("Error calling Gemini API:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
     throw error;
   }
 }

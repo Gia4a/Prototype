@@ -508,7 +508,7 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
     try {
       // Call your Firebase Cloud Function instead of direct Gemini API
       const response = await fetch(FIREBASE_FUNCTION_URL, {
-        method: 'POST',
+        method: 'POST', // Ensure POST method is used
         headers: {
           'Content-Type': 'application/json',
         },
