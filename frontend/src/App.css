@@ -195,11 +195,79 @@
   }
 }
 
-/* Styling for the zodiac sign grid container */
 .horoscope-grid-container {
   position: absolute;
-  top: 28%;
+  top: 50%;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate(-50%, -50%);
   z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 500px !important;
+  max-width: 500px !important;
+  min-width: 500px !important;
+  height: 400px !important;
+  max-height: 400px !important;
+  min-height: 400px !important;
+  box-sizing: border-box;
+  margin: 0 auto;
+}
+
+/* RESPONSIVE ADJUSTMENTS for standard containers */
+@media (max-width: 650px) {
+  .horoscope-standard-parent,
+  .horoscope-grid-container {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    min-width: 300px !important;
+    height: 350px !important;
+    max-height: 350px !important;
+    min-height: 350px !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .horoscope-standard-parent,
+  .horoscope-grid-container {
+    width: 98vw !important;
+    max-width: 98vw !important;
+    min-width: 280px !important;
+    height: 320px !important;
+    max-height: 320px !important;
+    min-height: 320px !important;
+  }
+}
+
+/* Animation for disappearing into the Daily Horoscope button */
+@keyframes disappear-to-button {
+  0% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.2) translate(50px, -50px); /* Adjust to match button position */
+  }
+}
+
+/* Animation for reappearing from the Daily Horoscope button */
+@keyframes reappear-from-button {
+  0% {
+    opacity: 0;
+    transform: scale(0.2) translate(50px, -50px); /* Adjust to match button position */
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translate(0, 0);
+  }
+}
+
+/* Apply animation to the horoscope grid */
+.horoscope-grid-container.disappear {
+  animation: disappear-to-button 0.5s forwards;
+}
+
+.horoscope-grid-container.reappear {
+  animation: reappear-from-button 0.5s forwards;
 }

@@ -17,63 +17,178 @@ interface CompactHoroscopeCardProps {
 }
 
 const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => {
-  const defaultData: HoroscopeData = {
-    sign: "Default", // Added missing 'sign' property
-    cocktailName: "Vodka Soda",
-    moonPhase: "waning crescent",
-    ruler: "Mercury",
-    element: "Air",
-    ingredients: ["2oz Vodka", "Soda Water", "Lime Wedge"],
-    instructions: "Add vodka to glass with ice, top with soda water, squeeze lime wedge",
-    theme: "Quiet reflection with mercury influence",
-    insight: "Waning Crescent energy invites introspection, time to refine and release with mindful mixology."
+  // STANDARDIZED container to match horoscope-grid-container dimensions
+  const containerStyle: React.CSSProperties = {
+    width: '100%',
+    maxWidth: '600px',
+    height: '400px', // Match horoscope-grid-container height
+    backgroundColor: '#111827',
+    color: 'white',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: '8px',
+    boxSizing: 'border-box',
+    margin: '0 auto'
   };
 
-  const horoscopeData = data || defaultData;
+  const cardStyle: React.CSSProperties = {
+    width: '100%',
+    height: '100%',
+    maxWidth: '100%',
+    backgroundColor: '#1f2937',
+    borderRadius: '8px',
+    border: '1px solid #3b82f6',
+    overflow: 'hidden',
+    display: 'flex',
+    flexDirection: 'column'
+  };
+
+  const headerStyle: React.CSSProperties = {
+    background: 'linear-gradient(to right, #2563eb, #9333ea)',
+    padding: '12px',
+    textAlign: 'center',
+    flexShrink: 0
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: '1.125rem',
+    fontWeight: 'bold',
+    margin: '0',
+    textShadow: '0px 4px 8px rgba(0, 0, 0, 0.7)',
+    color: 'white'
+  };
+
+  const contentStyle: React.CSSProperties = {
+    padding: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    flex: 1,
+    overflow: 'hidden'
+  };
+
+  const descriptionStyle: React.CSSProperties = {
+    textAlign: 'center',
+    fontSize: '0.875rem',
+    lineHeight: '1.625',
+    backgroundColor: '#374151',
+    borderRadius: '4px',
+    padding: '8px',
+    flexShrink: 0
+  };
+
+  const insightStyle: React.CSSProperties = {
+    fontStyle: 'italic',
+    color: '#bfdbfe',
+    margin: '0'
+  };
+
+  const themeStyle: React.CSSProperties = {
+    color: '#d8b4fe',
+    fontSize: '0.75rem',
+    marginTop: '4px',
+    display: 'block'
+  };
+
+  const detailsStyle: React.CSSProperties = {
+    display: 'grid',
+    gridTemplateColumns: '1fr 3fr',
+    gap: '8px',
+    fontSize: '0.875rem',
+    flex: 1,
+    minHeight: 0
+  };
+
+  const ingredientsTitleStyle: React.CSSProperties = {
+    fontWeight: '600',
+    color: '#4ade80',
+    marginBottom: '4px',
+    marginTop: '0',
+    fontSize: 'inherit'
+  };
+
+  const ingredientsListStyle: React.CSSProperties = {
+    fontSize: '0.75rem',
+    margin: '0',
+    padding: '0',
+    listStyle: 'none',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+    overflow: 'hidden'
+  };
+
+  const ingredientItemStyle: React.CSSProperties = {
+    color: '#d1d5db',
+    whiteSpace: 'nowrap',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis'
+  };
+
+  const instructionsTitleStyle: React.CSSProperties = {
+    fontWeight: '600',
+    color: '#fb923c',
+    marginBottom: '4px',
+    marginTop: '0',
+    fontSize: 'inherit'
+  };
+
+  const instructionsTextStyle: React.CSSProperties = {
+    fontSize: '0.75rem',
+    color: '#d1d5db',
+    lineHeight: '1.625',
+    margin: '0',
+    overflow: 'hidden',
+    display: '-webkit-box',
+    WebkitLineClamp: 4,
+    WebkitBoxOrient: 'vertical'
+  };
 
   return (
-    <div className="w-full h-full bg-gray-900 text-white flex items-center justify-center p-2">
-      <div className="w-[95%] max-w-md bg-gray-800 rounded-lg border border-blue-400 overflow-hidden">
+    <div style={containerStyle}>
+      <div style={cardStyle}>
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-3 text-center">
-          <h2 className="text-lg font-bold">{horoscopeData.cocktailName}</h2>
-          <div className="flex justify-center items-center gap-2 mt-1 text-sm">
-            <span>🌙 {horoscopeData.moonPhase}</span>
-            <span>•</span>
-            <span>🪐 {horoscopeData.ruler}</span>
+        <div style={headerStyle}>
+          <h2 style={titleStyle}>
+            {data.cocktailName}
+          </h2>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+            <span>🌙 {data.moonPhase}</span>
+            <span>🪐 {data.ruler}</span>
           </div>
         </div>
 
         {/* Content */}
-        <div className="p-3 space-y-3">
-          {/* 4-Line Idiom Style Description */}
-          <div className="text-center text-sm leading-relaxed bg-gray-700 rounded p-2">
-            <p className="italic text-blue-200">
-              {horoscopeData.insight}
+        <div style={contentStyle}>
+          {/* Description */}
+          <div style={descriptionStyle}>
+            <p style={insightStyle}>
+              {data.insight}
               <br />
-              <span className="text-purple-300 text-xs mt-1 block">
-                {horoscopeData.theme}
+              <span style={themeStyle}>
+                {data.theme}
               </span>
             </p>
           </div>
 
           {/* Ingredients & Instructions Row */}
-          <div className="grid grid-cols-4 gap-2 text-sm">
-            {/* Ingredients Column (1 width) */}
-            <div className="col-span-1">
-              <h4 className="font-semibold text-green-400 mb-1">🍹 Ingredients:</h4>
-              <ul className="text-xs space-y-0.5">
-                {horoscopeData.ingredients.map((ingredient, index) => (
-                  <li key={index} className="text-gray-300">• {ingredient}</li>
+          <div style={detailsStyle}>
+            {/* Ingredients Column */}
+            <div>
+              <h4 style={ingredientsTitleStyle}>🍹 Ingredients:</h4>
+              <ul style={ingredientsListStyle}>
+                {data.ingredients.map((ingredient, index) => (
+                  <li key={index} style={ingredientItemStyle}>• {ingredient}</li>
                 ))}
               </ul>
             </div>
 
-            {/* Instructions Column (3 width) */}
-            <div className="col-span-3">
-              <h4 className="font-semibold text-orange-400 mb-1">⚡ Method:</h4>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                {horoscopeData.instructions}
+            {/* Instructions Column */}
+            <div>
+              <h4 style={instructionsTitleStyle}>⚡ Method:</h4>
+              <p style={instructionsTextStyle}>
+                {data.instructions}
               </p>
             </div>
           </div>

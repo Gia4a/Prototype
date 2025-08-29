@@ -48,23 +48,11 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         }
     };
 
-    const capitalizeTitle = (title: string) => {
-        return title.toLowerCase().split(' ').map(word => 
-            word.charAt(0).toUpperCase() + word.slice(1)
-        ).join(' ');
-    };
-
-    // Helper function to format ingredient names
-    const formatIngredientName = (ingredient: string): string => {
-        return ingredient
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
-    };
-
     // Create proper data format for CompactHoroscopeCard
     const createCompactData = (rawData: any, query?: string): HoroscopeData => {
         console.log('Raw suggestion data:', rawData);
-        console.log('Search query:', query);
+        // Update search query to use cocktail name instead of sign
+        console.log('Search query:', rawData.cocktailName || query);
 
         if (!rawData) {
             return {
@@ -87,26 +75,15 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             insight = sentences.slice(0, 2).join(' ').trim();
         }
 
-        // Create proper ingredients array from individual components
-        const ingredients = [];
-        if (rawData.base && rawData.base !== 'Premium Spirit') {
-            ingredients.push(`2oz ${formatIngredientName(rawData.base)}`);
-        }
-        if (rawData.mixer && rawData.mixer !== 'Quality Mixer') {
-            ingredients.push(formatIngredientName(rawData.mixer));
-        }
-        if (rawData.citrus && rawData.citrus !== 'Fresh Garnish') {
-            ingredients.push(formatIngredientName(rawData.citrus));
-        }
+        // Create proper ingredients array from raw data
+        const ingredients = rawData.ingredients || ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'];
 
-        // Fallback ingredients if none found
-        if (ingredients.length === 0) {
-            ingredients.push('Premium Spirits', 'Quality Mixers', 'Fresh Garnish');
-        }
+        // Update header to use cocktail name directly
+        const header = rawData.cocktailName || 'Special Recommendation';
 
         return {
             sign: rawData.sign || 'Mixologist',
-            cocktailName: rawData.cocktailName || 'Special Recommendation',
+            cocktailName: header,
             moonPhase: rawData.moonPhase || 'current phase',
             ruler: rawData.ruler || 'Mercury',
             element: rawData.element || 'Spirit',
@@ -128,12 +105,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 <button onClick={onClose} className="results-popup-close-button">
                     &times;
                 </button>
-
-                {searchQuery && (
-                    <h2 className="popup-main-title">
-                        <strong>{capitalizeTitle(searchQuery)}</strong>
-                    </h2>
-                )}
 
                 <div className="popup-body">
                     {error ? (

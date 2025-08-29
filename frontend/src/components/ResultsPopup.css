@@ -1,4 +1,4 @@
-/* Updated ResultsPopup.css to optimize for CompactHoroscopeCard */
+/* Updated ResultsPopup.css using the standardized container system */
 
 /* Center the popup overlay */
 .results-popup-overlay {
@@ -14,19 +14,27 @@
     z-index: 1000;
 }
 
-/* Optimized popup content for compact card */
+/* STANDARDIZED popup content using horoscope-standard-parent dimensions */
 .results-popup-content {
     background-color: #1a1a1a;
     color: white;
     border-radius: 12px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    width: min(500px, 95vw);
-    max-height: 90vh;
+    
+    /* Inherit from standard parent system */
+    width: 600px !important;
+    max-width: 600px !important;
+    min-width: 600px !important;
+    height: 400px !important;
+    max-height: 400px !important;
+    min-height: 400px !important;
+    
     padding: 25px;
     position: relative;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Close button */
@@ -63,22 +71,29 @@
     flex-shrink: 0;
 }
 
-/* Popup body - optimized for compact card */
+/* Popup body - optimized for standardized size */
 .popup-body {
     color: white;
     display: flex;
     flex-direction: column;
     flex: 1;
     min-height: 0;
+    height: calc(100% - 80px); /* Account for title and margins */
 }
 
-/* Container for the compact card */
+/* Container for the compact card - STANDARDIZED to fill popup body */
 .compact-card-container {
-    width: 100%;
-    height: 100%;
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+    min-width: 100% !important;
+    min-height: 100% !important;
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 /* Loading spinner animation */
@@ -136,13 +151,16 @@
     margin-bottom: 20px;
 }
 
-/* Responsive adjustments for compact card */
-@media (max-width: 600px) {
+/* Responsive adjustments - match the standard parent responsive breakpoints */
+@media (max-width: 650px) {
     .results-popup-content {
-        width: 95%;
-        max-width: 95vw;
+        width: 95vw !important;
+        max-width: 95vw !important;
+        min-width: 300px !important;
+        height: 350px !important;
+        max-height: 350px !important;
+        min-height: 350px !important;
         padding: 15px;
-        margin: 10px;
     }
     
     .popup-main-title {
@@ -153,6 +171,12 @@
 
 @media (max-width: 400px) {
     .results-popup-content {
+        width: 98vw !important;
+        max-width: 98vw !important;
+        min-width: 280px !important;
+        height: 320px !important;
+        max-height: 320px !important;
+        min-height: 320px !important;
         padding: 10px;
     }
     
@@ -165,4 +189,13 @@
 .compact-card-container > * {
     max-width: 100%;
     max-height: 100%;
+}
+
+/* Text shadow overrides */
+.results-popup-content .horoscope-header-special {
+    text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.7) !important;
+}
+
+.results-popup-overlay .results-popup-content .compact-card-container .horoscope-header-special {
+    text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.7) !important;
 }

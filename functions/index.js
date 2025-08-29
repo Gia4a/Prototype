@@ -1,6 +1,6 @@
 // functions/index.js - Firebase Functions API
 const functions = require('firebase-functions');
-const cors = require('cors')({ origin: true });
+const cors = require('cors')({ origin: true }); // Temporarily allow all origins for testing
 const axios = require('axios');
 
 // Import your recipe system
@@ -64,22 +64,30 @@ exports.getCurrentRecipe = functions.https.onRequest((req, res) => {
 
 // API Endpoint: Get all recipes for a sign (8 moon phases)
 exports.getAllRecipesForSign = functions.https.onRequest((req, res) => {
-  cors(req, res, () => {
-    const { sign } = req.query;
-    
-    if (!sign) {
-      return res.status(400).json({
-        error: 'Missing required parameter: sign'
-      });
+  // Handle CORS
+  return cors(req, res, () => {
+    // Only allow POST requests
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
     }
-    
-    const recipes = getAllRecipesForSign(sign);
-    
-    res.json({
-      success: true,
-      data: recipes,
-      total_recipes: recipes.length
-    });
+
+    try {
+      const { sign, displayName, date } = req.body;
+      
+      // Your existing logic here
+      // For now, I'll provide a mock response
+      const mockResponse = {
+        moonPhase: "waning_gibbous",
+        fourLineIdiom: `${displayName}, the moon begins its gentle retreat. Time to harvest what you've carefully sown. Your cosmic journey bears sweet fruit. Gratitude fills the celestial spaces within.`,
+        dailyTheme: "Releasing thoughts with cosmic influence",
+        planetaryAlignments: `${displayName}'s ruling planet aligns favorably with current lunar energies`
+      };
+
+      res.status(200).json(mockResponse);
+    } catch (error) {
+      console.error('Error:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
   });
 });
 

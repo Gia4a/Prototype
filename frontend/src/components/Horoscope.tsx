@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import axios from 'axios';
 
 interface AstrologySign {
   name: string;
@@ -203,7 +202,7 @@ class HoroscopeRecipes {
         citrus: "lemon_juice",
         sweetener: "simple_syrup",
         mixer: "soda_water",
-        instructions: ["Add 2oz gin, 1oz lemon juice, 0.5oz simple syrup to glass with ice", "Top with soda water", "Stir"],
+        instructions: ["Add 2oz gin, 1oz lemon juice, 0.5oz simple_syrup to glass with ice", "Top with soda water", "Stir"],
         theme: "Mental expansion"
       },
       air_first_quarter: {
@@ -404,142 +403,78 @@ class HoroscopeRecipes {
   }
 }
 
-// Improved moon phase parsing function
-const parseMoonPhase = (response: string): string => {
-  const normalizedResponse = response.toLowerCase().trim();
-  
-  // Direct matches first
-  const directMatches = {
-    'new moon': 'new_moon',
-    'waxing crescent': 'waxing_crescent', 
-    'first quarter': 'first_quarter',
-    'waxing gibbous': 'waxing_gibbous',
-    'full moon': 'full_moon',
-    'waning gibbous': 'waning_gibbous',
-    'third quarter': 'third_quarter',
-    'last quarter': 'third_quarter', // Alternative name
-    'waning crescent': 'waning_crescent'
-  };
-
-  // Check for direct matches
-  for (const [key, value] of Object.entries(directMatches)) {
-    if (normalizedResponse.includes(key)) {
-      return value;
-    }
-  }
-
-  // Fallback regex patterns
-  if (normalizedResponse.match(/new/)) return 'new_moon';
-  if (normalizedResponse.match(/waxing.*crescent/)) return 'waxing_crescent';
-  if (normalizedResponse.match(/first.*quarter/)) return 'first_quarter';
-  if (normalizedResponse.match(/waxing.*gibbous/)) return 'waxing_gibbous';
-  if (normalizedResponse.match(/full/)) return 'full_moon';
-  if (normalizedResponse.match(/waning.*gibbous/)) return 'waning_gibbous';
-  if (normalizedResponse.match(/(third|last).*quarter/)) return 'third_quarter';
-  if (normalizedResponse.match(/waning.*crescent/)) return 'waning_crescent';
-
-  // If no match found, return a default
-  console.warn('Could not parse moon phase from response:', response);
-  return 'waning_crescent'; // Default fallback
-};
-
-const callGeminiAPI = async (prompt: string): Promise<string> => {
-  try {
-    const response = await axios.post(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
-      {
-        contents: [
-          {
-            parts: [
-              {
-                text: prompt
-              }
-            ]
-          }
-        ]
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-
-    return response.data.candidates[0].content.parts[0].text || 'No insight available';
-  } catch (error) {
-    console.error('Error calling Gemini API:', error);
-    return 'Error fetching data from Gemini API';
-  }
-};
-
-// Function to generate four-line idiom based on sign and moon phase
-const generateFourLineIdiom = (sign: string, moonPhase: string, element: string, ruler: string): string => {
-  const signName = sign.charAt(0).toUpperCase() + sign.slice(1);
-  const phaseName = moonPhase.replace('_', ' ');
-  
-  // Base templates for each moon phase
-  const phaseTemplates = {
-    'new moon': `${signName}, the new moon calls to fresh starts. With ${ruler} as your guide, new paths emerge. This lunar darkness holds infinite potential. Time to plant seeds in fertile cosmic soil.`,
-    'waxing crescent': `${signName}, the crescent moon grows stronger. Your ${element} energy builds momentum steadily. ${ruler.charAt(0).toUpperCase() + ruler.slice(1)} whispers encouragement in your ear. Small steps lead to magnificent journeys.`,
-    'first quarter': `${signName}, the quarter moon demands action. Half-light reveals the choices before you. With ${element} fire burning bright within. Decision time has finally arrived, act now.`,
-    'waxing gibbous': `${signName}, the gibbous moon swells with promise. Your ${ruler}-ruled spirit prepares for greatness. Almost at the peak of lunar power. Refinement and patience serve you well.`,
-    'full moon': `${signName}, the full moon blazes overhead. Maximum ${element} energy courses through you. ${ruler.charAt(0).toUpperCase() + ruler.slice(1)} grants you supernatural clarity tonight. This is your moment of cosmic triumph.`,
-    'waning gibbous': `${signName}, the moon begins its gentle retreat. Time to harvest what you've carefully sown. Your ${ruler}-blessed journey bears sweet fruit. Gratitude fills the ${element} spaces within.`,
-    'third quarter': `${signName}, the quarter moon calls for release. Half the lunar light illuminates truth clearly. ${ruler.charAt(0).toUpperCase() + ruler.slice(1)} helps you let go gracefully. What no longer serves must go.`,
-    'waning crescent': `${signName}, the crescent moon whispers softly. Time to slow down and reflect deeply. With ${ruler} still harmonizing your spirit. Rest now, prepare for the cycle ahead.`
-  };
-
-  return phaseTemplates[phaseName as keyof typeof phaseTemplates] || 
-         `${signName}, the ${phaseName} brings cosmic wisdom. Your ${element} nature aligns with celestial forces. ${ruler.charAt(0).toUpperCase() + ruler.slice(1)} guides your spiritual journey. Trust the universe's divine timing always.`;
-};
+const FIREBASE_FUNCTION_URL = process.env.NODE_ENV === 'development' 
+  ? "/api/getAllRecipesForSign" 
+  : "https://us-central1-blind-pig-bar.cloudfunctions.net/getAllRecipesForSign";
+// Updated to use proxy for development and direct URL for production
 
 const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) => void }) => {
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+
+  const handleSignClick = (sign: AstrologySign) => {
+    setIsAnimating(true);
+    setTimeout(() => {
+      onSignSelect(sign);
+      setIsAnimating(false);
+      setIsVisible(false); // Keep the grid hidden after animation
+    }, 500); // Match animation duration
+  };
+
   return (
-    <div 
-      style={{ 
-        display: 'grid', 
-        gridTemplateColumns: 'repeat(4, 1fr)', 
-        gap: '15px', 
-        width: '100%',
-        maxWidth: '600px',
-        margin: '0 auto',
-      }}
-    >
-      {ASTROLOGY_SIGNS.map((sign) => (
+    <>
+      {isVisible && (
         <div
-          key={sign.name}
-          style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+          className={`horoscope-grid-container ${isAnimating ? 'disappear' : ''}`}
+          onAnimationEnd={() => setIsAnimating(false)}
+          style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(4, 1fr)', 
+            gap: '15px', 
+            width: '100%',
+            maxWidth: '600px',
+            margin: '0 auto',
+          }}
         >
-          <button
-            onClick={() => onSignSelect(sign)}
-            style={{
-              width: '80px',
-              height: '80px',
-              background: 'transparent',
-              borderRadius: '50%',
-              border: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              fontSize: '47px',
-              fontWeight: 'bold',
-              boxShadow: 'none',
-              transition: 'transform 0.2s',
-              cursor: 'pointer'
-            }}
-            onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-            onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-          >
-            {sign.symbol}
-          </button>
-          
-          <span style={{ marginTop: '8px', fontSize: '16px', fontWeight: '500', color: 'white' }}>
-            {sign.displayName}
-          </span>
+          {ASTROLOGY_SIGNS.map((sign) => (
+            <div
+              key={sign.name}
+              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
+            >
+              <button
+                onClick={() => handleSignClick(sign)}
+                style={{
+                  width: '80px',
+                  height: '80px',
+                  background: 'transparent',
+                  borderRadius: '50%',
+                  border: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '47px',
+                  fontWeight: 'bold',
+                  boxShadow: 'none',
+                  transition: 'transform 0.2s',
+                  cursor: 'pointer'
+                }}
+                onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              >
+                {sign.symbol}
+              </button>
+              
+              <span style={{ marginTop: '8px', fontSize: '16px', fontWeight: '500', color: 'white' }}>
+                {sign.displayName}
+              </span>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
+      )}
+
+      {/* Remove CompactHoroscopeCard here; it should be rendered by the parent after result is generated */}
+    </>
   );
 };
 
@@ -554,6 +489,7 @@ interface HoroscopeResult {
   instructions: string;
   theme: string;
   insight: string;
+  planetaryAlignments?: string; // Optional field for planetary alignments
 }
 
 interface HoroscopeProps {
@@ -572,15 +508,37 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
     if (onLoadingChange) onLoadingChange(true);
 
     try {
-      const moonPhaseResponse = await callGeminiAPI(
-        `What is today's moon phase? Please respond with just one of these exact phrases: "new moon", "waxing crescent", "first quarter", "waxing gibbous", "full moon", "waning gibbous", "third quarter", or "waning crescent".`
-      );
+      // Call your Firebase Cloud Function instead of direct Gemini API
+      const response = await fetch(FIREBASE_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sign: sign.name,
+          displayName: sign.displayName,
+          date: new Date().toISOString()
+        })
+      });
 
-      console.log('Moon phase response:', moonPhaseResponse);
-      const moonPhase = parseMoonPhase(moonPhaseResponse);
-      console.log('Parsed moon phase:', moonPhase);
+      if (!response.ok) {
+        throw new Error(`Firebase function error: ${response.status}`);
+      }
 
-      const recipe = horoscopeRecipes.getRecipe(sign.name, moonPhase);
+      // Expect clean JSON response from your Firebase function
+      const astrologyData = await response.json();
+      console.log('Firebase response:', astrologyData);
+
+      // Your Firebase function should return something like:
+      // {
+      //   moonPhase: "waning_gibbous",
+      //   fourLineIdiom: "Gemini, the moon begins its gentle retreat. Time to harvest what you've carefully sown. Your mercury-blessed journey bears sweet fruit. Gratitude fills the air spaces within.",
+      //   dailyTheme: "Releasing thoughts with mercury influence",
+      //   planetaryAlignments: "Mercury aligns favorably with current lunar energies"
+      // }
+
+      // Get recipe based on moon phase from Firebase response
+      const recipe = horoscopeRecipes.getRecipe(sign.name, astrologyData.moonPhase);
 
       // Create ingredients array from recipe components
       const ingredients = [];
@@ -593,9 +551,7 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
       if (recipe.recipe.cream) ingredients.push(recipe.recipe.cream.replace('_', ' '));
       if (recipe.recipe.seasoning) ingredients.push(recipe.recipe.seasoning.replace('_', ' '));
 
-      // Generate four-line idiom
-      const fourLineIdiom = generateFourLineIdiom(sign.name, moonPhase, recipe.element, recipe.planetary_ruler);
-
+      // Build result with Firebase-provided data
       const result: HoroscopeResult = {
         sign: recipe.sign,
         cocktailName: recipe.recipe.name,
@@ -604,50 +560,20 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
         element: recipe.element,
         ingredients: ingredients,
         instructions: recipe.recipe.instructions.join(', '),
-        theme: recipe.recipe.theme,
-        insight: fourLineIdiom
+        theme: astrologyData.dailyTheme || recipe.recipe.theme,
+        insight: astrologyData.fourLineIdiom, // Directly use the 4-line idiom from Firebase
+        planetaryAlignments: astrologyData.planetaryAlignments // Include planetary alignments
       };
 
-      console.log('Generated HoroscopeResult:', result);
+      console.log('Firebase-enhanced HoroscopeResult:', result);
       onSignSelect(sign, result);
+
     } catch (error) {
-      console.error('Error fetching astrological data:', error);
+      console.error('Error fetching data from Firebase function:', error);
 
       if (onError) {
-        onError('Unable to connect to cosmic servers. Using backup stellar data...');
+        onError('Unable to connect to cosmic servers.');
       }
-
-      const fallbackMoonPhase = horoscopeRecipes.getCurrentMoonPhase();
-      const fallbackRecipe = horoscopeRecipes.getRecipe(sign.name, fallbackMoonPhase);
-
-      // Create ingredients array for fallback
-      const fallbackIngredients = [];
-      if (fallbackRecipe.recipe.base_spirit) fallbackIngredients.push(`2oz ${fallbackRecipe.recipe.base_spirit.replace('_', ' ')}`);
-      if (fallbackRecipe.recipe.mixer) fallbackIngredients.push(fallbackRecipe.recipe.mixer.replace('_', ' '));
-      if (fallbackRecipe.recipe.mixer2) fallbackIngredients.push(fallbackRecipe.recipe.mixer2.replace('_', ' '));
-      if (fallbackRecipe.recipe.liqueur) fallbackIngredients.push(`1oz ${fallbackRecipe.recipe.liqueur.replace('_', ' ')}`);
-      if (fallbackRecipe.recipe.citrus) fallbackIngredients.push(fallbackRecipe.recipe.citrus.replace('_', ' '));
-      if (fallbackRecipe.recipe.sweetener) fallbackIngredients.push(fallbackRecipe.recipe.sweetener.replace('_', ' '));
-      if (fallbackRecipe.recipe.cream) fallbackIngredients.push(fallbackRecipe.recipe.cream.replace('_', ' '));
-      if (fallbackRecipe.recipe.seasoning) fallbackIngredients.push(fallbackRecipe.recipe.seasoning.replace('_', ' '));
-
-      // Generate four-line idiom for fallback
-      const fallbackIdiom = generateFourLineIdiom(sign.name, fallbackMoonPhase, fallbackRecipe.element, fallbackRecipe.planetary_ruler);
-
-      const fallbackResult: HoroscopeResult = {
-        sign: fallbackRecipe.sign,
-        cocktailName: fallbackRecipe.recipe.name,
-        moonPhase: fallbackRecipe.moon_phase,
-        ruler: fallbackRecipe.planetary_ruler,
-        element: fallbackRecipe.element,
-        ingredients: fallbackIngredients,
-        instructions: fallbackRecipe.recipe.instructions.join(', '),
-        theme: fallbackRecipe.recipe.theme,
-        insight: fallbackIdiom
-      };
-
-      console.log('Fallback HoroscopeResult:', fallbackResult);
-      onSignSelect(sign, fallbackResult);
     } finally {
       if (onLoadingChange) onLoadingChange(false);
     }

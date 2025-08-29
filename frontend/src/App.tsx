@@ -180,15 +180,13 @@ function App() {
                     </button>
                 </div>
 
-                {/* Render Horoscope component when grid is visible */}
+                {/* STANDARDIZED PARENT CONTAINER for all horoscope-related components */}
                 {isHoroscopeGridVisible && (
-                    <div className="horoscope-grid-container">
-                        <Horoscope 
-                            onSignSelect={handleSignSelect}
-                            onLoadingChange={handleHoroscopeLoadingChange}
-                            onError={handleHoroscopeError}
-                        />
-                    </div>
+                    <Horoscope 
+                        onSignSelect={handleSignSelect}
+                        onLoadingChange={handleHoroscopeLoadingChange}
+                        onError={handleHoroscopeError}
+                    />
                 )}
 
                 {/* Show loading spinner when processing */}
@@ -206,7 +204,7 @@ function App() {
                     </div>
                 )}
 
-                {/* ResultsPopup component */}
+                {/* ResultsPopup component - Now uses standardized container internally */}
                 <ResultsPopup
                     isOpen={isPopupVisible}
                     onClose={closePopup}
