@@ -2,8 +2,7 @@
 const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true }); // Allow all origins for development
 const admin = require('firebase-admin');
-const { VertexAI } = require('@google-cloud/vertexai');
-const axios = require('axios'); // Revert back to axios for Gemini API calls
+const { GoogleGenerativeAI } = require('@google/generative-ai'); // <--- ADD THIS LINE
 
 admin.initializeApp();
 
@@ -101,15 +100,27 @@ exports.getAllRecipesForSign = functions.https.onRequest((request, response) => 
       `;
 
       console.log("Sending prompt to Gemini:", geminiPrompt);
-      const geminiResponseRaw = await callGeminiAPI(geminiPrompt);
+      // geminiResponseText will now directly receive the string content from callGeminiAPI
+      const geminiResponseText = await callGeminiAPI(geminiPrompt); 
 
-      // --- IMPORTANT: Adapt this line based on the actual structure of Gemini's response ---
-      // Gemini's generateContent typically returns results in candidates[0].content.parts[0].text
-      const geminiResponseText = geminiResponseRaw.candidates[0].content.parts[0].text;
       console.log("Raw Gemini response text:", geminiResponseText);
 
+      // *** ADD THIS CLEANING LOGIC ***
+      let cleanedGeminiResponseText = geminiResponseText;
+
+      // Attempt to extract JSON from a markdown code block
+      const jsonMatch = cleanedGeminiResponseText.match(/```json\n([\s\S]*?)\n```/);
+      if (jsonMatch && jsonMatch[1]) {
+        cleanedGeminiResponseText = jsonMatch[1];
+      } else {
+        // If no markdown block is found, try to remove leading/trailing whitespace or other common issues
+        cleanedGeminiResponseText = cleanedGeminiResponseText.trim();
+        // Optionally, you might add more robust cleaning here if models sometimes add other pre/post text
+      }
+      // *** END ADDED LOGIC ***
+
       // Parse the JSON string received from Gemini
-      const astrologyDataFromGemini = JSON.parse(geminiResponseText);
+      const astrologyDataFromGemini = JSON.parse(cleanedGeminiResponseText); // Use the cleaned string
       console.log("Parsed Gemini data:", astrologyDataFromGemini);
       // --- END NEW LOGIC ---
 
@@ -227,31 +238,39 @@ function getCurrentMoonPhase() {
   return phases[phaseIndex];
 }
 
-// Updated Gemini API integration
+// Gemini API integration (Updated to use @google/generative-ai client library)
 async function callGeminiAPI(prompt) {
   try {
-    const apiKey = process.env.GENERATIVE_LANGUAGE_API_KEY; // Ensure this is set in your environment variables
+    const apiKey = functions.config().generativelanguage.key;
 
-    const response = await axios.post(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent', // Updated to gemini-2.5-flash
-      { contents: [{ parts: [{ text: prompt }] }] },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        params: {
-          key: apiKey
-        }
-      }
-    );
+    if (!apiKey) {
+      throw new Error('Generative Language API Key not configured. Set it with `firebase functions:config:set generativelanguage.key="YOUR_API_KEY"`');
+    }
 
-    if (response.data && response.data.candidates && response.data.candidates.length > 0) {
-      return response.data.candidates[0].content.parts[0].text;
+    // Initialize the Generative AI client with your API Key
+    const genAI = new GoogleGenerativeAI(apiKey);
+
+    // Get the model you want to use
+    // Updated to use "gemini-2.5-flash-lite" as the model
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+    // Make the content generation request
+    // The prompt needs to be wrapped in the 'contents' structure
+    const result = await model.generateContent({
+      contents: [{ parts: [{ text: prompt }] }],
+    });
+
+    // Extract the text response
+    const response = await result.response;
+    if (response && response.candidates && response.candidates.length > 0) {
+      return response.candidates[0].content.parts[0].text;
     } else {
       throw new Error("Gemini response was empty or malformed.");
     }
+
   } catch (error) {
-    console.error("Error calling Gemini API:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    // Log the full error for debugging
+    console.error("Full error caught in getAllRecipesForSign:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
     throw error;
   }
 }
