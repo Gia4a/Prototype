@@ -24,154 +24,117 @@ function isClassicCocktailRequest(query) {
     );
 }
 
-// Improved JSON extraction and parsing
+// More robust JSON extraction and parsing
 function extractAndParseJSON(responseText) {
-    console.log("Raw response to parse:", responseText);
+    console.log("Raw response length:", responseText.length);
+    console.log("Raw response preview:", responseText.substring(0, 200) + "...");
     
     try {
-        // Remove markdown code blocks first
-        let cleanText = responseText.replace(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/g, '$1');
+        // Step 1: Remove markdown code blocks
+        let cleanText = responseText.replace(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/g, '$1');
         
-        // Find JSON array boundaries more robustly
-        const startIdx = cleanText.indexOf('[');
-        const lastIdx = cleanText.lastIndexOf(']');
+        // Step 2: Find JSON boundaries
+        let startIdx = cleanText.indexOf('[');
+        let endIdx = cleanText.lastIndexOf(']');
         
-        if (startIdx === -1 || lastIdx === -1 || startIdx >= lastIdx) {
-            throw new Error('No valid JSON array found in response');
+        // If no array, look for object
+        if (startIdx === -1) {
+            startIdx = cleanText.indexOf('{');
+            endIdx = cleanText.lastIndexOf('}');
         }
         
-        // Extract potential JSON
-        cleanText = cleanText.substring(startIdx, lastIdx + 1).trim();
+        if (startIdx === -1 || endIdx === -1 || startIdx >= endIdx) {
+            throw new Error('No valid JSON structure found');
+        }
         
-        // Clean common JSON issues
+        // Step 3: Extract JSON portion
+        cleanText = cleanText.substring(startIdx, endIdx + 1);
+        
+        // Step 4: Try parsing as-is first
+        try {
+            const directParse = JSON.parse(cleanText);
+            console.log("Direct parse successful");
+            return Array.isArray(directParse) ? directParse : [directParse];
+        } catch (directError) {
+            console.log("Direct parse failed, attempting cleanup:", directError.message);
+        }
+        
+        // Step 5: Aggressive cleanup for malformed JSON
         cleanText = cleanText
-            .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
-            .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')  // Quote unquoted keys
+            // Remove trailing commas
+            .replace(/,(\s*[}\]])/g, '$1')
+            // Fix unquoted keys
+            .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
+            // Handle unescaped quotes in values
+            .replace(/:\s*"([^"]*)"([^"]*)"([^"]*?)"\s*([,}\]])/g, ':"$1\\"$2\\"$3"$4')
+            // Fix values that should be quoted
             .replace(/:\s*([^",\[\]{}]+?)(\s*[,}\]])/g, (match, value, ending) => {
-                // Only quote if it's not already quoted, a number, boolean, or null
                 const trimmed = value.trim();
-                if (trimmed === 'null' || trimmed === 'true' || trimmed === 'false' || 
-                    /^-?\d+\.?\d*$/.test(trimmed) || trimmed.startsWith('"')) {
+                // Don't quote numbers, booleans, null, or already quoted strings
+                if (/^(-?\d+\.?\d*|true|false|null|".*")$/.test(trimmed)) {
                     return ':' + trimmed + ending;
                 }
+                // Quote and escape other values
                 return ':"' + trimmed.replace(/"/g, '\\"') + '"' + ending;
             });
         
-        console.log("Cleaned JSON string:", cleanText);
+        console.log("Cleaned JSON (first 200 chars):", cleanText.substring(0, 200));
         
         const parsed = JSON.parse(cleanText);
-        
-        // Validate structure
-        if (!Array.isArray(parsed)) {
-            throw new Error('Response is not an array');
-        }
-        
-        return parsed;
+        return Array.isArray(parsed) ? parsed : [parsed];
         
     } catch (error) {
-        console.error("JSON parsing failed:", error.message);
-        console.error("Failed text:", responseText);
+        console.error("All parsing attempts failed:", error.message);
+        console.error("Original text length:", responseText.length);
         
-        // Return fallback structure
+        // Extract any readable information for fallback
+        const titleMatch = responseText.match(/"title":\s*"([^"]+)"/i);
+        const snippetMatch = responseText.match(/"snippet":\s*"([^"]+)"/i);
+        
         return [{
-            title: "Mixologist Suggestion",
-            snippet: "I apologize, but I encountered an issue processing your request. Please try a different search term.",
+            title: titleMatch ? titleMatch[1] : "Mixologist Suggestion",
+            snippet: snippetMatch ? snippetMatch[1] : "I encountered an issue processing your request. Please try a different search term.",
             filePath: null,
-            why: "Fallback response due to parsing error."
+            why: "Response reconstructed from partial data due to parsing error."
         }];
     }
 }
 
-// Simplified prompts with stricter JSON requirements
+// Simplified, more reliable prompts
 const getClassicCocktailPrompt = (query) => `
-Provide the traditional recipe for "${query}" in exactly this JSON format. Do not include any text before or after the JSON array:
+Return a JSON array with the traditional recipe for "${query}". Use this exact format:
 
-[
-  {
-    "title": "Classic ${query}",
-    "snippet": "Ingredients: [list with exact measurements]. Instructions: [step-by-step method].",
-    "filePath": null,
-    "why": "Traditional recipe."
-  }
-]`;
+[{"title": "Classic ${query}", "snippet": "Ingredients: 2 oz spirit, mixers. Instructions: method.", "filePath": null, "why": "Traditional recipe"}]
+
+Keep ingredients and instructions concise. Ensure valid JSON.`;
 
 const getShooterPrompt = (query) => `
-Create shooter recipes for "${query}" using common ingredients. Respond with only this JSON format:
+Return a JSON array with shooter recipes for "${query}". Use this exact format:
 
-[
-  {
-    "title": "Simple ${query} Shot",
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].",
-    "filePath": null,
-    "why": "Easy to make shooter."
-  },
-  {
-    "title": "Premium ${query} Shot", 
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].",
-    "filePath": null,
-    "why": "Enhanced version."
-  }
-]`;
+[{"title": "${query} Shot", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Easy shooter"}]
+
+Use common ingredients only. Ensure valid JSON.`;
 
 const getFoodPairingPrompt = (query) => `
-Suggest beverage pairings for "${query}". Respond with only this JSON format:
+Return a JSON array with beverage pairings for "${query}". Use this exact format:
 
-[
-  {
-    "title": "Wine Pairing for ${query}",
-    "snippet": "Pairing Notes: [wine recommendation and why it works]. Serving: [temperature and glass].",
-    "filePath": "willowpark.net",
-    "why": "Complementary wine pairing."
-  },
-  {
-    "title": "Cocktail Pairing for ${query}",
-    "snippet": "Pairing Notes: [cocktail recommendation and why]. Serving: [preparation notes].",
-    "filePath": "willowpark.net", 
-    "why": "Spirit-based pairing."
-  },
-  {
-    "title": "Beer Pairing for ${query}",
-    "snippet": "Pairing Notes: [beer style and reasoning]. Serving: [temperature and glass].",
-    "filePath": "willowpark.net",
-    "why": "Beer pairing option."
-  }
-]`;
+[{"title": "Wine for ${query}", "snippet": "Pairing Notes: wine recommendation. Serving: details.", "filePath": "willowpark.net", "why": "Complementary pairing"}]
+
+Keep descriptions concise. Ensure valid JSON.`;
 
 const getLiquorPrompt = (query) => `
-Create cocktails using "${query}". Respond with only this JSON format:
+Return a JSON array with cocktails using "${query}". Use this exact format:
 
-[
-  {
-    "title": "Classic ${query} Cocktail",
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].",
-    "filePath": null,
-    "why": "Traditional cocktail."
-  },
-  {
-    "title": "Modern ${query} Mix",
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].",
-    "filePath": null,
-    "why": "Contemporary variation."
-  }
-]`;
+[{"title": "${query} Cocktail", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Classic cocktail"}]
+
+Use simple ingredients. Ensure valid JSON.`;
 
 const getCocktailPrompt = (query) => `
-Create cocktail suggestions for "${query}". Respond with only this JSON format:
+Return a JSON array with cocktail suggestions for "${query}". Use this exact format:
 
-[
-  {
-    "title": "Signature ${query} Drink",
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].",
-    "filePath": null,
-    "why": "Custom cocktail suggestion."
-  },
-  {
-    "title": "Alternative ${query} Mix",
-    "snippet": "Ingredients: [list with measurements]. Instructions: [method].", 
-    "filePath": null,
-    "why": "Different approach."
-  }
-]`;
+[{"title": "Custom ${query}", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Creative suggestion"}]
+
+Keep it simple. Ensure valid JSON.`;
 
 // Fallback function for any category
 function createFallbackResponse(query, category = 'general') {
@@ -235,7 +198,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
         category = 'general';
     }
 
-    // API Request with conservative settings
+    // API Request with very conservative settings for reliable JSON
     const requestBody = {
         contents: [{
             parts: [{
@@ -243,10 +206,10 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
             }]
         }],
         generationConfig: {
-            temperature: 0.3,      // Low for consistency
-            topK: 10,             // Focused responses
-            topP: 0.8,            // Balanced creativity
-            maxOutputTokens: 1024  // Prevent truncation
+            temperature: 0.1,      // Very low for maximum consistency
+            topK: 1,              // Most predictable output
+            topP: 0.1,            // Minimal creativity
+            maxOutputTokens: 512   // Shorter to avoid truncation
         }
     };
 
