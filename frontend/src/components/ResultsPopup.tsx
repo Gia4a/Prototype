@@ -6,18 +6,23 @@ import type { HoroscopeData, CocktailData } from './CompactHoroscopeCard';
 interface ResultsPopupProps {
     isOpen: boolean;
     onClose: () => void;
-    suggestion: any; // Can be horoscope data or mixologist response
+    recipes: {
+        classic: any;
+        premium: any;
+    };
+    currentRecipeType: 'classic' | 'premium';
     error: string | null;
-    searchQuery?: string;
     visible?: boolean;
-    onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void;
+    onUpgradeRequest?: () => void;
 }
 
 const ResultsPopup: React.FC<ResultsPopupProps> = ({ 
     isOpen, 
     onClose, 
-    suggestion, 
+    recipes,
+    currentRecipeType,
     error, 
+    // searchQuery removed
     visible,
     onUpgradeRequest 
 }) => {
@@ -42,6 +47,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     if (!isVisible) {
         return null;
     }
+
+    // Pick the recipe to display
+    const suggestion = currentRecipeType === 'premium' && recipes.premium ? recipes.premium : recipes.classic;
 
     const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (event.target === event.currentTarget) {
@@ -252,22 +260,15 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         if (hasCocktailStructure) {
             // Extract ingredients with enhanced parsing
             const ingredients = extractIngredients(suggestion.snippet);
-            
-            // Handle upgrade functionality
-            const handleUpgrade = (upgradeType: string) => {
-                if (onUpgradeRequest && suggestion.originalQuery) {
-                    onUpgradeRequest(suggestion.originalQuery, upgradeType);
-                }
-            };
-            
-            // Format cocktail data with upgrade support
+
+            // Format cocktail data
             const cocktailData: CocktailData = {
                 cocktailName: cleanCocktailName(suggestion.title),
                 ingredients: ingredients,
                 instructions: extractInstructions(suggestion.snippet),
                 comment: suggestion.enhancedComment || extractComment(suggestion.snippet),
                 originalQuery: suggestion.originalQuery,
-                onUpgrade: suggestion.originalQuery ? handleUpgrade : undefined
+                onUpgrade: undefined // handled by ResultsPopup
             };
 
             // Add debugging info if ingredients don't have measurements
@@ -279,6 +280,15 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             return (
                 <div className="compact-card-container">
                     <CompactCocktailCard data={cocktailData} />
+                    {/* Toggle button for upgrade */}
+                    {recipes.premium && (
+                        <button
+                            style={{ marginTop: 12, background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
+                            onClick={onUpgradeRequest}
+                        >
+                            {currentRecipeType === 'classic' ? '🔥 Show Premium Recipe' : '⬅️ Back to Classic'}
+                        </button>
+                    )}
                 </div>
             );
         }

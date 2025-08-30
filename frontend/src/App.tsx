@@ -1,13 +1,13 @@
-// App.tsx - Enhanced main component with upgrade functionality
+// App.tsx - Reverted to single-suggestion state, with Horoscope and upgrade logic preserved
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
+import Horoscope from './components/Horoscope';
 import CocktailUpgradeService from './services/cocktailUpgradeService';
 import type { UpgradeResponse, UpgradeType } from './services/cocktailUpgradeService';
+import './App.css';
 
-// Initialize the upgrade service with your Gemini API key
 const upgradeService = new CocktailUpgradeService(import.meta.env.VITE_GEMINI_API_KEY || '');
-
 type MixologistResponse = UpgradeResponse;
 
 const App: React.FC = () => {
@@ -16,11 +16,11 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [currentQuery, setCurrentQuery] = useState<string>('');
+    const [showHoroscope, setShowHoroscope] = useState(false);
 
     // Handle new suggestions from search
     const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
         if (typeof suggestion === 'string') {
-            // Convert string to proper response object
             setCurrentSuggestion({
                 originalQuery: query || '',
                 suggestion: suggestion,
@@ -30,11 +30,9 @@ const App: React.FC = () => {
         } else {
             setCurrentSuggestion(suggestion);
         }
-        
         if (query) {
             setCurrentQuery(query);
         }
-        
         setError(null);
         setShowResults(true);
     };
@@ -43,33 +41,22 @@ const App: React.FC = () => {
     const handleUpgradeRequest = async (originalQuery: string, upgradeType: string) => {
         setIsLoading(true);
         setError(null);
-
         try {
-            // Accept string for compatibility, but cast to UpgradeType
             const safeUpgradeType = upgradeType as UpgradeType;
-            console.log('Processing upgrade request:', originalQuery, safeUpgradeType);
-
-            // Use the client-side upgrade service instead of Firebase Cloud Functions
             const responseData = await upgradeService.getUpgradedCocktail(originalQuery, safeUpgradeType);
-
-            console.log('Upgrade response:', responseData);
-
-            // Update the current suggestion with the upgrade
             setCurrentSuggestion(responseData);
-            setCurrentQuery(originalQuery); // Keep original query for context
-
+            setCurrentQuery(originalQuery);
         } catch (error) {
             if (error instanceof Error) {
-                console.error("Error processing upgrade:", error.message);
                 setError(`Sorry, couldn't generate the ${upgradeType} upgrade. Please try again.`);
             } else {
-                console.error("Error processing upgrade:", error);
                 setError('Sorry, an unknown error occurred.');
             }
         } finally {
             setIsLoading(false);
         }
     };
+
     // Handle loading state changes
     const handleLoadingChange = (loading: boolean) => {
         setIsLoading(loading);
@@ -99,7 +86,27 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                     onUpgradeRequest={handleUpgradeRequest}
                 />
-                
+
+                {/* Horoscope Button */}
+                <button
+                    style={{
+                        margin: '16px auto',
+                        display: 'block',
+                        background: 'linear-gradient(90deg, #6366f1, #a21caf)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '12px 32px',
+                        fontSize: '1.1rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
+                    }}
+                    onClick={() => setShowHoroscope(true)}
+                >
+                    🔮 Horoscope Cocktails
+                </button>
+
                 {/* Loading indicator */}
                 {isLoading && (
                     <div className="loading-indicator">
@@ -108,6 +115,72 @@ const App: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            {/* Horoscope Modal */}
+            {showHoroscope && (
+                <div className="horoscope-modal-overlay" style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    width: '100vw',
+                    height: '100vh',
+                    background: 'rgba(0,0,0,0.7)',
+                    zIndex: 1000,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <div style={{
+                        background: '#18181b',
+                        borderRadius: '16px',
+                        padding: '32px 24px',
+                        minWidth: 340,
+                        maxWidth: 600,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                        position: 'relative'
+                    }}>
+                        <button
+                            onClick={() => setShowHoroscope(false)}
+                            style={{
+                                position: 'absolute',
+                                top: 12,
+                                right: 12,
+                                background: 'transparent',
+                                border: 'none',
+                                color: '#fff',
+                                fontSize: 28,
+                                cursor: 'pointer',
+                                zIndex: 2
+                            }}
+                            aria-label="Close horoscope"
+                        >
+                            ×
+                        </button>
+                        <Horoscope
+                            onSignSelect={(sign, result) => {
+                                setShowHoroscope(false);
+                                setCurrentSuggestion({
+                                    originalQuery: sign.name,
+                                    suggestion: result.cocktailName,
+                                    title: result.cocktailName,
+                                    content: result.theme,
+                                    why: result.insight,
+                                    enhancedComment: {
+                                        poeticDescription: result.theme,
+                                        personalComment: result.insight,
+                                        upgradeComment: undefined
+                                    },
+                                    ...result
+                                });
+                                setError(null);
+                                setShowResults(true);
+                            }}
+                            onLoadingChange={handleLoadingChange}
+                            onError={handleError}
+                        />
+                    </div>
+                </div>
+            )}
 
             {/* Results popup with enhanced features */}
             <ResultsPopup

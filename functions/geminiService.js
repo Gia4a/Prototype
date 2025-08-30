@@ -144,23 +144,35 @@ function extractAndParseJSON(responseText) {
 
 // Enhanced prompts with more variety and better structure
 const getClassicCocktailPrompt = (query) => {
-    const variation = getRandomVariation();
-    const style = getRandomStyle();
     const randomSeed = Math.floor(Math.random() * 1000);
-    
     return `
-${variation} a "${query}" cocktail using ${style}. Use common household ingredients - no specialty liqueurs unless absolutely essential (like bitters for Old Fashioned).
+Return a JSON array with exactly 2 cocktail recipes for "${query}":
 
-Return JSON array format:
-[{"title": "Name of Cocktail", "snippet": "Ingredients: 2 oz spirit, 1 oz mixer, 0.5 oz syrup. Instructions: detailed method with shaking/stirring, garnish, glassware.", "filePath": null, "why": "reasoning"}]
+1. The first recipe should be the classic or most widely accepted version of the "${query}" cocktail, using common home bar ingredients.
+2. The second recipe should be a premium, creative, or seasonal upgrade of the first—this could use a different base spirit, seasonal ingredients, or advanced techniques.
+
+Format:
+[
+  {
+    "title": "Classic ${query} Recipe",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "classic/original version"
+  },
+  {
+    "title": "Premium/Seasonal ${query} Upgrade",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "premium/seasonal/creative upgrade"
+  }
+]
 
 Requirements:
-- Include ALL ingredient measurements (oz, ml, dashes, etc.)  
-- Use common ingredients: lemon/lime juice, simple syrup, club soda, grenadine, common bitters
-- Avoid specialty liqueurs unless recipe demands it
-- Include glassware and garnish details
-- Make it unique (seed: ${randomSeed})
-- Ensure valid JSON structure`;
+- Both recipes must include all ingredient measurements and instructions.
+- The upgrade should clearly build on or reference the classic version, and may use a different spirit or seasonal twist.
+- Use valid JSON only.
+- Unique seed: ${randomSeed}
+`;
 };
 
 const getShooterPrompt = (query) => {
@@ -200,44 +212,67 @@ Include:
 };
 
 const getLiquorPrompt = (query) => {
-    const variation = getRandomVariation();
     const randomSeed = Math.floor(Math.random() * 1000);
-    
     return `
-${variation} a cocktail featuring "${query}" as the main spirit using common home bar ingredients. Create something distinctive and well-balanced.
+Return a JSON array with exactly 2 cocktail recipes featuring "${query}" as the main spirit:
 
-Return JSON array:
-[{"title": "Signature ${query} Cocktail", "snippet": "Ingredients: 2 oz ${query}, additional common ingredients with measurements. Instructions: complete preparation method, garnish, serving style.", "filePath": null, "why": "showcases the spirit"}]
+1. The first recipe should be a basic, classic, or simple cocktail using common home bar ingredients.
+2. The second recipe should be a premium, creative, or upgraded version of the first, using specialty or seasonal ingredients, advanced techniques, or unique presentation.
+
+Format:
+[
+  {
+    "title": "Basic Cocktail Name",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "classic/simple version"
+  },
+  {
+    "title": "Premium Cocktail Name",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "premium/upgrade version"
+  }
+]
 
 Requirements:
-- Highlight the "${query}" spirit prominently
-- Use accessible ingredients: citrus juices, simple syrup, club soda, ginger beer, grenadine, common fruits
-- Include all measurements precisely
-- Detailed preparation instructions
-- Creative but balanced flavor profile  
-- Unique creation (seed: ${randomSeed})
-- Proper JSON format`;
+- Both recipes must include all ingredient measurements and instructions.
+- The premium/upgrade should clearly build on or reference the basic version.
+- Use valid JSON only.
+- Unique seed: ${randomSeed}
+`;
 };
 
 const getCocktailPrompt = (query) => {
-    const variation = getRandomVariation();
-    const style = getRandomStyle();
     const randomSeed = Math.floor(Math.random() * 1000);
-    
     return `
-${variation} a cocktail inspired by "${query}" using ${style}. Use common home bar ingredients and be creative while maintaining balance.
+Return a JSON array with exactly 2 cocktail recipes inspired by "${query}":
 
-Return JSON array:
-[{"title": "Creative Cocktail Name", "snippet": "Ingredients: base spirit with measurement, common mixers with measurements, simple garnish. Instructions: step-by-step preparation, glassware, presentation.", "filePath": null, "why": "creative interpretation"}]
+1. The first recipe should be a simple, approachable, or classic cocktail using common home bar ingredients.
+2. The second recipe should be a premium, creative, or seasonal upgrade—this could use a different base spirit, seasonal ingredients, or advanced techniques.
 
-Focus on:
-- Original cocktail creation using common ingredients
-- Accessible ingredients: vodka, rum, whiskey, gin, citrus juices, simple syrup, club soda, tonic, ginger beer, cranberry juice
-- Complete ingredient measurements  
-- Detailed mixing instructions
-- Thoughtful flavor combinations
-- Unique approach (seed: ${randomSeed})
-- Valid JSON structure`;
+Format:
+[
+  {
+    "title": "Simple/Classic ${query} Cocktail",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "simple/classic version"
+  },
+  {
+    "title": "Premium/Seasonal ${query} Upgrade",
+    "snippet": "Ingredients: ... Instructions: ...",
+    "filePath": null,
+    "why": "premium/seasonal/creative upgrade"
+  }
+]
+
+Requirements:
+- Both recipes must include all ingredient measurements and instructions.
+- The upgrade should clearly build on or reference the first version, and may use a different spirit or seasonal twist.
+- Use valid JSON only.
+- Unique seed: ${randomSeed}
+`;
 };
 
 // Enhanced fallback with more variety

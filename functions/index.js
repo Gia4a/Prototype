@@ -19,14 +19,13 @@ const {
 } = require('./horescopeRecipe');
 
 // --- Enhanced mixologist and upgrade endpoints ---
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { defineSecret } = require('firebase-functions/v2/params');
+// Use only 1st Gen functions
+// const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { fetchAndProcessGeminiResults, generateCocktailComment, generateSeasonalUpgrade } = require('./geminiService');
 const { extractBestRecipe } = require('./cocktail');
 const { isFoodItem, isLiquorType, isFlavoredLiquor } = require('./constants');
 
-// Define the secret for Gemini API key
-const geminiApiKey = defineSecret('GEMINI_API_KEY');
+
 
 // Helper function to clean and parse JSON from Gemini responses
 function cleanAndParseGeminiJSON(responseText) {
@@ -289,23 +288,22 @@ async function callGeminiAPI(prompt) {
 
 
 // Enhanced mixologist function with comment generation
-exports.getMixologistSuggestion = onCall(
-  { secrets: [geminiApiKey] },
-  async (request) => {
+exports.getMixologistSuggestion = functions.https.onCall(
+  async (data, context) => {
     const { query } = request.data;
 
     if (!query || typeof query !== 'string') {
-      throw new HttpsError('invalid-argument', 'Query is required and must be a string');
+  throw new functions.https.HttpsError('invalid-argument', 'Query is required and must be a string');
     }
 
     const trimmedQuery = query.trim();
     if (trimmedQuery.length === 0) {
-      throw new HttpsError('invalid-argument', 'Query cannot be empty');
+  throw new functions.https.HttpsError('invalid-argument', 'Query cannot be empty');
     }
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-      throw new HttpsError('internal', 'Gemini API key is not configured');
+  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {
@@ -378,22 +376,21 @@ exports.getMixologistSuggestion = onCall(
 );
 
 // New function for handling upgrade requests
-exports.getUpgradedCocktail = onCall(
-  { secrets: [geminiApiKey] },
-  async (request) => {
-    const { originalQuery, upgradeType } = request.data;
+exports.getUpgradedCocktail = functions.https.onCall(
+  async (data, context) => {
+  const { originalQuery, upgradeType } = data;
 
     if (!originalQuery || typeof originalQuery !== 'string') {
-      throw new HttpsError('invalid-argument', 'Original query is required');
+  throw new functions.https.HttpsError('invalid-argument', 'Original query is required');
     }
 
     if (!upgradeType || typeof upgradeType !== 'string') {
-      throw new HttpsError('invalid-argument', 'Upgrade type is required');
+  throw new functions.https.HttpsError('invalid-argument', 'Upgrade type is required');
     }
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-      throw new HttpsError('internal', 'Gemini API key is not configured');
+  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {
@@ -455,22 +452,21 @@ exports.getUpgradedCocktail = onCall(
 );
 
 // Optional: Function to get just enhanced comment for existing recipes
-exports.getEnhancedComment = onCall(
-  { secrets: [geminiApiKey] },
-  async (request) => {
-    const { cocktailName, ingredients } = request.data;
+exports.getEnhancedComment = functions.https.onCall(
+  async (data, context) => {
+  const { cocktailName, ingredients } = data;
 
     if (!cocktailName || typeof cocktailName !== 'string') {
-      throw new HttpsError('invalid-argument', 'Cocktail name is required');
+  throw new functions.https.HttpsError('invalid-argument', 'Cocktail name is required');
     }
 
     if (!ingredients || !Array.isArray(ingredients)) {
-      throw new HttpsError('invalid-argument', 'Ingredients array is required');
+  throw new functions.https.HttpsError('invalid-argument', 'Ingredients array is required');
     }
 
-    const apiKey = geminiApiKey.value();
+    const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-      throw new HttpsError('internal', 'Gemini API key is not configured');
+  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {

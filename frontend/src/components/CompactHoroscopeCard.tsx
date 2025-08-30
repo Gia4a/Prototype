@@ -374,14 +374,6 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     wordBreak: 'break-word'
   };
 
-  // Helper function to get current season (for upgrade functionality)
-  const getCurrentSeason = () => {
-    const month = new Date().getMonth() + 1;
-    if (month >= 3 && month <= 5) return 'spring';
-    if (month >= 6 && month <= 8) return 'summer';
-    if (month >= 9 && month <= 11) return 'fall';
-    return 'winter';
-  };
 
   // Handle upgrade button click
   const handleUpgrade = () => {
