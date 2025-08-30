@@ -55,6 +55,7 @@ interface SearchBarProps {
     onLoadingChange: (loading: boolean) => void;
     onError: (error: string) => void;
     isLoading: boolean;
+    onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void; // New prop for upgrades
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 

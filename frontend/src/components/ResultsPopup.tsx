@@ -10,6 +10,7 @@ interface ResultsPopupProps {
     error: string | null;
     searchQuery?: string;
     visible?: boolean;
+    onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void;
 }
 
 const ResultsPopup: React.FC<ResultsPopupProps> = ({ 
@@ -17,7 +18,8 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     onClose, 
     suggestion, 
     error, 
-    visible 
+    visible,
+    onUpgradeRequest 
 }) => {
     const isVisible = isOpen || visible || false;
 
@@ -51,19 +53,32 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     const extractIngredients = (text: string): string[] => {
         if (!text) return ['No ingredients available'];
         
-        // Look for "Ingredients:" followed by content
-        const ingredientsMatch = text.match(/Ingredients:\s*([^.]*(?:\.[^.]*)*?)\.?\s*(?:Instructions?:|Method:|Preparation:|$)/i);
+        // Look for "Ingredients:" followed by content, stopping at "Instructions:" or similar
+        const ingredientsMatch = text.match(/Ingredients:\s*([\s\S]*?)(?=\s*Instructions?:|Method:|Preparation:|$)/i);
         if (ingredientsMatch) {
             const ingredientsText = ingredientsMatch[1].trim();
             
-            // Split by common delimiters but preserve measurements
-            const ingredients = ingredientsText
-                .split(/,(?=\s*\d)|,(?=\s*[A-Z])|;|\n/)
+            // Split by line breaks first, then by commas if needed
+            let ingredients = ingredientsText
+                .split(/\n/)
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+            
+            // If we only got one line, try splitting by commas but be careful with measurements
+            if (ingredients.length === 1 && ingredients[0].includes(',')) {
+                ingredients = ingredients[0]
+                    .split(/,(?=\s*\d)|,(?=\s*[A-Z•])|;/)
+                    .map(item => item.trim())
+                    .filter(item => item.length > 0);
+            }
+            
+            // Clean each ingredient
+            ingredients = ingredients
                 .map(item => {
                     let cleaned = item.trim();
                     
-                    // Remove leading bullets or dashes
-                    cleaned = cleaned.replace(/^[-•*]\s*/, '');
+                    // Remove leading bullets, dashes, or numbers
+                    cleaned = cleaned.replace(/^[-•*\d+.\s]*/, '');
                     
                     // Remove trailing periods but keep decimal points in measurements
                     cleaned = cleaned.replace(/\.$/, '');
@@ -71,9 +86,10 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                     return cleaned;
                 })
                 .filter(item => {
-                    // Filter out empty items and very short non-meaningful entries
+                    // Filter out empty items, instruction-like text, and very short entries
                     return item.length > 2 && 
-                           !item.match(/^(and|or|plus|with)$/i);
+                           !item.match(/^(and|or|plus|with|fill|add|shake|stir|strain|garnish|top|serve)$/i) &&
+                           !item.match(/^\d+\.\s*$/); // Remove standalone numbers
                 })
                 .slice(0, 8); // Limit to 8 ingredients for display
             
@@ -141,9 +157,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             .trim();
     };
 
-    // Enhanced helper function to extract description/comment with 1920s Chicago bartender personality
+    // Enhanced helper function to extract description/comment
     const extractComment = (text: string): string => {
-        if (!text) return getChicagoBartenderMessage();
+        if (!text) return "A delightful cocktail crafted just for you!";
         
         // Look for description before ingredients
         const beforeIngredients = text.split(/Ingredients?:/i)[0].trim();
@@ -169,24 +185,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             return pairingMatch[1].trim();
         }
         
-        return getChicagoBartenderMessage();
-    };
-
-    // 1920s Chicago bartender personality messages
-    const getChicagoBartenderMessage = (): string => {
-        const messages = [
-            "Listen here, friend - this here's a real humdinger that'll put some pep in your step.",
-            "Now that's the cat's pajamas! A drink that's the bee's knees and then some.",
-            "This little number's been packin' 'em in at the speakeasy since before you were knee-high to a grasshopper.",
-            "Say, this cocktail's the real McCoy - none of that bathtub gin nonsense.",
-            "Hot diggity! This drink's got more kick than a Chicago thoroughbred.",
-            "Now don't go tellin' the feds, but this recipe's straight from the finest joint on the South Side.",
-            "This drink's smoother than a con man's pitch and twice as satisfying.",
-            "Kid, you're lookin' at liquid gold - the kind that made Chicago famous.",
-            "This here concoction's got more class than a Northside socialite.",
-            "Now that's what I call a real sockdolager of a drink!"
-        ];
-        return messages[Math.floor(Math.random() * messages.length)];
+        return "A wonderfully crafted cocktail experience!";
     };
 
     // Helper function to determine if ingredients look complete (have measurements)
@@ -254,12 +253,21 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             // Extract ingredients with enhanced parsing
             const ingredients = extractIngredients(suggestion.snippet);
             
-            // Format cocktail data
+            // Handle upgrade functionality
+            const handleUpgrade = (upgradeType: string) => {
+                if (onUpgradeRequest && suggestion.originalQuery) {
+                    onUpgradeRequest(suggestion.originalQuery, upgradeType);
+                }
+            };
+            
+            // Format cocktail data with upgrade support
             const cocktailData: CocktailData = {
                 cocktailName: cleanCocktailName(suggestion.title),
                 ingredients: ingredients,
                 instructions: extractInstructions(suggestion.snippet),
-                comment: extractComment(suggestion.snippet)
+                comment: suggestion.enhancedComment || extractComment(suggestion.snippet),
+                originalQuery: suggestion.originalQuery,
+                onUpgrade: suggestion.originalQuery ? handleUpgrade : undefined
             };
 
             // Add debugging info if ingredients don't have measurements

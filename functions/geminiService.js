@@ -397,6 +397,177 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
     }
 }
 
+// Function to generate personalized cocktail comment
+async function generateCocktailComment(cocktailName, ingredients, season, apiKey) {
+    if (!apiKey) {
+        throw new Error('API key for Gemini service is not configured.');
+    }
+
+    const currentDate = new Date();
+    const monthNames = ["January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"];
+    const currentMonth = monthNames[currentDate.getMonth()];
+    const currentSeason = season || getCurrentSeason();
+    
+    const promptText = `
+Create a personalized comment for the cocktail "${cocktailName}" with these ingredients: ${ingredients.join(', ')}.
+
+Format your response as JSON:
+{
+    "poeticDescription": "2-line poetic description of the drink (each line under 40 characters)",
+    "personalComment": "encouraging comment about trying this recipe (under 50 characters)",
+    "upgradeComment": "suggestion to spice up/upgrade (under 50 characters)"
+}
+
+Requirements:
+- Reference today being ${currentDate.toDateString()} and ${currentSeason} season
+- Make it personal and encouraging
+- Keep text lengths within character limits
+- Use encouraging phrases like "spice up your life", "break from boring cocktails"
+- Valid JSON only
+`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{
+                text: promptText
+            }]
+        }],
+        generationConfig: {
+            temperature: 0.8,
+            topK: 40,
+            topP: 0.9,
+            maxOutputTokens: 512,
+            candidateCount: 1
+        }
+    };
+
+    try {
+        const geminiResponse = await axios.post(
+            `${GEMINI_API_URL}?key=${apiKey}`,
+            requestBody,
+            {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 15000
+            }
+        );
+
+        if (!geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('Invalid response structure from Gemini API');
+        }
+
+        const responseText = geminiResponse.data.candidates[0].content.parts[0].text;
+        const parsed = extractAndParseJSON(responseText);
+        
+        if (parsed && parsed[0]) {
+            return parsed[0];
+        }
+        
+        throw new Error('Could not parse comment response');
+        
+    } catch (error) {
+        console.error('Gemini comment generation error:', error.message);
+        
+        // Fallback personalized comment
+        return {
+            poeticDescription: `${currentSeason}'s perfect blend,\nCrafted to make spirits ascend.`,
+            personalComment: "Time to elevate your cocktail game!",
+            upgradeComment: "Ready to spice up your life?"
+        };
+    }
+}
+
+// Function to generate seasonal upgrade recipe
+async function generateSeasonalUpgrade(originalCocktail, upgradeType, season, apiKey) {
+    if (!apiKey) {
+        throw new Error('API key for Gemini service is not configured.');
+    }
+
+    const currentSeason = season || getCurrentSeason();
+    const upgradePrompts = {
+        seasonal: `Create a ${currentSeason} seasonal upgrade of "${originalCocktail}" using seasonal ingredients`,
+        spicy: `Create a spicy/bold upgrade of "${originalCocktail}" using flavored liqueurs and bold ingredients`,
+        premium: `Create a premium upgrade of "${originalCocktail}" using top-shelf ingredients and sophisticated techniques`,
+        festive: `Create a festive/holiday upgrade of "${originalCocktail}" with seasonal themes and special ingredients`
+    };
+
+    const promptText = `
+${upgradePrompts[upgradeType] || upgradePrompts.seasonal}
+
+Return JSON array:
+[{"title": "Upgraded Cocktail Name", "snippet": "Ingredients: detailed list with measurements including premium/seasonal/spicy ingredients. Instructions: complete preparation method with any special techniques.", "filePath": null, "why": "explanation of the upgrade"}]
+
+Requirements:
+- Include original spirit base but upgrade with specialty ingredients
+- Use seasonal elements for ${currentSeason}: ${getSeasonalIngredients(currentSeason)}
+- Include detailed measurements for all ingredients
+- Explain what makes this an upgrade from the original
+- Valid JSON structure only
+`;
+
+    const requestBody = {
+        contents: [{
+            parts: [{
+                text: promptText
+            }]
+        }],
+        generationConfig: {
+            temperature: 0.8,
+            topK: 40,
+            topP: 0.9,
+            maxOutputTokens: 1024,
+            candidateCount: 1
+        }
+    };
+
+    try {
+        const geminiResponse = await axios.post(
+            `${GEMINI_API_URL}?key=${apiKey}`,
+            requestBody,
+            {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 30000
+            }
+        );
+
+        if (!geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('Invalid response structure from Gemini API');
+        }
+
+        const responseText = geminiResponse.data.candidates[0].content.parts[0].text;
+        const parsed = extractAndParseJSON(responseText);
+        
+        return parsed && parsed.length > 0 ? parsed[0] : null;
+        
+    } catch (error) {
+        console.error('Gemini upgrade generation error:', error.message);
+        return null;
+    }
+}
+
+// Helper functions for seasonal content
+function getCurrentSeason() {
+    const month = new Date().getMonth() + 1; // 1-12
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'fall';
+    return 'winter';
+}
+
+function getSeasonalIngredients(season) {
+    const seasonalMap = {
+        spring: 'fresh herbs, elderflower, strawberries, rhubarb, lavender',
+        summer: 'watermelon, peach, berries, basil, mint, cucumber',
+        fall: 'apple, pear, cinnamon, maple, cranberries, ginger',
+        winter: 'citrus, pomegranate, rosemary, cloves, hot spices'
+    };
+    return seasonalMap[season] || seasonalMap.summer;
+}
+
 module.exports = {
-    fetchAndProcessGeminiResults
+    fetchAndProcessGeminiResults,
+    generateCocktailComment,
+    generateSeasonalUpgrade,
+    getCurrentSeason,
+    getSeasonalIngredients
 };

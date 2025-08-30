@@ -203,13 +203,18 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
   );
 };
 
-
-// CocktailData interface and CompactCocktailCard component
+// Enhanced CocktailData interface with upgrade functionality
 interface CocktailData {
   cocktailName: string;
   ingredients: string[];
   instructions: string;
-  comment: string; // This replaces insight for regular cocktails
+  comment: string | {
+    poeticDescription?: string;
+    personalComment?: string;
+    upgradeComment?: string;
+  }; // Can be string or structured comment object
+  originalQuery?: string; // For upgrade functionality
+  onUpgrade?: (upgradeType: string) => void; // Callback for upgrade button
 }
 
 interface CompactCocktailCardProps {
@@ -263,29 +268,59 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px', // Reduced gap for better space utilization
+    gap: '6px', // Further reduced for upgrade button space
     flex: 1,
-    overflow: 'visible', // Changed from hidden to visible
+    overflow: 'visible',
     minHeight: 0
   };
 
   const commentStyle: React.CSSProperties = {
     textAlign: 'center',
-    fontSize: '0.8rem', // Slightly smaller
-    lineHeight: '1.4', // Tighter line height
+    fontSize: '0.75rem',
+    lineHeight: '1.3',
     backgroundColor: '#374151',
     borderRadius: '4px',
-    padding: '6px', // Reduced padding
-    flexShrink: 0,
+    padding: '6px',
+    flexShrink: 0
+  };
+
+  const poeticStyle: React.CSSProperties = {
     fontStyle: 'italic',
-    color: '#bfdbfe'
+    color: '#bfdbfe',
+    marginBottom: '4px',
+    fontSize: '0.8rem'
+  };
+
+  const personalCommentStyle: React.CSSProperties = {
+    color: '#d8b4fe',
+    fontSize: '0.7rem',
+    marginBottom: '2px'
+  };
+
+  const upgradeCommentStyle: React.CSSProperties = {
+    color: '#fbbf24',
+    fontSize: '0.7rem',
+    fontWeight: '500'
+  };
+
+  const upgradeButtonStyle: React.CSSProperties = {
+    backgroundColor: '#dc2626',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    padding: '4px 8px',
+    fontSize: '0.7rem',
+    cursor: 'pointer',
+    marginTop: '4px',
+    alignSelf: 'center',
+    transition: 'background-color 0.2s'
   };
 
   const detailsStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '1fr 2fr', // More balanced columns
+    gridTemplateColumns: '1fr 2fr',
     gap: '8px',
-    fontSize: '0.8rem', // Slightly smaller base font
+    fontSize: '0.8rem',
     flex: 1,
     minHeight: 0,
     overflow: 'visible'
@@ -300,23 +335,23 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
   };
 
   const ingredientsListStyle: React.CSSProperties = {
-    fontSize: '0.7rem', // Smaller ingredient text
+    fontSize: '0.7rem',
     margin: '0',
     padding: '0',
     listStyle: 'none',
     display: 'flex',
     flexDirection: 'column',
-    gap: '1px', // Tighter spacing
-    overflow: 'visible', // Allow all ingredients to show
-    maxHeight: 'none' // Remove height restrictions
+    gap: '1px',
+    overflow: 'visible',
+    maxHeight: 'none'
   };
 
   const ingredientItemStyle: React.CSSProperties = {
     color: '#d1d5db',
     lineHeight: '1.3',
-    overflow: 'visible', // Show full ingredient text
-    whiteSpace: 'normal', // Allow wrapping if needed
-    wordBreak: 'break-word' // Break long words if necessary
+    overflow: 'visible',
+    whiteSpace: 'normal',
+    wordBreak: 'break-word'
   };
 
   const instructionsTitleStyle: React.CSSProperties = {
@@ -328,15 +363,81 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
   };
 
   const instructionsTextStyle: React.CSSProperties = {
-    fontSize: '0.7rem', // Smaller instruction text
+    fontSize: '0.7rem',
     color: '#d1d5db',
     lineHeight: '1.4',
     margin: '0',
-    overflow: 'visible', // Show all instructions
-    maxHeight: 'none', // Remove height restrictions
-    display: 'block', // Remove webkit-box restrictions
+    overflow: 'visible',
+    maxHeight: 'none',
+    display: 'block',
     whiteSpace: 'normal',
     wordBreak: 'break-word'
+  };
+
+  // Helper function to get current season (for upgrade functionality)
+  const getCurrentSeason = () => {
+    const month = new Date().getMonth() + 1;
+    if (month >= 3 && month <= 5) return 'spring';
+    if (month >= 6 && month <= 8) return 'summer';
+    if (month >= 9 && month <= 11) return 'fall';
+    return 'winter';
+  };
+
+  // Handle upgrade button click
+  const handleUpgrade = () => {
+    if (data.onUpgrade) {
+      const upgradeTypes = ['seasonal', 'spicy', 'premium', 'festive'];
+      const randomUpgrade = upgradeTypes[Math.floor(Math.random() * upgradeTypes.length)];
+      data.onUpgrade(randomUpgrade);
+    }
+  };
+
+  // Determine if upgrade functionality should be available
+  const shouldShowUpgrade = data.onUpgrade && data.originalQuery;
+
+  // Render comment content based on type
+  const renderComment = () => {
+    if (typeof data.comment === 'string') {
+      // Legacy string comment
+      return <div style={{ ...commentStyle, fontStyle: 'italic', color: '#bfdbfe' }}>{data.comment}</div>;
+    }
+
+    if (data.comment && typeof data.comment === 'object') {
+      // New structured comment
+      return (
+        <div style={commentStyle}>
+          {data.comment.poeticDescription && (
+            <div style={poeticStyle}>
+              {data.comment.poeticDescription.split('\n').map((line, index) => (
+                <div key={index}>{line}</div>
+              ))}
+            </div>
+          )}
+          {data.comment.personalComment && (
+            <div style={personalCommentStyle}>
+              {data.comment.personalComment}
+            </div>
+          )}
+          {data.comment.upgradeComment && shouldShowUpgrade && (
+            <div>
+              <div style={upgradeCommentStyle}>
+                {data.comment.upgradeComment}
+              </div>
+              <button 
+                style={upgradeButtonStyle}
+                onClick={handleUpgrade}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+              >
+                🔥 Upgrade Recipe
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return <div style={commentStyle}>Perfect cocktail for any occasion!</div>;
   };
 
   return (
@@ -351,10 +452,8 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
 
         {/* Content */}
         <div style={contentStyle}>
-          {/* Comment section */}
-          <div style={commentStyle}>
-            {data.comment}
-          </div>
+          {/* Enhanced comment section */}
+          {renderComment()}
 
           {/* Ingredients & Instructions Row */}
           <div style={detailsStyle} className="ingredients-section method-section">

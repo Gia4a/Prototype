@@ -18,7 +18,15 @@ const {
   PLANETARY_MODIFIERS 
 } = require('./horescopeRecipe');
 
-const { fetchAndProcessGeminiResults } = require('./geminiService');
+// --- Enhanced mixologist and upgrade endpoints ---
+const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { defineSecret } = require('firebase-functions/v2/params');
+const { fetchAndProcessGeminiResults, generateCocktailComment, generateSeasonalUpgrade } = require('./geminiService');
+const { extractBestRecipe } = require('./cocktail');
+const { isFoodItem, isLiquorType, isFlavoredLiquor } = require('./constants');
+
+// Define the secret for Gemini API key
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 // Helper function to clean and parse JSON from Gemini responses
 function cleanAndParseGeminiJSON(responseText) {
@@ -279,66 +287,211 @@ async function callGeminiAPI(prompt) {
   }
 }
 
-// API Endpoint: Get mixologist suggestion
-exports.getMixologistSuggestion = functions.https.onCall(async (data, context) => {
-  const query = data.query;
 
-  if (!query) {
-    throw new functions.https.HttpsError('invalid-argument', 'Query is required');
-  }
+// Enhanced mixologist function with comment generation
+exports.getMixologistSuggestion = onCall(
+  { secrets: [geminiApiKey] },
+  async (request) => {
+    const { query } = request.data;
 
-  try {
-    console.log('Processing mixologist query:', query);
-    
-    const apiKey = functions.config().generativelanguage.key;
-    
+    if (!query || typeof query !== 'string') {
+      throw new HttpsError('invalid-argument', 'Query is required and must be a string');
+    }
+
+    const trimmedQuery = query.trim();
+    if (trimmedQuery.length === 0) {
+      throw new HttpsError('invalid-argument', 'Query cannot be empty');
+    }
+
+    const apiKey = geminiApiKey.value();
     if (!apiKey) {
-      throw new functions.https.HttpsError('internal', 'Gemini API key not configured');
+      throw new HttpsError('internal', 'Gemini API key is not configured');
     }
 
-    // Use the improved geminiService
-    const searchResults = await fetchAndProcessGeminiResults(query, apiKey);
-    
-    console.log('Search results count:', searchResults?.length || 0);
+    try {
+      console.log(`Processing enhanced query: "${trimmedQuery}"`);
 
-    if (!searchResults || searchResults.length === 0) {
+      // Get the basic cocktail results
+      const results = await fetchAndProcessGeminiResults(trimmedQuery, apiKey);
+            
+      if (!results || results.length === 0) {
+        throw new HttpsError('not-found', 'No results found for the given query');
+      }
+
+      const primaryResult = results[0];
+            
+      // Check if this is a cocktail/liquor query that should get enhanced comments
+      const isEnhanceable = (isLiquorType(trimmedQuery) || 
+                 trimmedQuery.toLowerCase().includes('cocktail') ||
+                 trimmedQuery.toLowerCase().includes('drink')) &&
+                !trimmedQuery.toLowerCase().includes('horoscope');
+
+      if (isEnhanceable && primaryResult.snippet) {
+        try {
+          // Extract ingredients for comment generation
+          const ingredientsText = primaryResult.snippet.match(/Ingredients:\s*([\s\S]*?)(?=\s*Instructions?:|$)/i);
+          const ingredients = ingredientsText ? 
+            ingredientsText[1].split(/[\,\n]/).map(i => i.trim()).filter(i => i.length > 0) : 
+            ['premium spirits', 'quality mixers'];
+
+          // Generate enhanced comment
+          const enhancedComment = await generateCocktailComment(
+            primaryResult.title,
+            ingredients,
+            null, // Let function determine current season
+            apiKey
+          );
+
+          // Add enhanced comment to the result
+          primaryResult.enhancedComment = enhancedComment;
+          primaryResult.supportsUpgrade = true;
+                    
+        } catch (commentError) {
+          console.warn('Could not generate enhanced comment:', commentError.message);
+          // Continue with basic result
+        }
+      }
+
       return {
-        originalQuery: query,
-        suggestion: `No specific recommendations found for "${query}". Try searching for a classic cocktail, spirit, or food item.`,
-        title: 'No Results Found',
-        searchType: 'general',
-        results: []
+        originalQuery: trimmedQuery,
+        suggestion: primaryResult.snippet || primaryResult.content || 'No specific recommendation available.',
+        title: primaryResult.title || 'Mixologist Recommendation',
+        filePath: primaryResult.filePath || null,
+        results: results,
+        searchType: 'cocktail_suggestion',
+        snippet: primaryResult.snippet,
+        why: primaryResult.why || 'Expert mixologist recommendation',
+        enhancedComment: primaryResult.enhancedComment || null,
+        supportsUpgrade: primaryResult.supportsUpgrade || false
       };
+
+    } catch (error) {
+      console.error('Error in getMixologistSuggestion:', error);
+            
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+            
+      throw new HttpsError('internal', `Failed to process mixologist request: ${error.message}`);
+    }
+  }
+);
+
+// New function for handling upgrade requests
+exports.getUpgradedCocktail = onCall(
+  { secrets: [geminiApiKey] },
+  async (request) => {
+    const { originalQuery, upgradeType } = request.data;
+
+    if (!originalQuery || typeof originalQuery !== 'string') {
+      throw new HttpsError('invalid-argument', 'Original query is required');
     }
 
-    // Return the first result as the main suggestion
-    const mainResult = searchResults[0];
-    
-    return {
-      originalQuery: query,
-      suggestion: mainResult.snippet || mainResult.title || 'No details available',
-      title: mainResult.title || 'Mixologist Recommendation',
-      snippet: mainResult.snippet,
-      content: mainResult.snippet,
-      filePath: mainResult.filePath,
-      why: mainResult.why,
-      results: searchResults,
-      searchType: 'general'
-    };
+    if (!upgradeType || typeof upgradeType !== 'string') {
+      throw new HttpsError('invalid-argument', 'Upgrade type is required');
+    }
 
-  } catch (error) {
-    console.error("Error in getMixologistSuggestion:", error.message);
-    
-    // Return a fallback response instead of throwing
-    return {
-      originalQuery: query,
-      suggestion: `I encountered an issue processing your request for "${query}". Please try again with a different search term.`,
-      title: 'Search Error',
-      searchType: 'error',
-      results: []
-    };
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      console.log(`Processing upgrade request: "${originalQuery}" -> ${upgradeType}`);
+
+      // Generate the seasonal/upgraded version
+      const upgradeResult = await generateSeasonalUpgrade(
+        originalQuery,
+        upgradeType,
+        null, // Let function determine current season
+        apiKey
+      );
+
+      if (!upgradeResult) {
+        throw new HttpsError('internal', 'Could not generate upgrade recipe');
+      }
+
+      // Generate enhanced comment for the upgrade
+      let enhancedComment = null;
+      try {
+        const ingredientsText = upgradeResult.snippet.match(/Ingredients:\s*([\s\S]*?)(?=\s*Instructions?:|$)/i);
+        const ingredients = ingredientsText ? 
+          ingredientsText[1].split(/[\,\n]/).map(i => i.trim()).filter(i => i.length > 0) : 
+          ['premium spirits', 'seasonal ingredients'];
+
+        enhancedComment = await generateCocktailComment(
+          upgradeResult.title,
+          ingredients,
+          null,
+          apiKey
+        );
+      } catch (commentError) {
+        console.warn('Could not generate upgrade comment:', commentError.message);
+      }
+
+      return {
+        originalQuery: originalQuery,
+        suggestion: upgradeResult.snippet,
+        title: upgradeResult.title,
+        filePath: upgradeResult.filePath,
+        searchType: 'cocktail_upgrade',
+        snippet: upgradeResult.snippet,
+        why: upgradeResult.why,
+        upgradeType: upgradeType,
+        enhancedComment: enhancedComment,
+        supportsUpgrade: true // Upgrades can be further upgraded
+      };
+
+    } catch (error) {
+      console.error('Error in getUpgradedCocktail:', error);
+            
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+            
+      throw new HttpsError('internal', `Failed to process upgrade request: ${error.message}`);
+    }
   }
-});
+);
+
+// Optional: Function to get just enhanced comment for existing recipes
+exports.getEnhancedComment = onCall(
+  { secrets: [geminiApiKey] },
+  async (request) => {
+    const { cocktailName, ingredients } = request.data;
+
+    if (!cocktailName || typeof cocktailName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Cocktail name is required');
+    }
+
+    if (!ingredients || !Array.isArray(ingredients)) {
+      throw new HttpsError('invalid-argument', 'Ingredients array is required');
+    }
+
+    const apiKey = geminiApiKey.value();
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      const enhancedComment = await generateCocktailComment(
+        cocktailName,
+        ingredients,
+        null,
+        apiKey
+      );
+
+      return {
+        enhancedComment: enhancedComment,
+        success: true
+      };
+
+    } catch (error) {
+      console.error('Error generating enhanced comment:', error);
+      throw new HttpsError('internal', `Failed to generate comment: ${error.message}`);
+    }
+  }
+);
 
 // Batch function for multiple signs
 exports.getBatchRecipes = functions.https.onRequest((req, res) => {

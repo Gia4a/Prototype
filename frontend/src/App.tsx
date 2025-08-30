@@ -1,187 +1,126 @@
-import { useState } from 'react';
+// App.tsx - Enhanced main component with upgrade functionality
+import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
-import Horoscope from './components/Horoscope';
 import ResultsPopup from './components/ResultsPopup';
-import './App.css';
+import CocktailUpgradeService from './services/cocktailUpgradeService';
+import type { UpgradeResponse, UpgradeType } from './services/cocktailUpgradeService';
 
-// Interfaces for type safety
-interface AstrologySign {
-    name: string;
-    displayName: string;
-}
+// Initialize the upgrade service with your Gemini API key
+const upgradeService = new CocktailUpgradeService(import.meta.env.VITE_GEMINI_API_KEY || '');
 
-interface HoroscopeResult {
-    sign: string;
-    cocktailName: string;
-    moonPhase: string;
-    ruler: string;
-    element: string;
-    ingredients: string[];
-    instructions: string;
-    theme: string;
-    insight: string;
-}
+type MixologistResponse = UpgradeResponse;
 
-interface MixologistResponse {
-    originalQuery: string;
-    suggestion: string;
-    title?: string;
-    content?: string;
-    filePath?: string;
-    results?: any[];
-    searchType?: string;
-    snippet?: string;
-    why?: string;
-}
-
-// Union type for all possible popup content
-type PopupContent = HoroscopeResult | MixologistResponse | null;
-
-function App() {
-    // State management
-    const [isPopupVisible, setIsPopupVisible] = useState(false);
+const App: React.FC = () => {
+    const [currentSuggestion, setCurrentSuggestion] = useState<MixologistResponse | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [isHoroscopeGridVisible, setIsHoroscopeGridVisible] = useState(false);
-    const [popupContent, setPopupContent] = useState<PopupContent>(null);
-    const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined);
+    const [showResults, setShowResults] = useState(false);
+    const [currentQuery, setCurrentQuery] = useState<string>('');
 
-    // Toggle horoscope grid visibility
-    const toggleHoroscopeGrid = () => {
-        setIsHoroscopeGridVisible(!isHoroscopeGridVisible);
-    };
-
-    // Handle mixologist search results
-    const handleMixologistSuggestion = (data: MixologistResponse | string | null, queryFromSearchBar?: string) => {
-        console.log("Received mixologist data:", data);
-        
-        if (data) {
-            if (typeof data === 'string') {
-                // Convert string response to structured format
-                const structuredData: MixologistResponse = {
-                    originalQuery: queryFromSearchBar || 'Unknown Query',
-                    suggestion: data,
-                    title: 'Mixologist Recommendation',
-                    searchType: 'general'
-                };
-                setPopupContent(structuredData);
-            } else {
-                // Use the structured response directly
-                setPopupContent(data);
-            }
+    // Handle new suggestions from search
+    const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
+        if (typeof suggestion === 'string') {
+            // Convert string to proper response object
+            setCurrentSuggestion({
+                originalQuery: query || '',
+                suggestion: suggestion,
+                title: 'Mixologist Recommendation',
+                searchType: 'general'
+            });
         } else {
-            setPopupContent(null);
+            setCurrentSuggestion(suggestion);
         }
         
-        setSearchQuery(queryFromSearchBar);
-        setError(null);
-        setIsPopupVisible(true);
-        setIsLoading(false);
-    };
-
-    // Handle horoscope sign selection
-    const handleSignSelect = (sign: AstrologySign, result: HoroscopeResult) => {
-        console.log("Received horoscope result:", result);
+        if (query) {
+            setCurrentQuery(query);
+        }
         
-        setPopupContent(result);
-        setSearchQuery(`${sign.displayName} Cosmic Cocktail`);
         setError(null);
-        setIsPopupVisible(true);
+        setShowResults(true);
     };
 
+    // Handle upgrade requests using the client-side service
+    const handleUpgradeRequest = async (originalQuery: string, upgradeType: string) => {
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // Accept string for compatibility, but cast to UpgradeType
+            const safeUpgradeType = upgradeType as UpgradeType;
+            console.log('Processing upgrade request:', originalQuery, safeUpgradeType);
+
+            // Use the client-side upgrade service instead of Firebase Cloud Functions
+            const responseData = await upgradeService.getUpgradedCocktail(originalQuery, safeUpgradeType);
+
+            console.log('Upgrade response:', responseData);
+
+            // Update the current suggestion with the upgrade
+            setCurrentSuggestion(responseData);
+            setCurrentQuery(originalQuery); // Keep original query for context
+
+        } catch (error) {
+            if (error instanceof Error) {
+                console.error("Error processing upgrade:", error.message);
+                setError(`Sorry, couldn't generate the ${upgradeType} upgrade. Please try again.`);
+            } else {
+                console.error("Error processing upgrade:", error);
+                setError('Sorry, an unknown error occurred.');
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
     // Handle loading state changes
-    const handleLoadingChange = (loadingState: boolean) => {
-        setIsLoading(loadingState);
-        if (loadingState) {
-            // Clear previous results when starting new search
-            setError(null);
-            setPopupContent(null);
-            setIsPopupVisible(false);
-        }
+    const handleLoadingChange = (loading: boolean) => {
+        setIsLoading(loading);
     };
 
-    // Handle errors from various components
+    // Handle errors
     const handleError = (errorMessage: string) => {
-        console.error("Application error:", errorMessage);
         setError(errorMessage);
-        setPopupContent(null);
-        setIsPopupVisible(true);
         setIsLoading(false);
     };
 
-    // Close popup and reset state
-    const closePopup = () => {
-        setIsPopupVisible(false);
+    // Close results popup
+    const handleCloseResults = () => {
+        setShowResults(false);
+        setCurrentSuggestion(null);
         setError(null);
-        setPopupContent(null);
-        setSearchQuery(undefined);
     };
 
     return (
         <div className="app-container">
-            <div className="image-container">
-                <img 
-                    src="/Bar_pig.png" 
-                    alt="Blind Pig Bar" 
-                    className="main-background-image"
+            {/* Main search interface */}
+            <div className="main-content">
+                <SearchBar
+                    onNewSuggestion={handleNewSuggestion}
+                    onLoadingChange={handleLoadingChange}
+                    onError={handleError}
+                    isLoading={isLoading}
+                    onUpgradeRequest={handleUpgradeRequest}
                 />
                 
-                {/* Search Bar Overlay */}
-                <div className="overlay-search">
-                    <SearchBar
-                        onNewSuggestion={handleMixologistSuggestion}
-                        onLoadingChange={handleLoadingChange}
-                        onError={handleError}
-                        isLoading={isLoading}
-                    />
-                </div>
-
-                {/* Daily Horoscope Button */}
-                <div className="daily-horoscope-container">
-                    <button onClick={toggleHoroscopeGrid} className="daily-horoscope-button">
-                        {isHoroscopeGridVisible ? 'Hide Horoscope' : 'Daily Horoscope'}
-                    </button>
-                </div>
-
-                {/* Horoscope Grid */}
-                {isHoroscopeGridVisible && (
-                    <Horoscope 
-                        onSignSelect={handleSignSelect}
-                        onLoadingChange={handleLoadingChange}
-                        onError={handleError}
-                    />
-                )}
-
-                {/* Loading Indicator */}
+                {/* Loading indicator */}
                 {isLoading && (
-                    <div className="loading-container" style={{ 
-                        position: 'absolute', 
-                        top: '50%', 
-                        left: '50%', 
-                        transform: 'translate(-50%, -50%)',
-                        color: 'white',
-                        textAlign: 'center',
-                        background: 'rgba(0, 0, 0, 0.8)',
-                        padding: '20px',
-                        borderRadius: '8px'
-                    }}>
-                        <div className="loading-spinner" />
-                        <p>Getting mixologist's suggestion...</p>
+                    <div className="loading-indicator">
+                        <div className="loading-spinner"></div>
+                        <p>Crafting your perfect cocktail...</p>
                     </div>
                 )}
-
-                {/* Results Popup */}
-                <ResultsPopup
-                    isOpen={isPopupVisible}
-                    onClose={closePopup}
-                    suggestion={popupContent}
-                    error={error}
-                    searchQuery={searchQuery}
-                    visible={isPopupVisible}
-                />
             </div>
+
+            {/* Results popup with enhanced features */}
+            <ResultsPopup
+                isOpen={showResults}
+                onClose={handleCloseResults}
+                suggestion={currentSuggestion}
+                error={error}
+                searchQuery={currentQuery}
+                visible={showResults}
+                onUpgradeRequest={handleUpgradeRequest}
+            />
         </div>
     );
-}
+};
 
 export default App;
