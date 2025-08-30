@@ -4,6 +4,23 @@ const { isFoodItem, isLiquorType, isFlavoredLiquor, isShooterQuery } = require('
 
 // Constants
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
+
+// Common home bar ingredients to promote in recipes
+const COMMON_INGREDIENTS = [
+    // Base spirits
+    'vodka', 'rum', 'gin', 'whiskey', 'tequila',
+    // Mixers & juices
+    'lemon juice', 'lime juice', 'orange juice', 'cranberry juice', 'pineapple juice', 'tomato juice',
+    // Syrups & sweeteners
+    'simple syrup', 'grenadine', 'honey', 'maple syrup',
+    // Sodas & mixers
+    'club soda', 'tonic water', 'ginger beer', 'cola', 'sprite', '7up',
+    // Common garnishes
+    'lemon', 'lime', 'orange', 'cherry', 'mint', 'olives',
+    // Basic bitters (only when essential)
+    'angostura bitters', 'orange bitters'
+];
+
 const CLASSIC_COCKTAILS = [
     'moscow mule', 'old fashioned', 'manhattan', 'martini', 'margarita', 
     'mojito', 'daiquiri', 'whiskey sour', 'cosmopolitan', 'mai tai',
@@ -22,6 +39,31 @@ function isClassicCocktailRequest(query) {
         normalizedQuery.startsWith(cocktail + ' ') ||
         normalizedQuery.endsWith(' ' + cocktail)
     );
+}
+
+// Add randomization to prevent same responses
+function getRandomVariation() {
+    const variations = [
+        "Create a unique variation",
+        "Suggest a modern twist on",
+        "Provide a creative take on",
+        "Give me an interesting version of",
+        "Show me a premium recipe for",
+        "What's a great way to make"
+    ];
+    return variations[Math.floor(Math.random() * variations.length)];
+}
+
+function getRandomStyle() {
+    const styles = [
+        "classic style",
+        "modern mixology approach", 
+        "craft cocktail style",
+        "bartender's choice",
+        "premium version",
+        "traditional method"
+    ];
+    return styles[Math.floor(Math.random() * styles.length)];
 }
 
 // More robust JSON extraction and parsing
@@ -100,69 +142,152 @@ function extractAndParseJSON(responseText) {
     }
 }
 
-// Simplified, more reliable prompts
-const getClassicCocktailPrompt = (query) => `
-Return a JSON array with the traditional recipe for "${query}". Use this exact format:
+// Enhanced prompts with more variety and better structure
+const getClassicCocktailPrompt = (query) => {
+    const variation = getRandomVariation();
+    const style = getRandomStyle();
+    const randomSeed = Math.floor(Math.random() * 1000);
+    
+    return `
+${variation} a "${query}" cocktail using ${style}. Use common household ingredients - no specialty liqueurs unless absolutely essential (like bitters for Old Fashioned).
 
-[{"title": "Classic ${query}", "snippet": "Ingredients: 2 oz spirit, mixers. Instructions: method.", "filePath": null, "why": "Traditional recipe"}]
+Return JSON array format:
+[{"title": "Name of Cocktail", "snippet": "Ingredients: 2 oz spirit, 1 oz mixer, 0.5 oz syrup. Instructions: detailed method with shaking/stirring, garnish, glassware.", "filePath": null, "why": "reasoning"}]
 
-Keep ingredients and instructions concise. Ensure valid JSON.`;
+Requirements:
+- Include ALL ingredient measurements (oz, ml, dashes, etc.)  
+- Use common ingredients: lemon/lime juice, simple syrup, club soda, grenadine, common bitters
+- Avoid specialty liqueurs unless recipe demands it
+- Include glassware and garnish details
+- Make it unique (seed: ${randomSeed})
+- Ensure valid JSON structure`;
+};
 
-const getShooterPrompt = (query) => `
-Return a JSON array with shooter recipes for "${query}". Use this exact format:
+const getShooterPrompt = (query) => {
+    const randomSeed = Math.floor(Math.random() * 1000);
+    
+    return `
+Create a shooter recipe for "${query}" using common home bar ingredients. Keep it simple and accessible.
 
-[{"title": "${query} Shot", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Easy shooter"}]
+Return JSON array:
+[{"title": "Shot Name", "snippet": "Ingredients: 0.5 oz ingredient1, 0.5 oz ingredient2, splash of ingredient3. Instructions: layer/mix method, serve immediately.", "filePath": null, "why": "perfect shooter"}]
 
-Use common ingredients only. Ensure valid JSON.`;
+Focus on:
+- Exact measurements for shooter portions
+- Common ingredients: vodka, rum, whiskey, cranberry juice, lime juice, grenadine
+- Simple layering or mixing technique
+- Bold flavors that work in small portions
+- Unique variation (seed: ${randomSeed})
+- Valid JSON only`;
+};
 
-const getFoodPairingPrompt = (query) => `
-Return a JSON array with beverage pairings for "${query}". Use this exact format:
+const getFoodPairingPrompt = (query) => {
+    const randomSeed = Math.floor(Math.random() * 1000);
+    
+    return `
+Recommend a specific cocktail or wine pairing for "${query}" using common home bar ingredients. Focus on flavor harmony and complementary elements.
 
-[{"title": "Wine for ${query}", "snippet": "Pairing Notes: wine recommendation. Serving: details.", "filePath": "willowpark.net", "why": "Complementary pairing"}]
+Return JSON array:
+[{"title": "Perfect Pairing for ${query}", "snippet": "Pairing: specific drink name. Ingredients: detailed list with measurements using common ingredients. Instructions: preparation method. Why it works: flavor explanation.", "filePath": "willowpark.net", "why": "expert pairing"}]
 
-Keep descriptions concise. Ensure valid JSON.`;
+Include:
+- Specific drink recommendation with full recipe
+- Use accessible ingredients: common spirits, citrus juices, simple syrup, club soda
+- Explanation of flavor pairing principles  
+- Complete ingredient measurements
+- Unique suggestion (seed: ${randomSeed})
+- Valid JSON structure`;
+};
 
-const getLiquorPrompt = (query) => `
-Return a JSON array with cocktails using "${query}". Use this exact format:
+const getLiquorPrompt = (query) => {
+    const variation = getRandomVariation();
+    const randomSeed = Math.floor(Math.random() * 1000);
+    
+    return `
+${variation} a cocktail featuring "${query}" as the main spirit using common home bar ingredients. Create something distinctive and well-balanced.
 
-[{"title": "${query} Cocktail", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Classic cocktail"}]
+Return JSON array:
+[{"title": "Signature ${query} Cocktail", "snippet": "Ingredients: 2 oz ${query}, additional common ingredients with measurements. Instructions: complete preparation method, garnish, serving style.", "filePath": null, "why": "showcases the spirit"}]
 
-Use simple ingredients. Ensure valid JSON.`;
+Requirements:
+- Highlight the "${query}" spirit prominently
+- Use accessible ingredients: citrus juices, simple syrup, club soda, ginger beer, grenadine, common fruits
+- Include all measurements precisely
+- Detailed preparation instructions
+- Creative but balanced flavor profile  
+- Unique creation (seed: ${randomSeed})
+- Proper JSON format`;
+};
 
-const getCocktailPrompt = (query) => `
-Return a JSON array with cocktail suggestions for "${query}". Use this exact format:
+const getCocktailPrompt = (query) => {
+    const variation = getRandomVariation();
+    const style = getRandomStyle();
+    const randomSeed = Math.floor(Math.random() * 1000);
+    
+    return `
+${variation} a cocktail inspired by "${query}" using ${style}. Use common home bar ingredients and be creative while maintaining balance.
 
-[{"title": "Custom ${query}", "snippet": "Ingredients: list. Instructions: method.", "filePath": null, "why": "Creative suggestion"}]
+Return JSON array:
+[{"title": "Creative Cocktail Name", "snippet": "Ingredients: base spirit with measurement, common mixers with measurements, simple garnish. Instructions: step-by-step preparation, glassware, presentation.", "filePath": null, "why": "creative interpretation"}]
 
-Keep it simple. Ensure valid JSON.`;
+Focus on:
+- Original cocktail creation using common ingredients
+- Accessible ingredients: vodka, rum, whiskey, gin, citrus juices, simple syrup, club soda, tonic, ginger beer, cranberry juice
+- Complete ingredient measurements  
+- Detailed mixing instructions
+- Thoughtful flavor combinations
+- Unique approach (seed: ${randomSeed})
+- Valid JSON structure`;
+};
 
-// Fallback function for any category
+// Enhanced fallback with more variety
 function createFallbackResponse(query, category = 'general') {
+    const randomVariations = {
+        food: [
+            `Wine & Cocktail Pairing for ${query}`,
+            `Perfect Drink Match for ${query}`, 
+            `Beverage Harmony with ${query}`
+        ],
+        liquor: [
+            `Signature ${query} Creation`,
+            `Craft ${query} Cocktail`,
+            `Premium ${query} Recipe`
+        ],
+        general: [
+            `Mixologist's ${query} Special`,
+            `Craft Cocktail: ${query} Inspired`,
+            `Artisan ${query} Creation`
+        ]
+    };
+    
+    const titles = randomVariations[category] || randomVariations.general;
+    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+    
     const fallbackData = {
         food: [{
-            title: `Beverage Pairing for ${query}`,
-            snippet: `A thoughtfully selected beverage that complements ${query}. The pairing enhances both the food and drink experience through balanced flavors.`,
+            title: randomTitle,
+            snippet: `A thoughtfully selected beverage that complements ${query}. The pairing enhances both the food and drink experience through balanced flavors and complementary aromatics.`,
             filePath: "willowpark.net",
-            why: "Professional pairing recommendation."
+            why: "Professional pairing recommendation based on flavor harmony."
         }],
         liquor: [{
-            title: `${query} Cocktail Suggestion`,
-            snippet: `A well-balanced cocktail featuring ${query} as the base spirit. Mixed with complementary ingredients for optimal flavor.`,
+            title: randomTitle,
+            snippet: `Ingredients: 2 oz ${query}, 0.75 oz fresh citrus, 0.5 oz premium syrup, garnish. Instructions: Combine ingredients in shaker with ice, shake vigorously, strain into chilled glass, garnish appropriately.`,
             filePath: null,
-            why: "Classic preparation method."
+            why: "Classic preparation method showcasing the spirit's character."
         }],
         general: [{
-            title: `Mixologist Suggestion for ${query}`,
-            snippet: `A carefully crafted recommendation based on your search for ${query}. This suggestion considers flavor balance and accessibility.`,
+            title: randomTitle,
+            snippet: `Ingredients: Premium base spirit, quality mixers, fresh garnish. Instructions: Expert preparation technique ensuring optimal flavor balance and presentation. Served in appropriate glassware.`,
             filePath: null,
-            why: "Expert mixologist recommendation."
+            why: "Expert mixologist recommendation crafted for optimal experience."
         }]
     };
     
     return fallbackData[category] || fallbackData.general;
 }
 
-// Main Function
+// Main Function with enhanced settings
 async function fetchAndProcessGeminiResults(query, apiKey) {
     if (!apiKey) {
         throw new Error('API key for Gemini service is not configured.');
@@ -175,7 +300,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
     const isFlavoredFromList = isFlavoredLiquor(query);
     const isShooter = isShooterQuery(query);
 
-    console.log(`Query Analysis - "${query}": classic=${isClassicCocktail}, food=${isFood}, liquor=${isLiquor}, shooter=${isShooter}`);
+    console.log(`Query Analysis - "${query}": classic=${isClassicCocktail}, food=${isFood}, liquor=${isLiquor}, flavored=${isFlavoredFromList}, shooter=${isShooter}`);
 
     // Select appropriate prompt
     let promptText = '';
@@ -198,7 +323,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
         category = 'general';
     }
 
-    // API Request with very conservative settings for reliable JSON
+    // Enhanced API Request with better settings for variety
     const requestBody = {
         contents: [{
             parts: [{
@@ -206,15 +331,16 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
             }]
         }],
         generationConfig: {
-            temperature: 0.1,      // Very low for maximum consistency
-            topK: 1,              // Most predictable output
-            topP: 0.1,            // Minimal creativity
-            maxOutputTokens: 512   // Shorter to avoid truncation
+            temperature: 0.7,        // Increased for more variety
+            topK: 40,               // Allow more creative options
+            topP: 0.8,              // Better balance of creativity and coherence
+            maxOutputTokens: 1024,   // More space for detailed recipes
+            candidateCount: 1        // Single response for consistency
         }
     };
 
     try {
-        console.log("Sending request to Gemini API...");
+        console.log("Sending request to Gemini API with enhanced settings...");
         
         const geminiResponse = await axios.post(
             `${GEMINI_API_URL}?key=${apiKey}`,
@@ -250,7 +376,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
 
         // Ensure we always return at least one result
         if (mappedResults.length === 0) {
-            console.log("No valid results, using fallback");
+            console.log("No valid results, using enhanced fallback");
             return createFallbackResponse(query, category);
         }
 

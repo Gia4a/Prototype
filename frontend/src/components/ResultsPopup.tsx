@@ -47,68 +47,153 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         }
     };
 
-    // Helper function to extract ingredients from text
+    // Enhanced helper function to extract ingredients WITH measurements
     const extractIngredients = (text: string): string[] => {
         if (!text) return ['No ingredients available'];
         
         // Look for "Ingredients:" followed by content
-        const ingredientsMatch = text.match(/Ingredients:\s*([^.]*(?:\.[^.]*)*?)\.?\s*(?:Instructions?:|Method:|$)/i);
+        const ingredientsMatch = text.match(/Ingredients:\s*([^.]*(?:\.[^.]*)*?)\.?\s*(?:Instructions?:|Method:|Preparation:|$)/i);
         if (ingredientsMatch) {
             const ingredientsText = ingredientsMatch[1].trim();
-            return ingredientsText
-                .split(/,|\band\b/)
+            
+            // Split by common delimiters but preserve measurements
+            const ingredients = ingredientsText
+                .split(/,(?=\s*\d)|,(?=\s*[A-Z])|;|\n/)
+                .map(item => {
+                    let cleaned = item.trim();
+                    
+                    // Remove leading bullets or dashes
+                    cleaned = cleaned.replace(/^[-•*]\s*/, '');
+                    
+                    // Remove trailing periods but keep decimal points in measurements
+                    cleaned = cleaned.replace(/\.$/, '');
+                    
+                    return cleaned;
+                })
+                .filter(item => {
+                    // Filter out empty items and very short non-meaningful entries
+                    return item.length > 2 && 
+                           !item.match(/^(and|or|plus|with)$/i);
+                })
+                .slice(0, 8); // Limit to 8 ingredients for display
+            
+            return ingredients.length > 0 ? ingredients : ['Ingredients not specified'];
+        }
+        
+        // Fallback: try to find measurement patterns in the text
+        const measurementPattern = /(?:\d+(?:\.\d+)?\s*(?:oz|ml|cups?|tbsp|tsp|cl|dash|splash|drops?|barspoons?))[^,;.\n]*/gi;
+        const foundMeasurements = text.match(measurementPattern);
+        
+        if (foundMeasurements && foundMeasurements.length > 0) {
+            return foundMeasurements
                 .map(item => item.trim())
-                .filter(item => item.length > 2)
-                .map(item => item.replace(/^\d+\s*(oz|ml|cups?|tbsp|tsp)\s*/i, '').trim())
-                .filter(item => item.length > 0)
-                .slice(0, 6); // Limit to 6 ingredients for display
+                .filter(item => item.length > 3)
+                .slice(0, 6);
         }
         
         return ['Ingredients not specified'];
     };
 
-    // Helper function to extract instructions from text  
+    // Enhanced helper function to extract instructions
     const extractInstructions = (text: string): string => {
         if (!text) return 'No instructions available';
         
-        // Look for "Instructions:" or "Method:" followed by content
-        const instructionsMatch = text.match(/(?:Instructions?|Method):\s*(.+?)(?:\.|$)/i);
+        // Look for "Instructions:", "Method:", or "Preparation:" followed by content
+        const instructionsMatch = text.match(/(?:Instructions?|Method|Preparation):\s*(.+?)(?:\.|$)/i);
         if (instructionsMatch) {
-            return instructionsMatch[1].trim();
+            let instructions = instructionsMatch[1].trim();
+            
+            // Clean up the instructions
+            instructions = instructions
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .replace(/^[-•*]\s*/, '') // Remove leading bullets
+                .trim();
+            
+            return instructions;
         }
         
-        // Look for instruction-like sentences
+        // Look for instruction-like sentences with action words
         const sentences = text.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 10);
         for (const sentence of sentences) {
-            if (sentence.match(/\b(mix|stir|shake|add|pour|fill|garnish|serve|combine|build)/i)) {
-                return sentence;
+            if (sentence.match(/\b(mix|stir|shake|add|pour|fill|garnish|serve|combine|build|muddle|strain|layer)/i)) {
+                return sentence.replace(/^[-•*]\s*/, '').trim();
             }
         }
         
-        return 'Method not specified';
+        // Last resort: look for any sentence that seems like preparation
+        const preparationSentence = sentences.find(s => 
+            s.length > 20 && 
+            (s.includes('ingredients') || s.includes('glass') || s.includes('ice'))
+        );
+        
+        return preparationSentence ? preparationSentence.trim() : 'Method not specified';
     };
 
-    // Helper function to clean cocktail names
+    // Enhanced helper function to clean cocktail names
     const cleanCocktailName = (title: string): string => {
         if (!title) return 'Cocktail Recommendation';
         
         return title
-            .replace(/^(The Classic:|Direct Interpretation:|Creative Interpretation:|Classic & Simple:|Creative Twist:|Simple |Premium |Modern |Alternative |Signature )/i, '')
+            .replace(/^(The Classic:|Direct Interpretation:|Creative Interpretation:|Classic & Simple:|Creative Twist:|Simple |Premium |Modern |Alternative |Signature |Craft )/i, '')
             .replace(/ - .*$/, '') // Remove everything after dash
+            .replace(/\s+Recipe$/i, '') // Remove "Recipe" suffix
+            .replace(/\s+Cocktail$/i, '') // Remove redundant "Cocktail" suffix if the name already implies it
             .trim();
     };
 
-    // Helper function to extract description/comment
+    // Enhanced helper function to extract description/comment with 1920s Chicago bartender personality
     const extractComment = (text: string): string => {
-        if (!text) return 'A carefully crafted cocktail recommendation.';
+        if (!text) return getChicagoBartenderMessage();
         
         // Look for description before ingredients
         const beforeIngredients = text.split(/Ingredients?:/i)[0].trim();
         if (beforeIngredients.length > 20) {
-            return beforeIngredients.replace(/^(Concept:|Pairing Notes?:)/i, '').trim();
+            let comment = beforeIngredients
+                .replace(/^(Concept:|Pairing Notes?:|Description:)/i, '')
+                .trim();
+            
+            // If it's too long, take just the first sentence
+            const firstSentence = comment.split(/[.!?]/)[0].trim();
+            return firstSentence.length > 10 ? firstSentence : comment;
         }
         
-        return 'A delicious cocktail crafted with care.';
+        // Look for "why" explanations
+        const whyMatch = text.match(/(?:why|reason|because)[\s:]*([^.!?]+)/i);
+        if (whyMatch && whyMatch[1]) {
+            return whyMatch[1].trim();
+        }
+        
+        // Look for pairing notes
+        const pairingMatch = text.match(/(?:pairing|notes?|works?)[\s:]*([^.!?]+)/i);
+        if (pairingMatch && pairingMatch[1]) {
+            return pairingMatch[1].trim();
+        }
+        
+        return getChicagoBartenderMessage();
+    };
+
+    // 1920s Chicago bartender personality messages
+    const getChicagoBartenderMessage = (): string => {
+        const messages = [
+            "Listen here, friend - this here's a real humdinger that'll put some pep in your step.",
+            "Now that's the cat's pajamas! A drink that's the bee's knees and then some.",
+            "This little number's been packin' 'em in at the speakeasy since before you were knee-high to a grasshopper.",
+            "Say, this cocktail's the real McCoy - none of that bathtub gin nonsense.",
+            "Hot diggity! This drink's got more kick than a Chicago thoroughbred.",
+            "Now don't go tellin' the feds, but this recipe's straight from the finest joint on the South Side.",
+            "This drink's smoother than a con man's pitch and twice as satisfying.",
+            "Kid, you're lookin' at liquid gold - the kind that made Chicago famous.",
+            "This here concoction's got more class than a Northside socialite.",
+            "Now that's what I call a real sockdolager of a drink!"
+        ];
+        return messages[Math.floor(Math.random() * messages.length)];
+    };
+
+    // Helper function to determine if ingredients look complete (have measurements)
+    const hasDetailedIngredients = (ingredients: string[]): boolean => {
+        return ingredients.some(ingredient => 
+            /\d+(?:\.\d+)?\s*(?:oz|ml|cups?|tbsp|tsp|cl|dash|splash)/i.test(ingredient)
+        );
     };
 
     // Determine result type and render accordingly
@@ -166,13 +251,22 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                                     suggestion.snippet.toLowerCase().includes('instructions:'));
 
         if (hasCocktailStructure) {
+            // Extract ingredients with enhanced parsing
+            const ingredients = extractIngredients(suggestion.snippet);
+            
             // Format cocktail data
             const cocktailData: CocktailData = {
                 cocktailName: cleanCocktailName(suggestion.title),
-                ingredients: extractIngredients(suggestion.snippet),
+                ingredients: ingredients,
                 instructions: extractInstructions(suggestion.snippet),
                 comment: extractComment(suggestion.snippet)
             };
+
+            // Add debugging info if ingredients don't have measurements
+            if (!hasDetailedIngredients(ingredients)) {
+                console.warn('Ingredients may be missing measurements:', ingredients);
+                console.log('Original snippet:', suggestion.snippet);
+            }
 
             return (
                 <div className="compact-card-container">

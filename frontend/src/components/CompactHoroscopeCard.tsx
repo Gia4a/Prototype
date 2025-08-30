@@ -39,7 +39,7 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     backgroundColor: '#1f2937',
     borderRadius: '8px',
     border: '1px solid #3b82f6',
-    overflow: 'hidden',
+    overflow: 'visible', // Changed from hidden to visible
     display: 'flex',
     flexDirection: 'column'
   };
@@ -63,18 +63,19 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '8px', // Reduced gap for better space utilization
     flex: 1,
-    overflow: 'hidden'
+    overflow: 'visible', // Changed from hidden to visible
+    minHeight: 0
   };
 
   const descriptionStyle: React.CSSProperties = {
     textAlign: 'center',
-    fontSize: '0.875rem',
-    lineHeight: '1.625',
+    fontSize: '0.8rem', // Slightly smaller for more space
+    lineHeight: '1.4', // Tighter line height
     backgroundColor: '#374151',
     borderRadius: '4px',
-    padding: '8px',
+    padding: '6px', // Reduced padding
     flexShrink: 0
   };
 
@@ -86,18 +87,19 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
 
   const themeStyle: React.CSSProperties = {
     color: '#d8b4fe',
-    fontSize: '0.75rem',
-    marginTop: '4px',
+    fontSize: '0.7rem', // Smaller theme text
+    marginTop: '2px',
     display: 'block'
   };
 
   const detailsStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '1fr 3fr',
+    gridTemplateColumns: '1fr 2fr', // More balanced columns
     gap: '8px',
-    fontSize: '0.875rem',
+    fontSize: '0.8rem', // Slightly smaller base font
     flex: 1,
-    minHeight: 0
+    minHeight: 0,
+    overflow: 'visible'
   };
 
   const ingredientsTitleStyle: React.CSSProperties = {
@@ -105,25 +107,27 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     color: '#4ade80',
     marginBottom: '4px',
     marginTop: '0',
-    fontSize: 'inherit'
+    fontSize: '0.8rem'
   };
 
   const ingredientsListStyle: React.CSSProperties = {
-    fontSize: '0.75rem',
+    fontSize: '0.7rem', // Smaller ingredient text
     margin: '0',
     padding: '0',
     listStyle: 'none',
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
-    overflow: 'hidden'
+    gap: '1px', // Tighter spacing
+    overflow: 'visible', // Allow all ingredients to show
+    maxHeight: 'none' // Remove height restrictions
   };
 
   const ingredientItemStyle: React.CSSProperties = {
     color: '#d1d5db',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    lineHeight: '1.3',
+    overflow: 'visible', // Show full ingredient text
+    whiteSpace: 'normal', // Allow wrapping if needed
+    wordBreak: 'break-word' // Break long words if necessary
   };
 
   const instructionsTitleStyle: React.CSSProperties = {
@@ -131,18 +135,19 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     color: '#fb923c',
     marginBottom: '4px',
     marginTop: '0',
-    fontSize: 'inherit'
+    fontSize: '0.8rem'
   };
 
   const instructionsTextStyle: React.CSSProperties = {
-    fontSize: '0.75rem',
+    fontSize: '0.7rem', // Smaller instruction text
     color: '#d1d5db',
-    lineHeight: '1.625',
+    lineHeight: '1.4',
     margin: '0',
-    overflow: 'hidden',
-    display: '-webkit-box',
-    WebkitLineClamp: 4,
-    WebkitBoxOrient: 'vertical'
+    overflow: 'visible', // Show all instructions
+    maxHeight: 'none', // Remove height restrictions
+    display: 'block', // Remove webkit-box restrictions
+    whiteSpace: 'normal',
+    wordBreak: 'break-word'
   };
 
   return (
@@ -150,10 +155,10 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
       <div style={cardStyle}>
         {/* Header */}
         <div style={headerStyle}>
-          <h2 style={titleStyle}>
+          <h2 style={titleStyle} className="horoscope-header-special">
             {data.cocktailName}
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '0.8rem' }}>
             <span>🌙 {data.moonPhase}</span>
             <span>🪐 {data.ruler}</span>
           </div>
@@ -173,11 +178,11 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
           </div>
 
           {/* Ingredients & Instructions Row */}
-          <div style={detailsStyle}>
+          <div style={detailsStyle} className="ingredients-section method-section">
             {/* Ingredients Column */}
             <div>
               <h4 style={ingredientsTitleStyle}>🍹 Ingredients:</h4>
-              <ul style={ingredientsListStyle}>
+              <ul style={ingredientsListStyle} className="ingredients-list">
                 {data.ingredients.map((ingredient, index) => (
                   <li key={index} style={ingredientItemStyle}>• {ingredient}</li>
                 ))}
@@ -187,9 +192,9 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
             {/* Instructions Column */}
             <div>
               <h4 style={instructionsTitleStyle}>⚡ Method:</h4>
-              <p style={instructionsTextStyle}>
+              <div style={instructionsTextStyle} className="method-content">
                 {data.instructions}
-              </p>
+              </div>
             </div>
           </div>
         </div>
@@ -198,8 +203,8 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
   );
 };
 
-// Also create the CocktailData interface and CompactCocktailCard component in the same file
-// since you said not to create new files
+
+// CocktailData interface and CompactCocktailCard component
 interface CocktailData {
   cocktailName: string;
   ingredients: string[];
@@ -234,7 +239,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     backgroundColor: '#1f2937',
     borderRadius: '8px',
     border: '1px solid #3b82f6',
-    overflow: 'hidden',
+    overflow: 'visible', // Changed from hidden to visible
     display: 'flex',
     flexDirection: 'column'
   };
@@ -258,18 +263,19 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     padding: '12px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '8px', // Reduced gap for better space utilization
     flex: 1,
-    overflow: 'hidden'
+    overflow: 'visible', // Changed from hidden to visible
+    minHeight: 0
   };
 
   const commentStyle: React.CSSProperties = {
     textAlign: 'center',
-    fontSize: '0.875rem',
-    lineHeight: '1.625',
+    fontSize: '0.8rem', // Slightly smaller
+    lineHeight: '1.4', // Tighter line height
     backgroundColor: '#374151',
     borderRadius: '4px',
-    padding: '8px',
+    padding: '6px', // Reduced padding
     flexShrink: 0,
     fontStyle: 'italic',
     color: '#bfdbfe'
@@ -277,11 +283,12 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
 
   const detailsStyle: React.CSSProperties = {
     display: 'grid',
-    gridTemplateColumns: '1fr 3fr',
+    gridTemplateColumns: '1fr 2fr', // More balanced columns
     gap: '8px',
-    fontSize: '0.875rem',
+    fontSize: '0.8rem', // Slightly smaller base font
     flex: 1,
-    minHeight: 0
+    minHeight: 0,
+    overflow: 'visible'
   };
 
   const ingredientsTitleStyle: React.CSSProperties = {
@@ -289,25 +296,27 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     color: '#4ade80',
     marginBottom: '4px',
     marginTop: '0',
-    fontSize: 'inherit'
+    fontSize: '0.8rem'
   };
 
   const ingredientsListStyle: React.CSSProperties = {
-    fontSize: '0.75rem',
+    fontSize: '0.7rem', // Smaller ingredient text
     margin: '0',
     padding: '0',
     listStyle: 'none',
     display: 'flex',
     flexDirection: 'column',
-    gap: '2px',
-    overflow: 'hidden'
+    gap: '1px', // Tighter spacing
+    overflow: 'visible', // Allow all ingredients to show
+    maxHeight: 'none' // Remove height restrictions
   };
 
   const ingredientItemStyle: React.CSSProperties = {
     color: '#d1d5db',
-    whiteSpace: 'nowrap',
-    overflow: 'hidden',
-    textOverflow: 'ellipsis'
+    lineHeight: '1.3',
+    overflow: 'visible', // Show full ingredient text
+    whiteSpace: 'normal', // Allow wrapping if needed
+    wordBreak: 'break-word' // Break long words if necessary
   };
 
   const instructionsTitleStyle: React.CSSProperties = {
@@ -315,18 +324,19 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     color: '#fb923c',
     marginBottom: '4px',
     marginTop: '0',
-    fontSize: 'inherit'
+    fontSize: '0.8rem'
   };
 
   const instructionsTextStyle: React.CSSProperties = {
-    fontSize: '0.75rem',
+    fontSize: '0.7rem', // Smaller instruction text
     color: '#d1d5db',
-    lineHeight: '1.625',
+    lineHeight: '1.4',
     margin: '0',
-    overflow: 'hidden',
-    display: '-webkit-box',
-    WebkitLineClamp: 4,
-    WebkitBoxOrient: 'vertical'
+    overflow: 'visible', // Show all instructions
+    maxHeight: 'none', // Remove height restrictions
+    display: 'block', // Remove webkit-box restrictions
+    whiteSpace: 'normal',
+    wordBreak: 'break-word'
   };
 
   return (
@@ -334,7 +344,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
       <div style={cardStyle}>
         {/* Header - Simple title only for cocktails */}
         <div style={headerStyle}>
-          <h2 style={titleStyle}>
+          <h2 style={titleStyle} className="horoscope-header-special">
             {data.cocktailName}
           </h2>
         </div>
@@ -347,11 +357,11 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
           </div>
 
           {/* Ingredients & Instructions Row */}
-          <div style={detailsStyle}>
+          <div style={detailsStyle} className="ingredients-section method-section">
             {/* Ingredients Column */}
             <div>
               <h4 style={ingredientsTitleStyle}>🍹 Ingredients:</h4>
-              <ul style={ingredientsListStyle}>
+              <ul style={ingredientsListStyle} className="ingredients-list">
                 {data.ingredients.map((ingredient, index) => (
                   <li key={index} style={ingredientItemStyle}>• {ingredient}</li>
                 ))}
@@ -361,9 +371,9 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
             {/* Instructions Column */}
             <div>
               <h4 style={instructionsTitleStyle}>⚡ Method:</h4>
-              <p style={instructionsTextStyle}>
+              <div style={instructionsTextStyle} className="method-content">
                 {data.instructions}
-              </p>
+              </div>
             </div>
           </div>
         </div>

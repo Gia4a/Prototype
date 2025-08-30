@@ -29,7 +29,7 @@ function parseSnippetForRecipe(snippet) {
     // Only return a formatted recipe if BOTH sections were successfully parsed and are non-empty.
     if (ingredientsSection && instructionsSection) {
         let formattedRecipe = "Ingredients\n" + ingredientsSection;
-        formattedRecipe += "\n\nSteps\n" + instructionsSection;
+        formattedRecipe += "\n\nInstructions\n" + instructionsSection;  // Changed from "Steps" to "Instructions"
         return formattedRecipe.trim();
     }
     
