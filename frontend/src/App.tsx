@@ -4,158 +4,121 @@ import Horoscope from './components/Horoscope';
 import ResultsPopup from './components/ResultsPopup';
 import './App.css';
 
-// Updated types for selectedSign
+// Interfaces for type safety
 interface AstrologySign {
-  name: string;
-  displayName: string;
+    name: string;
+    displayName: string;
 }
 
-// Updated HoroscopeSuggestion interface to match CompactHoroscopeCard expectations
-interface HoroscopeSuggestion {
-    sign: string;
-    cocktailName: string;
-    moonPhase: string;
-    ruler: string;
-    element: string;
-    ingredients: string[];  // Changed to match CompactHoroscopeCard
-    instructions: string;   // Changed to string to match CompactHoroscopeCard
-    theme: string;
-    insight: string;
-}
-
-// HoroscopeResult interface that matches what Horoscope component returns
 interface HoroscopeResult {
     sign: string;
     cocktailName: string;
     moonPhase: string;
     ruler: string;
     element: string;
-    ingredients: string[];  // Updated to match the fixed Horoscope.tsx
-    instructions: string;   // Updated to match the fixed Horoscope.tsx
+    ingredients: string[];
+    instructions: string;
     theme: string;
     insight: string;
 }
 
+interface MixologistResponse {
+    originalQuery: string;
+    suggestion: string;
+    title?: string;
+    content?: string;
+    filePath?: string;
+    results?: any[];
+    searchType?: string;
+    snippet?: string;
+    why?: string;
+}
+
+// Union type for all possible popup content
+type PopupContent = HoroscopeResult | MixologistResponse | null;
+
 function App() {
+    // State management
     const [isPopupVisible, setIsPopupVisible] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // State for controlling the visibility of the zodiac sign grid
     const [isHoroscopeGridVisible, setIsHoroscopeGridVisible] = useState(false);
-
-    // Updated state to handle both string and HoroscopeSuggestion
-    const [apiResult, setApiResult] = useState<HoroscopeSuggestion | string | null>(null);
+    const [popupContent, setPopupContent] = useState<PopupContent>(null);
     const [searchQuery, setSearchQuery] = useState<string | undefined>(undefined);
 
+    // Toggle horoscope grid visibility
     const toggleHoroscopeGrid = () => {
         setIsHoroscopeGridVisible(!isHoroscopeGridVisible);
     };
 
-    // Function to parse string results into HoroscopeSuggestion format
-    const parseStringToHoroscope = (result: string, query?: string): HoroscopeSuggestion | null => {
-        try {
-            // If the result is already a JSON string, parse it
-            const parsed = JSON.parse(result);
-            if (parsed.sign && parsed.cocktailName) {
-                return parsed as HoroscopeSuggestion;
+    // Handle mixologist search results
+    const handleMixologistSuggestion = (data: MixologistResponse | string | null, queryFromSearchBar?: string) => {
+        console.log("Received mixologist data:", data);
+        
+        if (data) {
+            if (typeof data === 'string') {
+                // Convert string response to structured format
+                const structuredData: MixologistResponse = {
+                    originalQuery: queryFromSearchBar || 'Unknown Query',
+                    suggestion: data,
+                    title: 'Mixologist Recommendation',
+                    searchType: 'general'
+                };
+                setPopupContent(structuredData);
+            } else {
+                // Use the structured response directly
+                setPopupContent(data);
             }
-        } catch (e) {
-            // If parsing fails, create a basic structure from the string
-            console.warn('Could not parse horoscope data, creating fallback structure');
-        }
-        
-        // Fallback: create a basic horoscope structure from string result
-        return {
-            sign: query?.includes('Cosmic Cocktail') ? query.replace(' Cosmic Cocktail', '') : 'Mixologist',
-            cocktailName: query || 'Mixologist Special',
-            moonPhase: 'current phase',
-            ruler: 'Mercury',
-            element: 'Spirit',
-            ingredients: ['Premium Spirits', 'Quality Mixers', 'Fresh Garnish'],  // Changed to array
-            instructions: result || 'No instructions available',  // Keep as string
-            theme: 'Mixologist recommendation',
-            insight: result || 'No insight available'
-        };
-    };
-
-    // This function will be called by SearchBar.tsx when it gets a response
-    const handleNewMixologistSuggestion = (suggestion: string | null, query?: string) => {
-        if (suggestion) {
-            // Try to parse as horoscope data, or convert string to horoscope format
-            const horoscopeData = parseStringToHoroscope(suggestion, query);
-            setApiResult(horoscopeData);
         } else {
-            setApiResult(null);
+            setPopupContent(null);
         }
-        setSearchQuery(query);
-        setError(null);
-        setIsPopupVisible(true);
-        setIsLoading(false);
-    };
-
-    const closePopup = () => {
-        setIsPopupVisible(false);
-        setError(null);
-        setApiResult(null);
-        setSearchQuery(undefined);
-    };
-
-    const handleLoadingChange = (loadingState: boolean) => {
-        setIsLoading(loadingState);
-        if (loadingState) { 
-            // Clear previous results when new search starts
-            setError(null);
-            setApiResult(null);
-            setIsPopupVisible(false);
-        }
-    };
-
-    const handleErrorFromSearchBar = (errorMessage: string) => {
-        setError(errorMessage);
-        setApiResult(null);
-        setIsPopupVisible(true);
-        setIsLoading(false);
-    };
-
-    // Function to handle sign selection from Horoscope
-    const handleSignSelect = (sign: AstrologySign, result: HoroscopeResult) => {
-        // Now the interfaces match perfectly, so we can pass the result directly
-        const parsedResult: HoroscopeSuggestion = {
-            sign: result.sign,
-            cocktailName: result.cocktailName,
-            moonPhase: result.moonPhase,
-            ruler: result.ruler,
-            element: result.element,
-            ingredients: result.ingredients,      // Now both are string[]
-            instructions: result.instructions,   // Now both are string
-            theme: result.theme,
-            insight: result.insight,
-        };
         
-        setApiResult(parsedResult);
+        setSearchQuery(queryFromSearchBar);
+        setError(null);
+        setIsPopupVisible(true);
+        setIsLoading(false);
+    };
+
+    // Handle horoscope sign selection
+    const handleSignSelect = (sign: AstrologySign, result: HoroscopeResult) => {
+        console.log("Received horoscope result:", result);
+        
+        setPopupContent(result);
         setSearchQuery(`${sign.displayName} Cosmic Cocktail`);
         setError(null);
         setIsPopupVisible(true);
     };
 
-    // Function to handle horoscope loading states
-    const handleHoroscopeLoadingChange = (loading: boolean) => {
-        setIsLoading(loading);
+    // Handle loading state changes
+    const handleLoadingChange = (loadingState: boolean) => {
+        setIsLoading(loadingState);
+        if (loadingState) {
+            // Clear previous results when starting new search
+            setError(null);
+            setPopupContent(null);
+            setIsPopupVisible(false);
+        }
     };
 
-    // Function to handle horoscope errors
-    const handleHoroscopeError = (errorMessage: string) => {
+    // Handle errors from various components
+    const handleError = (errorMessage: string) => {
+        console.error("Application error:", errorMessage);
         setError(errorMessage);
+        setPopupContent(null);
+        setIsPopupVisible(true);
+        setIsLoading(false);
     };
 
-    // Ensure we pass the right type to ResultsPopup
-    const horoscopeSuggestion: HoroscopeSuggestion | null = 
-        typeof apiResult === 'object' && apiResult !== null ? apiResult : null;
+    // Close popup and reset state
+    const closePopup = () => {
+        setIsPopupVisible(false);
+        setError(null);
+        setPopupContent(null);
+        setSearchQuery(undefined);
+    };
 
     return (
         <div className="app-container">
-            {/* Image container with overlaid search elements */}
             <div className="image-container">
                 <img 
                     src="/Bar_pig.png" 
@@ -163,33 +126,33 @@ function App() {
                     className="main-background-image"
                 />
                 
-                {/* Search bar positioned over the image */}
+                {/* Search Bar Overlay */}
                 <div className="overlay-search">
                     <SearchBar
-                        onNewSuggestion={handleNewMixologistSuggestion}
+                        onNewSuggestion={handleMixologistSuggestion}
                         onLoadingChange={handleLoadingChange}
-                        onError={handleErrorFromSearchBar}
+                        onError={handleError}
                         isLoading={isLoading}
                     />
                 </div>
 
-                {/* Separate positioning for Daily Horoscope Button */}
+                {/* Daily Horoscope Button */}
                 <div className="daily-horoscope-container">
                     <button onClick={toggleHoroscopeGrid} className="daily-horoscope-button">
                         {isHoroscopeGridVisible ? 'Hide Horoscope' : 'Daily Horoscope'}
                     </button>
                 </div>
 
-                {/* STANDARDIZED PARENT CONTAINER for all horoscope-related components */}
+                {/* Horoscope Grid */}
                 {isHoroscopeGridVisible && (
                     <Horoscope 
                         onSignSelect={handleSignSelect}
-                        onLoadingChange={handleHoroscopeLoadingChange}
-                        onError={handleHoroscopeError}
+                        onLoadingChange={handleLoadingChange}
+                        onError={handleError}
                     />
                 )}
 
-                {/* Show loading spinner when processing */}
+                {/* Loading Indicator */}
                 {isLoading && (
                     <div className="loading-container" style={{ 
                         position: 'absolute', 
@@ -197,18 +160,21 @@ function App() {
                         left: '50%', 
                         transform: 'translate(-50%, -50%)',
                         color: 'white',
-                        textAlign: 'center'
+                        textAlign: 'center',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        padding: '20px',
+                        borderRadius: '8px'
                     }}>
                         <div className="loading-spinner" />
                         <p>Getting mixologist's suggestion...</p>
                     </div>
                 )}
 
-                {/* ResultsPopup component - Now uses standardized container internally */}
+                {/* Results Popup */}
                 <ResultsPopup
                     isOpen={isPopupVisible}
                     onClose={closePopup}
-                    suggestion={horoscopeSuggestion}
+                    suggestion={popupContent}
                     error={error}
                     searchQuery={searchQuery}
                     visible={isPopupVisible}

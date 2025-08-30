@@ -1,8 +1,8 @@
 // functions/index.js - Firebase Functions API
 const functions = require('firebase-functions');
-const cors = require('cors')({ origin: true }); // Allow all origins for development
+const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
-const { GoogleGenerativeAI } = require('@google/generative-ai'); // <--- ADD THIS LINE
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 admin.initializeApp();
 
@@ -17,6 +17,55 @@ const {
   SIGNS,
   PLANETARY_MODIFIERS 
 } = require('./horescopeRecipe');
+
+const { fetchAndProcessGeminiResults } = require('./geminiService');
+
+// Helper function to clean and parse JSON from Gemini responses
+function cleanAndParseGeminiJSON(responseText) {
+    if (!responseText) {
+        throw new Error('Empty response from Gemini');
+    }
+
+    console.log("Original Gemini response:", responseText);
+
+    try {
+        // Remove markdown code blocks
+        let cleaned = responseText.replace(/```(?:json)?\s*\n?([\s\S]*?)\n?\s*```/g, '$1');
+        
+        // Find JSON object boundaries
+        const startIdx = cleaned.search(/[{\[]/);
+        const isArray = cleaned.charAt(startIdx) === '[';
+        const endChar = isArray ? ']' : '}';
+        const endIdx = cleaned.lastIndexOf(endChar);
+        
+        if (startIdx === -1 || endIdx === -1) {
+            throw new Error('No valid JSON found in response');
+        }
+
+        cleaned = cleaned.substring(startIdx, endIdx + 1).trim();
+        
+        // Basic JSON cleanup
+        cleaned = cleaned
+            .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
+            .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');  // Quote keys
+
+        console.log("Cleaned JSON:", cleaned);
+        
+        return JSON.parse(cleaned);
+        
+    } catch (error) {
+        console.error("JSON parsing failed:", error.message);
+        console.error("Failed to parse:", responseText);
+        
+        // Return fallback structure
+        return {
+            fourLineIdiom: "The stars align in mysterious ways, bringing wisdom through liquid inspiration.",
+            dailyTheme: "Cosmic Guidance",
+            planetaryAlignments: "Current planetary energies support reflection and discovery.",
+            moonPhase: "waxing_crescent"
+        };
+    }
+}
 
 // API Endpoint: Get specific recipe
 exports.getRecipe = functions.https.onRequest((req, res) => {
@@ -68,78 +117,47 @@ exports.getCurrentRecipe = functions.https.onRequest((req, res) => {
 // API Endpoint: Get all recipes for a sign (8 moon phases)
 exports.getAllRecipesForSign = functions.https.onRequest((request, response) => {
   cors(request, response, async () => {
-    console.log("Request received for getAllRecipesForSign!"); // Log the request
+    console.log("Request received for getAllRecipesForSign!");
 
     if (request.method !== 'POST') {
-      // Handle non-POST methods
       return response.status(405).send('Method Not Allowed');
     }
 
     try {
-      const { sign, displayName, date } = request.body; // 'date' is typically an ISO string from frontend
+      const { sign, displayName, date } = request.body;
       console.log("Received data:", request.body);
 
-      // --- NEW LOGIC: Call Gemini for Astrological Data ---
-      // Craft a prompt to get the specific data points from Gemini
       const geminiPrompt = `
-        Given the zodiac sign "${sign}" and the current date "${new Date(date).toDateString()}", 
-        provide the following astrological information in a JSON object:
-        - The current moon phase (use a format like "new_moon", "full_moon", "waxing_crescent").
-        - A four-line idiom or insightful verse for this sign based on today's astrological energies.
-        - A concise daily theme for this sign.
-        - Any relevant current planetary alignments or influences that generally apply to this sign.
-
-        Respond ONLY with a valid JSON object. Do not include any text before or after the JSON object.
-        The JSON object must have the following structure:
+        Provide astrological information for zodiac sign "${sign}" on date "${new Date(date).toDateString()}".
+        Return ONLY a JSON object with this exact structure:
         {
-          "moonPhase": "string",
-          "fourLineIdiom": "string",
-          "dailyTheme": "string",
-          "planetaryAlignments": "string"
+          "moonPhase": "waxing_crescent",
+          "fourLineIdiom": "A four-line mystical verse about today's cosmic energies",
+          "dailyTheme": "Brief theme for the day",
+          "planetaryAlignments": "Description of current planetary influences"
         }
       `;
 
       console.log("Sending prompt to Gemini:", geminiPrompt);
-      // geminiResponseText will now directly receive the string content from callGeminiAPI
-      const geminiResponseText = await callGeminiAPI(geminiPrompt); 
-
-      console.log("Raw Gemini response text:", geminiResponseText);
-
-      // *** ADD THIS CLEANING LOGIC ***
-      let cleanedGeminiResponseText = geminiResponseText;
-
-      // Attempt to extract JSON from a markdown code block
-      const jsonMatch = cleanedGeminiResponseText.match(/```json\n([\s\S]*?)\n```/);
-      if (jsonMatch && jsonMatch[1]) {
-        cleanedGeminiResponseText = jsonMatch[1];
-      } else {
-        // If no markdown block is found, try to remove leading/trailing whitespace or other common issues
-        cleanedGeminiResponseText = cleanedGeminiResponseText.trim();
-        // Optionally, you might add more robust cleaning here if models sometimes add other pre/post text
-      }
-      // *** END ADDED LOGIC ***
-
-      // Parse the JSON string received from Gemini
-      const astrologyDataFromGemini = JSON.parse(cleanedGeminiResponseText); // Use the cleaned string
-      console.log("Parsed Gemini data:", astrologyDataFromGemini);
-      // --- END NEW LOGIC ---
+      const geminiResponseText = await callGeminiAPI(geminiPrompt);
+      const astrologyData = cleanAndParseGeminiJSON(geminiResponseText);
+      
+      console.log("Parsed Gemini data:", astrologyData);
 
       response.status(200).json({
         success: true,
-        // Pass the data directly from Gemini to the frontend
-        moonPhase: astrologyDataFromGemini.moonPhase,
-        fourLineIdiom: astrologyDataFromGemini.fourLineIdiom,
-        dailyTheme: astrologyDataFromGemini.dailyTheme,
-        planetaryAlignments: astrologyDataFromGemini.planetaryAlignments,
+        moonPhase: astrologyData.moonPhase || 'current_phase',
+        fourLineIdiom: astrologyData.fourLineIdiom || 'The cosmos whispers ancient wisdom.',
+        dailyTheme: astrologyData.dailyTheme || 'Cosmic Reflection',
+        planetaryAlignments: astrologyData.planetaryAlignments || 'Harmonious celestial energies.',
       });
 
     } catch (error) {
-      console.error("Full error caught in getAllRecipesForSign:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-      // More robust error response for frontend
+      console.error("Error in getAllRecipesForSign:", error.message);
       response.status(500).json({
-          success: false,
-          error: "Failed to get astrological insights from Gemini.",
-          details: error.message
+        success: false,
+        error: "Failed to get astrological insights.",
+        details: error.message
       });
     }
   });
@@ -154,18 +172,12 @@ exports.getDailyMessage = functions.https.onCall(async (data, context) => {
   }
   
   try {
-    const recipe = getRecipe(sign, moonPhase); // You already have the recipe data
-    const prompt = generateDailyMessage(sign, recipe); // This now asks for JSON
+    const recipe = getRecipe(sign, moonPhase);
+    const prompt = generateDailyMessage(sign, recipe);
     
-    // Call Gemini API here
-    const geminiResponseString = await callGeminiAPI(prompt); // This is now a JSON string
-    
-    // --- START OF CHANGES ---
+    const geminiResponseString = await callGeminiAPI(prompt);
+    const parsedGeminiData = cleanAndParseGeminiJSON(geminiResponseString);
 
-    // 1. Parse the JSON string from Gemini
-    const parsedGeminiData = JSON.parse(geminiResponseString);
-
-    // 2. Combine your local recipe data with the AI-generated text
     const finalResponseObject = {
         sign: sign,
         cocktailName: recipe.final_recipe.name,
@@ -177,23 +189,18 @@ exports.getDailyMessage = functions.https.onCall(async (data, context) => {
             recipe.final_recipe.mixer,
             recipe.final_recipe.citrus,
             recipe.final_recipe.garnish
-        ].filter(Boolean), // .filter(Boolean) removes any null/empty ingredients
+        ].filter(Boolean),
         
-        // Use the parsed data from Gemini
-        instructions: parsedGeminiData.instructions,
-        theme: parsedGeminiData.theme,
-        insight: parsedGeminiData.insight
+        instructions: parsedGeminiData.instructions || 'Mix with intention',
+        theme: parsedGeminiData.theme || 'Cosmic Balance',
+        insight: parsedGeminiData.insight || 'A mystical cocktail experience awaits.'
     };
 
-    // 3. Return the complete, structured object
     return finalResponseObject;
-
-    // --- END OF CHANGES ---
 
   } catch (error) {
     console.error("Error in getDailyMessage:", error);
-    // Add more descriptive error logging
-    throw new functions.https.HttpsError('internal', 'Failed to generate and parse daily message.', error.message);
+    throw new functions.https.HttpsError('internal', 'Failed to generate daily message.', error.message);
   }
 });
 
@@ -227,7 +234,6 @@ exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
 
 // Helper function for current moon phase
 function getCurrentMoonPhase() {
-  // Replace with real moon phase API or calculation
   const phases = [
     'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
     'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
@@ -238,29 +244,28 @@ function getCurrentMoonPhase() {
   return phases[phaseIndex];
 }
 
-// Gemini API integration (Updated to use @google/generative-ai client library)
+// Improved Gemini API integration
 async function callGeminiAPI(prompt) {
   try {
     const apiKey = functions.config().generativelanguage.key;
 
     if (!apiKey) {
-      throw new Error('Generative Language API Key not configured. Set it with `firebase functions:config:set generativelanguage.key="YOUR_API_KEY"`');
+      throw new Error('Generative Language API Key not configured');
     }
 
-    // Initialize the Generative AI client with your API Key
     const genAI = new GoogleGenerativeAI(apiKey);
-
-    // Get the model you want to use
-    // Updated to use "gemini-2.5-flash-lite" as the model
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 
-    // Make the content generation request
-    // The prompt needs to be wrapped in the 'contents' structure
     const result = await model.generateContent({
       contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        topK: 10,
+        topP: 0.8,
+        maxOutputTokens: 1024
+      }
     });
 
-    // Extract the text response
     const response = await result.response;
     if (response && response.candidates && response.candidates.length > 0) {
       return response.candidates[0].content.parts[0].text;
@@ -269,11 +274,71 @@ async function callGeminiAPI(prompt) {
     }
 
   } catch (error) {
-    // Log the full error for debugging
-    console.error("Full error caught in getAllRecipesForSign:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+    console.error("Gemini API error:", error.message);
     throw error;
   }
 }
+
+// API Endpoint: Get mixologist suggestion
+exports.getMixologistSuggestion = functions.https.onCall(async (data, context) => {
+  const query = data.query;
+
+  if (!query) {
+    throw new functions.https.HttpsError('invalid-argument', 'Query is required');
+  }
+
+  try {
+    console.log('Processing mixologist query:', query);
+    
+    const apiKey = functions.config().generativelanguage.key;
+    
+    if (!apiKey) {
+      throw new functions.https.HttpsError('internal', 'Gemini API key not configured');
+    }
+
+    // Use the improved geminiService
+    const searchResults = await fetchAndProcessGeminiResults(query, apiKey);
+    
+    console.log('Search results count:', searchResults?.length || 0);
+
+    if (!searchResults || searchResults.length === 0) {
+      return {
+        originalQuery: query,
+        suggestion: `No specific recommendations found for "${query}". Try searching for a classic cocktail, spirit, or food item.`,
+        title: 'No Results Found',
+        searchType: 'general',
+        results: []
+      };
+    }
+
+    // Return the first result as the main suggestion
+    const mainResult = searchResults[0];
+    
+    return {
+      originalQuery: query,
+      suggestion: mainResult.snippet || mainResult.title || 'No details available',
+      title: mainResult.title || 'Mixologist Recommendation',
+      snippet: mainResult.snippet,
+      content: mainResult.snippet,
+      filePath: mainResult.filePath,
+      why: mainResult.why,
+      results: searchResults,
+      searchType: 'general'
+    };
+
+  } catch (error) {
+    console.error("Error in getMixologistSuggestion:", error.message);
+    
+    // Return a fallback response instead of throwing
+    return {
+      originalQuery: query,
+      suggestion: `I encountered an issue processing your request for "${query}". Please try again with a different search term.`,
+      title: 'Search Error',
+      searchType: 'error',
+      results: []
+    };
+  }
+});
 
 // Batch function for multiple signs
 exports.getBatchRecipes = functions.https.onRequest((req, res) => {
@@ -298,21 +363,4 @@ exports.getBatchRecipes = functions.https.onRequest((req, res) => {
       processed_signs: signs.length
     });
   });
-});
-
-// API Endpoint: Get mixologist suggestion
-exports.getMixologistSuggestion = functions.https.onCall(async (data, context) => {
-  const query = data.query;
-
-  if (!query) {
-    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with a query.');
-  }
-
-  // Example logic for generating a mixologist suggestion
-  const suggestion = `Based on your query '${query}', we suggest trying a classic Mojito!`;
-
-  return {
-    originalQuery: query,
-    mixologistSuggestion: suggestion
-  };
 });

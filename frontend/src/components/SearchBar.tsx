@@ -6,19 +6,17 @@ import type { CameraCaptureHandle } from './CameraCapture';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN, // Should be blind-pig-bar.firebaseapp.com
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,   // Should be blind-pig-bar
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET, // Should be blind-pig-bar.appspot.com
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
     appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    // Add others if needed: messagingSenderId, measurementId
 };
 
-
-// Initialize Firebase App once outside the component to avoid re-initialization
+// Initialize Firebase App
 const app = initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
-// All-seeing eye SVG icon
+// Eye icon component
 const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
     <span
         onClick={disabled ? undefined : onClick}
@@ -39,9 +37,21 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
     </span>
 );
 
-// Updated SearchBarProps interface
+// Interfaces
+interface MixologistResponse {
+    originalQuery: string;
+    suggestion: string;
+    title?: string;
+    content?: string;
+    filePath?: string;
+    results?: any[];
+    searchType?: string;
+    snippet?: string;
+    why?: string;
+}
+
 interface SearchBarProps {
-    onNewSuggestion: (suggestion: string | null, query?: string) => void;
+    onNewSuggestion: (suggestion: MixologistResponse | string | null, query?: string) => void;
     onLoadingChange: (loading: boolean) => void;
     onError: (error: string) => void;
     isLoading: boolean;
@@ -57,33 +67,45 @@ const SearchBar: React.FC<SearchBarProps> = ({
     const [showCamera, setShowCamera] = useState(false);
     const cameraRef = useRef<CameraCaptureHandle>(null);
 
-    // Handle Cloud Function mixologist request
+    // Call the mixologist Cloud Function
     const callMixologist = async (searchQuery: string) => {
         if (!searchQuery.trim()) {
-            onError("Please enter something to ask the mixologist!");
+            onError('Please enter a search term');
             return;
         }
 
-        onLoadingChange(true); // Notify App.tsx that loading has started
-
+        onLoadingChange(true);
+        
         try {
-            const callMixologistFunction = httpsCallable(functions, 'getMixologistSuggestion');
-            const result = await callMixologistFunction({ query: searchQuery.trim() });
+            console.log('Calling mixologist with query:', searchQuery);
+            
+            const getMixologistSuggestion = httpsCallable<
+                { query: string },
+                MixologistResponse
+            >(functions, 'getMixologistSuggestion');
 
-            const suggestion = (result.data as any).mixologistSuggestion;
-            const originalQuery = (result.data as any).originalQuery;
+            const result = await getMixologistSuggestion({ query: searchQuery.trim() });
+            const responseData = result.data;
 
-            // Pass the result and query back up to App.tsx
-            onNewSuggestion(suggestion, searchQuery.trim());
-            console.log("Full Cloud Function Response:", { originalQuery, suggestion });
+            console.log('Mixologist response:', responseData);
 
-        } catch (err: any) {
-            console.error("Error calling mixologist function:", err);
-            const errorMessage = `Error: ${err.message || 'Couldn\'t get a suggestion from the mixologist.'}`;
-            onError(errorMessage);
-            onNewSuggestion(null, searchQuery.trim());
+            // Always pass the response, even if it's an error type
+            onNewSuggestion(responseData, searchQuery);
+            
+        } catch (error: any) {
+            console.error("Error calling mixologist function:", error);
+            
+            // Create a fallback response for display
+            const fallbackResponse: MixologistResponse = {
+                originalQuery: searchQuery,
+                suggestion: `Sorry, I couldn't process your request for "${searchQuery}". Please try again.`,
+                title: 'Search Error',
+                searchType: 'error'
+            };
+            
+            onNewSuggestion(fallbackResponse, searchQuery);
         } finally {
-            onLoadingChange(false); // Notify App.tsx that loading has finished
+            onLoadingChange(false);
         }
     };
 
@@ -91,9 +113,8 @@ const SearchBar: React.FC<SearchBarProps> = ({
         if (cameraRef.current) cameraRef.current.stopCamera();
         setShowCamera(false);
         if (imageData) {
-            // For camera captures, you might want to handle differently
-            // For now, treating it as a text query - you may need to modify this
-            callMixologist("Image captured - please analyze this drink/food item");
+            // For now, treat camera capture as a general request
+            callMixologist("Analyze this drink or food item from image");
         }
     };
 
@@ -103,7 +124,16 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleSubmit = (event: React.FormEvent) => {
         event.preventDefault();
-        callMixologist(query);
+        if (query.trim()) {
+            callMixologist(query);
+        }
+    };
+
+    const handleCameraClick = () => {
+        if (!isLoading) {
+            setShowCamera(false);
+            setTimeout(() => setShowCamera(true), 0);
+        }
     };
 
     return (
@@ -112,7 +142,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                 display: 'inline-block', 
                 position: 'relative', 
                 width: 'clamp(280px, 70vw, 390px)',
-                maxWidth: 'calc(100vw - 80px)' // Leave space for logo on mobile
+                maxWidth: 'calc(100vw - 80px)'
             }}>
                 <input
                     type="text"
@@ -136,18 +166,11 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     top: '50%',
                     transform: 'translateY(-50%)',
                     zIndex: 2,
-                    pointerEvents: isLoading ? 'none' : 'auto',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                 }}>
-                    <EyeIcon
-                        onClick={() => {
-                            setShowCamera(false); // reset first to ensure re-mount
-                            setTimeout(() => setShowCamera(true), 0);
-                        }}
-                        disabled={isLoading}
-                    />
+                    <EyeIcon onClick={handleCameraClick} disabled={isLoading} />
                 </div>
             </form>
 
