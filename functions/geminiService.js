@@ -70,7 +70,7 @@ function getCurrentTheme() {
     // Breast Cancer Awareness (October - alternative to Halloween)
     if (month === 9 && Math.random() > 0.5) return { 
         name: 'Pink Ribbon', 
-        ingredients: 'pink grapefruit juice, strawberry, rosé wine',
+        ingredients: 'pink grapefruit juice, strawberry, rosÃ© wine',
         mention: 'Supporting breast cancer awareness'
     };
     
@@ -122,7 +122,7 @@ const SPECIALTY_CLASSIC_INGREDIENTS = {
     'martini': ['dry vermouth', 'olives'],
     'negroni': ['campari', 'sweet vermouth'],
     'sazerac': ['absinthe', 'peychauds bitters'],
-    'aviation': ['maraschino liqueur', 'crème de violette'],
+    'aviation': ['maraschino liqueur', 'crÃ¨me de violette'],
     'last word': ['green chartreuse', 'maraschino liqueur']
 };
 
@@ -526,8 +526,8 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
     }
 }
 
-// Cocktail comment generation
-async function generateCocktailComment(cocktailName, ingredients, season, apiKey, hasUpgrade = false) {
+// Enhanced cocktail comment generation - same comment for both versions
+async function generateCocktailComment(cocktailName, ingredients, season, apiKey, recipeType = 'classic') {
     if (!apiKey) {
         throw new Error('API key for Gemini service is not configured.');
     }
@@ -535,22 +535,21 @@ async function generateCocktailComment(cocktailName, ingredients, season, apiKey
     const currentSeason = season || getCurrentSeason();
     
     const promptText = `
-Create a poetic cocktail description for "${cocktailName}" with these ingredients: ${ingredients.join(', ')}.
+Create a single poetic cocktail description for "${cocktailName}" that works for both classic and premium versions.
 
 Format as JSON:
 {
-    "poeticLine1": "First poetic line about the cocktail (under 50 characters)",
-    "poeticLine2": "Second poetic line completing the thought (under 50 characters)",
-    "poeticLine3": "A single sentence, in the style of a 1920s bartender, describing this as an adventurous drink (under 80 characters)",
-    "showUpgradeButton": ${hasUpgrade}
+    "poeticLine1": "First line: cocktail influencer tweet style, poetic idiom about this cocktail (50 characters max)",
+    "poeticLine2": "Second line: completing the poetic thought, influencer style (50 characters max)"
 }
 
 Requirements:
-- Three lines that flow poetically together
-- Reference the ${currentSeason} season and ingredients naturally
-- poeticLine3 must be 1920s bartender style, single sentence (max 80 characters)
-- Keep poeticLine1 and poeticLine2 under 50 characters
-- Valid JSON structure only
+- Write like a food influencer posting on Twitter
+- Use poetic idioms and metaphors about the cocktail
+- Reference ${currentSeason} season naturally
+- Both lines should work for any version of this cocktail
+- Keep each line under 50 characters
+- Valid JSON only
 `;
 
     const requestBody = {
@@ -563,7 +562,7 @@ Requirements:
             temperature: 0.9,
             topK: 40,
             topP: 0.9,
-            maxOutputTokens: 256,
+            maxOutputTokens: 200,
             candidateCount: 1
         }
     };
@@ -588,8 +587,8 @@ Requirements:
         if (parsed && parsed[0]) {
             const result = parsed[0];
             return {
-                text: `${result.poeticLine1}\n${result.poeticLine2}\n${result.poeticLine3}`,
-                showUpgradeButton: result.showUpgradeButton || hasUpgrade
+                text: `${result.poeticLine1}\n${result.poeticLine2}`,
+                showUpgradeButton: true
             };
         }
         
@@ -598,88 +597,16 @@ Requirements:
     } catch (error) {
         console.error('Gemini comment generation error:', error.message);
         
-        // Fallback poetic comment
+        // Fallback poetic comment - same for all versions
         const fallbackPoetic = [
-            `${currentSeason}'s perfect blend, smooth and bright,`,
-            `A cocktail crafted for pure delight,`,
-            `Sip and savor the season's finest bite.`
+            `${currentSeason}'s liquid poetry, pure delight,`,
+            `Each sip a verse that feels just right.`
         ];
         
         return {
             text: fallbackPoetic.join('\n'),
-            showUpgradeButton: hasUpgrade
+            showUpgradeButton: true
         };
-    }
-}
-
-// Themed upgrade generation
-async function generateThemedUpgrade(originalCocktail, upgradeType, season, apiKey) {
-    if (!apiKey) {
-        throw new Error('API key for Gemini service is not configured.');
-    }
-
-    const currentSeason = season || getCurrentSeason();
-    const seasonalJuice = getRandomSeasonalJuice(currentSeason);
-    const specialtyLiqueur = getRandomSpecialtyLiqueur();
-    const theme = getCurrentTheme();
-
-    const upgradePrompts = {
-        themed: `Create a ${theme.name} themed upgrade of "${originalCocktail}" using ${theme.ingredients}`,
-        bold: `Create a bold upgrade of "${originalCocktail}" using flavored spirits and unique ingredients`,
-        seasonal: `Create a ${currentSeason} seasonal upgrade of "${originalCocktail}" with seasonal elements`
-    };
-
-    const promptText = `
-${upgradePrompts[upgradeType] || upgradePrompts.themed}
-
-Return JSON array:
-[{"title": "${theme.name} ${originalCocktail}", "snippet": "Ingredients: [detailed list with exact measurements including 'oz', themed ingredients like ${theme.ingredients}]. OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it enhances the upgrade. Instructions: [complete preparation method]. Theme: ${theme.mention}", "filePath": null, "why": "${theme.name.toLowerCase()} themed upgrade with bold flavors", "hasUpgrade": false}]
-
-Requirements:
-- Include EXACT measurements with "oz" for all ingredients
-- Use themed ingredients: ${theme.ingredients}
-- OPTIONAL: Include seasonal fruit juice (${seasonalJuice}) only if it enhances the upgrade
-- Explain what makes this an upgrade from the original
-- Include complete step-by-step instructions
-- Mention the theme in the snippet
-- Valid JSON structure only
-`;
-
-    const requestBody = {
-        contents: [{
-            parts: [{
-                text: promptText
-            }]
-        }],
-        generationConfig: {
-            temperature: 0.8,
-            topK: 50,
-            topP: 0.9,
-            maxOutputTokens: 512,
-            candidateCount: 1
-        }
-    };
-
-    try {
-        const geminiResponse = await axios.post(
-            `${GEMINI_API_URL}?key=${apiKey}`,
-            requestBody,
-            {
-                headers: { 'Content-Type': 'application/json' },
-                timeout: 20000
-            }
-        );
-
-        if (!geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
-            throw new Error('Invalid response structure from Gemini API');
-        }
-
-        const responseText = geminiResponse.data.candidates[0].content.parts[0].text;
-        return extractAndParseJSON(responseText);
-        
-    } catch (error) {
-        console.error('Gemini upgrade generation error:', error.message);
-        return createFallbackResponse(originalCocktail, 'general');
     }
 }
 
@@ -687,6 +614,5 @@ Requirements:
 module.exports = {
     fetchAndProcessGeminiResults,
     generateCocktailComment,
-    generateThemedUpgrade, // Renamed from generateSeasonalUpgrade
     getCurrentTheme // Export for use in other modules if needed
 };

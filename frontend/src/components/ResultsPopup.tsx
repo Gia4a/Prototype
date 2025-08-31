@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './ResultsPopup.css';
 import CompactHoroscopeCard, { CompactCocktailCard } from './CompactHoroscopeCard';
 import type { HoroscopeData, CocktailData } from './CompactHoroscopeCard';
@@ -26,6 +26,40 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     onUpgradeRequest 
 }) => {
     const isVisible = isOpen || visible || false;
+    
+    // Local state to store both recipes
+    const [storedRecipes, setStoredRecipes] = useState<{classic: any, premium: any}>({
+        classic: null,
+        premium: null
+    });
+    
+    // Local state to track which recipe to display
+    const [displayType, setDisplayType] = useState<'classic' | 'premium'>('classic');
+
+    // Store both recipes when they come in
+    useEffect(() => {
+        if (recipes.classic || recipes.premium) {
+            setStoredRecipes(prev => ({
+                classic: recipes.classic || prev.classic,
+                premium: recipes.premium || prev.premium
+            }));
+        }
+    }, [recipes]);
+
+    // Initialize display type
+    useEffect(() => {
+        setDisplayType(currentRecipeType);
+    }, [currentRecipeType]);
+
+    // Handle upgrade button click - switch between stored recipes
+    const handleLocalUpgrade = () => {
+        if (storedRecipes.classic && storedRecipes.premium) {
+            setDisplayType(prev => prev === 'classic' ? 'premium' : 'classic');
+        } else if (onUpgradeRequest) {
+            // Fallback to original upgrade request if premium not stored
+            onUpgradeRequest();
+        }
+    };
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
@@ -47,8 +81,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         return null;
     }
 
-    // Pick the recipe to display
-    const suggestion = currentRecipeType === 'premium' && recipes.premium ? recipes.premium : recipes.classic;
+    // Get the recipe to display based on current display type
+    const suggestion = displayType === 'premium' && storedRecipes.premium ? 
+        storedRecipes.premium : storedRecipes.classic;
 
     const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
         if (event.target === event.currentTarget) {
@@ -164,27 +199,32 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             .trim();
     };
 
-    // Use enhanced comment from Gemini response if available
+   // Get cocktail comment with upgrade button text based on available recipes
     const getCocktailComment = (suggestion: any, isBasic: boolean = true): string => {
         if (suggestion && suggestion.enhancedComment && suggestion.enhancedComment.text) {
             let comment = suggestion.enhancedComment.text;
-            // Optionally add 1920s bartender upgrade if basic and premium exists
-            if (isBasic && recipes.premium && suggestion.enhancedComment.showUpgradeButton) {
-                comment += `\n\n"Say, doll, ready to spice up your life with something a bit more... adventurous?" - Your 1920s Bartender`;
+            // Always add upgrade text if suggestion supports upgrade OR both recipes are stored
+            if (suggestion.supportsUpgrade || (storedRecipes.classic && storedRecipes.premium)) {
+                const upgradeText = isBasic ? 
+                    '\n\n"Say, ready for the premium version of this beauty?" - Your Mixologist' :
+                    '\n\n"How about we dial it back to the classic?" - Your Mixologist';
+                comment += upgradeText;
             }
             return comment;
         }
-        // Fallback: use old poetic comment if enhanced not available
+        
+        // Fallback: use poetic comment
         const poeticLines = [
             `${suggestion && suggestion.title ? suggestion.title : 'Cocktail'}'s embrace, smooth and bright,`,
-            `A perfect blend for summer's delight.`
+            `A perfect blend for any delight.`
         ];
-        const bartenderUpgrade = isBasic && recipes.premium ? 
-            `\n\n"Say, doll, ready to spice up your life with something a bit more... adventurous?" - Your 1920s Bartender` : 
-            '';
-        return poeticLines.join('\n') + bartenderUpgrade;
+        const upgradeText = (suggestion.supportsUpgrade || (storedRecipes.classic && storedRecipes.premium)) ? 
+            (isBasic ? 
+                '\n\n"Say, ready for the premium version of this beauty?" - Your Mixologist' :
+                '\n\n"How about we dial it back to the classic?" - Your Mixologist') : '';
+        return poeticLines.join('\n') + upgradeText;
     };
-
+    
     // Determine result type and render accordingly
     const renderContent = () => {
         if (error) {
@@ -240,7 +280,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                                     suggestion.snippet.toLowerCase().includes('instructions:'));
 
         if (hasCocktailStructure) {
-
             // Extract ingredients with enhanced parsing (prefer full measurements)
             let ingredients: string[] = [];
             if (suggestion && suggestion.snippet) {
@@ -260,18 +299,20 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
             const instructions = extractInstructions(suggestion.snippet);
             const cocktailName = cleanCocktailName(suggestion.title);
-            const isBasicRecipe = currentRecipeType === 'classic';
-            // Use enhanced comment from Gemini
+            const isBasicRecipe = displayType === 'classic';
             const comment = getCocktailComment(suggestion, isBasicRecipe);
 
-            // Format cocktail data
+            // Format cocktail data with local upgrade handler
             const cocktailData: CocktailData = {
                 cocktailName: cocktailName,
                 ingredients: ingredients,
                 instructions: instructions,
                 comment: comment,
                 originalQuery: suggestion.originalQuery,
-                onUpgrade: recipes.premium && isBasicRecipe ? onUpgradeRequest : undefined
+                // Use local upgrade if both recipes stored, otherwise use external handler
+                onUpgrade: (storedRecipes.classic && storedRecipes.premium) ? 
+                    () => handleLocalUpgrade() : 
+                    (onUpgradeRequest || undefined)
             };
 
             return (
@@ -316,7 +357,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             </button>
             <div>
                 {renderContent()}
-                {/* Removed: button to switch to premium */}
             </div>
         </div>
     );
