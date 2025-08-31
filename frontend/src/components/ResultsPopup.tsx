@@ -315,16 +315,9 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 <button onClick={onClose} className="results-popup-close-button">
                     &times;
                 </button>
-                <div className="popup-body">
+                <div>
                     {renderContent()}
-                    {/* Add button to switch to premium if available and not already viewing premium */}
-                    {currentRecipeType === 'classic' && recipes.premium && onUpgradeRequest && (
-                        <div style={{ textAlign: 'center', marginTop: 24 }}>
-                            <button className="switch-premium-btn" onClick={onUpgradeRequest}>
-                                See the Premium Drink
-                            </button>
-                        </div>
-                    )}
+                    {/* Removed: button to switch to premium */}
                 </div>
             </div>
         </div>

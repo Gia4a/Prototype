@@ -21,15 +21,18 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
   const containerStyle: React.CSSProperties = {
     width: '100%',
     maxWidth: '600px',
-    height: '400px', // Match horoscope-grid-container height
+    height: '80vh',
+    maxHeight: '80vh',
     backgroundColor: '#111827',
     color: 'white',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '8px',
+    padding: '16px',
     boxSizing: 'border-box',
-    margin: '0 auto'
+    margin: '40px auto',
+    borderRadius: '16px',
+    boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
   };
 
   const cardStyle: React.CSSProperties = {
@@ -48,16 +51,32 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     background: 'linear-gradient(to right, #2563eb, #9333ea)',
     padding: '12px',
     textAlign: 'center',
-    flexShrink: 0
+    flexShrink: 0,
+    marginBottom: '10px', // Add space below header
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: '1.125rem',
-    fontWeight: 'bold',
-    margin: '0',
-    textShadow: '0px 4px 8px rgba(0, 0, 0, 0.7)',
-    color: 'white'
-  };
+  fontSize: 'min(2rem, max(0.7rem, 8vw))',
+  fontWeight: 'bold',
+  margin: '0',
+  textShadow: '0px 4px 8px rgba(0, 0, 0, 0.7)',
+  color: 'white',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  maxWidth: '100%',
+  width: '100%',
+  lineHeight: 1.2,
+  minWidth: 0,
+  fontFamily: 'inherit',
+  display: 'block',
+  letterSpacing: '0.01em',
+  textAlign: 'center',
+  marginLeft: 'auto',
+  marginRight: 'auto',
+  verticalAlign: 'middle',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
 
   const contentStyle: React.CSSProperties = {
     padding: '12px',
@@ -65,7 +84,7 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     flexDirection: 'column',
     gap: '8px', // Reduced gap for better space utilization
     flex: 1,
-    overflow: 'visible', // Changed from hidden to visible
+    overflow: 'hidden', // Changed from hidden to visible
     minHeight: 0
   };
 
@@ -76,7 +95,8 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
     backgroundColor: '#374151',
     borderRadius: '4px',
     padding: '6px', // Reduced padding
-    flexShrink: 0
+    flexShrink: 0,
+    marginTop: '8px'
   };
 
   const insightStyle: React.CSSProperties = {
@@ -224,17 +244,19 @@ interface CompactCocktailCardProps {
 const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
   // STANDARDIZED container to match horoscope-grid-container dimensions
   const containerStyle: React.CSSProperties = {
-    width: '100%',
-    maxWidth: '600px',
-    height: '400px', // Match horoscope-grid-container height
-    backgroundColor: '#111827',
-    color: 'white',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '8px',
-    boxSizing: 'border-box',
-    margin: '0 auto'
+  width: '100vw',
+  height: '100vh',
+  backgroundColor: '#111827',
+  color: 'white',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: 0,
+  boxSizing: 'border-box',
+  margin: 0,
+  position: 'fixed',
+  top: 0,
+  left: 0,
   };
 
   const cardStyle: React.CSSProperties = {
@@ -244,7 +266,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     backgroundColor: '#1f2937',
     borderRadius: '8px',
     border: '1px solid #3b82f6',
-    overflow: 'visible', // Changed from hidden to visible
+    overflow: 'visible',
     display: 'flex',
     flexDirection: 'column'
   };
@@ -253,15 +275,16 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     background: 'linear-gradient(to right, #2563eb, #9333ea)',
     padding: '12px',
     textAlign: 'center',
-    flexShrink: 0,
-    minHeight: '56px', // fixed header height for alignment
+    flex: '0 0 20%', // 20% of card height
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    minHeight: 0,
+    maxHeight: '15%'
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: '1.125rem',
+    fontSize: '2rem',
     fontWeight: 'bold',
     margin: '0',
     textShadow: '0px 4px 8px rgba(0, 0, 0, 0.7)',
@@ -285,11 +308,15 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     backgroundColor: '#374151',
     borderRadius: '4px',
     padding: '6px',
-    flexShrink: 0,
-    minHeight: '56px', // match header height
+    flex: '0 0 20%', // 20% of card height
     display: 'flex',
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
+    minHeight: 0,
+    maxHeight: '20%',
+  border: '5px solid rgba(59,130,246,0.18)', // subtle blended border all around
+  marginTop: 0, // no margin between header and comment
+  boxShadow: '0 2px 8px 0 rgba(59,130,246,0.07)', // soft shadow for extra definition
   };
 
   const poeticStyle: React.CSSProperties = {
@@ -449,12 +476,10 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
             {data.cocktailName}
           </h2>
         </div>
-
+        {/* Poetic comment section - always 20% height */}
+        {renderComment()}
         {/* Content */}
         <div style={contentStyle}>
-          {/* Enhanced comment section */}
-          {renderComment()}
-
           {/* Ingredients & Instructions Row */}
           <div style={detailsStyle} className="ingredients-section method-section">
             {/* Ingredients Column */}
