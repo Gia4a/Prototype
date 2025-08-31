@@ -172,18 +172,21 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
 
   return (
     <div style={containerStyle}>
+      {/* Card */}
       <div style={cardStyle}>
         {/* Header */}
         <div style={headerStyle}>
           <h2 style={titleStyle} className="horoscope-header-special">
             {data.cocktailName}
           </h2>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '0.8rem' }}>
-            <span>🌙 {data.moonPhase}</span>
-            <span>🪐 {data.ruler}</span>
-          </div>
+          {/* Only show moon/ruler for horoscope cards */}
+          {data.moonPhase && data.ruler && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '0.8rem' }}>
+              <span>🌙 {data.moonPhase}</span>
+              <span>🪐 {data.ruler}</span>
+            </div>
+          )}
         </div>
-
         {/* Content */}
         <div style={contentStyle}>
           {/* Description */}
@@ -191,12 +194,9 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
             <p style={insightStyle}>
               {data.insight}
               <br />
-              <span style={themeStyle}>
-                {data.theme}
-              </span>
+              <span style={themeStyle}>{data.theme}</span>
             </p>
           </div>
-
           {/* Ingredients & Instructions Row */}
           <div style={detailsStyle} className="ingredients-section method-section">
             {/* Ingredients Column */}
@@ -208,7 +208,6 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
                 ))}
               </ul>
             </div>
-
             {/* Instructions Column */}
             <div>
               <h4 style={instructionsTitleStyle}>⚡ Method:</h4>
