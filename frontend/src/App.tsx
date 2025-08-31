@@ -1,61 +1,66 @@
-// App.tsx - Reverted to single-suggestion state, with Horoscope and upgrade logic preserved
+// App.tsx - Fixed version with restored UI and current functionality
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
-import CocktailUpgradeService from './services/cocktailUpgradeService';
-import type { UpgradeResponse, UpgradeType } from './services/cocktailUpgradeService';
 import './App.css';
 
-const upgradeService = new CocktailUpgradeService(import.meta.env.VITE_GEMINI_API_KEY || '');
-type MixologistResponse = UpgradeResponse;
+// Interface for mixologist response (simplified without upgrade service dependency)
+interface MixologistResponse {
+    originalQuery: string;
+    suggestion: string;
+    title?: string;
+    content?: string;
+    filePath?: string;
+    results?: any[];
+    searchType?: string;
+    snippet?: string;
+    why?: string;
+    enhancedComment?: {
+        poeticDescription?: string;
+        personalComment?: string;
+        upgradeComment?: string;
+    };
+}
 
 const App: React.FC = () => {
-    const [currentSuggestion, setCurrentSuggestion] = useState<MixologistResponse | null>(null);
+    const [recipes, setRecipes] = useState<{classic: any, premium: any}>({classic: null, premium: null});
+    const [currentRecipeType, setCurrentRecipeType] = useState<'classic' | 'premium'>('classic');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
-    const [currentQuery, setCurrentQuery] = useState<string>('');
     const [showHoroscope, setShowHoroscope] = useState(false);
 
     // Handle new suggestions from search
     const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
         if (typeof suggestion === 'string') {
-            setCurrentSuggestion({
+            const structuredData: MixologistResponse = {
                 originalQuery: query || '',
                 suggestion: suggestion,
                 title: 'Mixologist Recommendation',
                 searchType: 'general'
-            });
+            };
+            setRecipes({classic: structuredData, premium: null});
+        } else if (suggestion) {
+            // If backend returns results array, split into classic and premium
+            if (suggestion.results && Array.isArray(suggestion.results) && suggestion.results.length >= 2) {
+                setRecipes({
+                    classic: suggestion.results[0],
+                    premium: suggestion.results[1]
+                });
+            } else {
+                setRecipes({classic: suggestion, premium: null});
+            }
         } else {
-            setCurrentSuggestion(suggestion);
+            setRecipes({classic: null, premium: null});
         }
-        if (query) {
-            setCurrentQuery(query);
-        }
+        
+        setCurrentRecipeType('classic');
         setError(null);
         setShowResults(true);
     };
 
-    // Handle upgrade requests using the client-side service
-    const handleUpgradeRequest = async (originalQuery: string, upgradeType: string) => {
-        setIsLoading(true);
-        setError(null);
-        try {
-            const safeUpgradeType = upgradeType as UpgradeType;
-            const responseData = await upgradeService.getUpgradedCocktail(originalQuery, safeUpgradeType);
-            setCurrentSuggestion(responseData);
-            setCurrentQuery(originalQuery);
-        } catch (error) {
-            if (error instanceof Error) {
-                setError(`Sorry, couldn't generate the ${upgradeType} upgrade. Please try again.`);
-            } else {
-                setError('Sorry, an unknown error occurred.');
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
+
 
     // Handle loading state changes
     const handleLoadingChange = (loading: boolean) => {
@@ -71,127 +76,104 @@ const App: React.FC = () => {
     // Close results popup
     const handleCloseResults = () => {
         setShowResults(false);
-        setCurrentSuggestion(null);
+        setRecipes({classic: null, premium: null});
+        setCurrentRecipeType('classic');
         setError(null);
+    };
+
+    // Handle upgrade toggle
+    const handleUpgradeToggle = () => {
+        setCurrentRecipeType(currentRecipeType === 'classic' ? 'premium' : 'classic');
+    };
+
+    // Toggle horoscope grid visibility
+    const toggleHoroscopeGrid = () => {
+        setShowHoroscope(!showHoroscope);
     };
 
     return (
         <div className="app-container">
-            {/* Main search interface */}
-            <div className="main-content">
-                <SearchBar
-                    onNewSuggestion={handleNewSuggestion}
-                    onLoadingChange={handleLoadingChange}
-                    onError={handleError}
-                    isLoading={isLoading}
-                    onUpgradeRequest={handleUpgradeRequest}
+            <div className="image-container">
+                <img 
+                    src="/Bar_pig.png" 
+                    alt="Blind Pig Bar" 
+                    className="main-background-image"
                 />
+                
+                {/* Search Bar Overlay */}
+                <div className="overlay-search">
+                    <SearchBar
+                        onNewSuggestion={handleNewSuggestion}
+                        onLoadingChange={handleLoadingChange}
+                        onError={handleError}
+                        isLoading={isLoading}
+                    />
+                </div>
 
-                {/* Horoscope Button */}
-                <button
-                    style={{
-                        margin: '16px auto',
-                        display: 'block',
-                        background: 'linear-gradient(90deg, #6366f1, #a21caf)',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '12px 32px',
-                        fontSize: '1.1rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.12)'
-                    }}
-                    onClick={() => setShowHoroscope(true)}
-                >
-                    🔮 Horoscope Cocktails
-                </button>
+                {/* Daily Horoscope Button */}
+                <div className="daily-horoscope-container">
+                    <button onClick={toggleHoroscopeGrid} className="daily-horoscope-button">
+                        🔮 {showHoroscope ? 'Hide Horoscope' : 'Horoscope Cocktails'}
+                    </button>
+                </div>
 
-                {/* Loading indicator */}
+                {/* Horoscope Grid */}
+                {showHoroscope && (
+                    <Horoscope 
+                        onSignSelect={(sign, result) => {
+                            setShowHoroscope(false);
+                            const horoscopeData: MixologistResponse = {
+                                originalQuery: sign.name,
+                                suggestion: result.cocktailName,
+                                title: result.cocktailName,
+                                content: result.theme,
+                                why: result.insight,
+                                enhancedComment: {
+                                    poeticDescription: result.theme,
+                                    personalComment: result.insight,
+                                    upgradeComment: undefined
+                                },
+                                ...result
+                            };
+                            setRecipes({classic: horoscopeData, premium: null});
+                            setCurrentRecipeType('classic');
+                            setError(null);
+                            setShowResults(true);
+                        }}
+                        onLoadingChange={handleLoadingChange}
+                        onError={handleError}
+                    />
+                )}
+
+                {/* Loading Indicator */}
                 {isLoading && (
-                    <div className="loading-indicator">
-                        <div className="loading-spinner"></div>
+                    <div className="loading-container" style={{ 
+                        position: 'absolute', 
+                        top: '50%', 
+                        left: '50%', 
+                        transform: 'translate(-50%, -50%)',
+                        color: 'white',
+                        textAlign: 'center',
+                        background: 'rgba(0, 0, 0, 0.8)',
+                        padding: '20px',
+                        borderRadius: '8px'
+                    }}>
+                        <div className="loading-spinner" />
                         <p>Crafting your perfect cocktail...</p>
                     </div>
                 )}
+
+                {/* Results popup with enhanced features */}
+                <ResultsPopup
+                    isOpen={showResults}
+                    onClose={handleCloseResults}
+                    recipes={recipes}
+                    currentRecipeType={currentRecipeType}
+                    error={error}
+                    visible={showResults}
+                    onUpgradeRequest={handleUpgradeToggle}
+                />
             </div>
-
-            {/* Horoscope Modal */}
-            {showHoroscope && (
-                <div className="horoscope-modal-overlay" style={{
-                    position: 'fixed',
-                    top: 0,
-                    left: 0,
-                    width: '100vw',
-                    height: '100vh',
-                    background: 'rgba(0,0,0,0.7)',
-                    zIndex: 1000,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <div style={{
-                        background: '#18181b',
-                        borderRadius: '16px',
-                        padding: '32px 24px',
-                        minWidth: 340,
-                        maxWidth: 600,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-                        position: 'relative'
-                    }}>
-                        <button
-                            onClick={() => setShowHoroscope(false)}
-                            style={{
-                                position: 'absolute',
-                                top: 12,
-                                right: 12,
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#fff',
-                                fontSize: 28,
-                                cursor: 'pointer',
-                                zIndex: 2
-                            }}
-                            aria-label="Close horoscope"
-                        >
-                            ×
-                        </button>
-                        <Horoscope
-                            onSignSelect={(sign, result) => {
-                                setShowHoroscope(false);
-                                setCurrentSuggestion({
-                                    originalQuery: sign.name,
-                                    suggestion: result.cocktailName,
-                                    title: result.cocktailName,
-                                    content: result.theme,
-                                    why: result.insight,
-                                    enhancedComment: {
-                                        poeticDescription: result.theme,
-                                        personalComment: result.insight,
-                                        upgradeComment: undefined
-                                    },
-                                    ...result
-                                });
-                                setError(null);
-                                setShowResults(true);
-                            }}
-                            onLoadingChange={handleLoadingChange}
-                            onError={handleError}
-                        />
-                    </div>
-                </div>
-            )}
-
-            {/* Results popup with enhanced features */}
-            <ResultsPopup
-                isOpen={showResults}
-                onClose={handleCloseResults}
-                suggestion={currentSuggestion}
-                error={error}
-                searchQuery={currentQuery}
-                visible={showResults}
-                onUpgradeRequest={handleUpgradeRequest}
-            />
         </div>
     );
 };

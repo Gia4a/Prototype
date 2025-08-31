@@ -253,7 +253,11 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     background: 'linear-gradient(to right, #2563eb, #9333ea)',
     padding: '12px',
     textAlign: 'center',
-    flexShrink: 0
+    flexShrink: 0,
+    minHeight: '56px', // fixed header height for alignment
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   };
 
   const titleStyle: React.CSSProperties = {
@@ -281,7 +285,11 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
     backgroundColor: '#374151',
     borderRadius: '4px',
     padding: '6px',
-    flexShrink: 0
+    flexShrink: 0,
+    minHeight: '56px', // match header height
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center'
   };
 
   const poeticStyle: React.CSSProperties = {

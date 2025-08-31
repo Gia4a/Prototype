@@ -3,6 +3,7 @@ const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { HttpsError } = require("firebase-functions/v1/https"); // This is the key line!
 
 admin.initializeApp();
 
@@ -228,6 +229,14 @@ exports.getStats = functions.https.onRequest((req, res) => {
   });
 });
 
+// Cloud Function: getMixologistSuggestion
+exports.getMixologistSuggestion = functions.https.onCall(
+  async (data, context) => {
+    // ... your logic
+    // And when you need to throw an error:
+    throw new HttpsError('invalid-argument', 'Your query cannot be empty.');
+  }
+);
 // API Endpoint: Get all base recipes (for debugging)
 exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
@@ -290,7 +299,7 @@ async function callGeminiAPI(prompt) {
 // Enhanced mixologist function with comment generation
 exports.getMixologistSuggestion = functions.https.onCall(
   async (data, context) => {
-    const { query } = request.data;
+    const { query } = data;
 
     if (!query || typeof query !== 'string') {
   throw new functions.https.HttpsError('invalid-argument', 'Query is required and must be a string');

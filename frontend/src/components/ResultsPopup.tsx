@@ -22,7 +22,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     recipes,
     currentRecipeType,
     error, 
-    // searchQuery removed
     visible,
     onUpgradeRequest 
 }) => {
@@ -123,7 +122,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         if (!text) return 'No instructions available';
         
         // Look for "Instructions:", "Method:", or "Preparation:" followed by content
-        const instructionsMatch = text.match(/(?:Instructions?|Method|Preparation):\s*(.+?)(?:\.|$)/i);
+        const instructionsMatch = text.match(/(?:Instructions?|Method|Preparation):\s*([\s\S]*?)(?:\n\n|$)/i);
         if (instructionsMatch) {
             let instructions = instructionsMatch[1].trim();
             
@@ -165,42 +164,25 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             .trim();
     };
 
-    // Enhanced helper function to extract description/comment
-    const extractComment = (text: string): string => {
-        if (!text) return "A delightful cocktail crafted just for you!";
-        
-        // Look for description before ingredients
-        const beforeIngredients = text.split(/Ingredients?:/i)[0].trim();
-        if (beforeIngredients.length > 20) {
-            let comment = beforeIngredients
-                .replace(/^(Concept:|Pairing Notes?:|Description:)/i, '')
-                .trim();
-            
-            // If it's too long, take just the first sentence
-            const firstSentence = comment.split(/[.!?]/)[0].trim();
-            return firstSentence.length > 10 ? firstSentence : comment;
+    // Use enhanced comment from Gemini response if available
+    const getCocktailComment = (suggestion: any, isBasic: boolean = true): string => {
+        if (suggestion && suggestion.enhancedComment && suggestion.enhancedComment.text) {
+            let comment = suggestion.enhancedComment.text;
+            // Optionally add 1920s bartender upgrade if basic and premium exists
+            if (isBasic && recipes.premium && suggestion.enhancedComment.showUpgradeButton) {
+                comment += `\n\n"Say, doll, ready to spice up your life with something a bit more... adventurous?" - Your 1920s Bartender`;
+            }
+            return comment;
         }
-        
-        // Look for "why" explanations
-        const whyMatch = text.match(/(?:why|reason|because)[\s:]*([^.!?]+)/i);
-        if (whyMatch && whyMatch[1]) {
-            return whyMatch[1].trim();
-        }
-        
-        // Look for pairing notes
-        const pairingMatch = text.match(/(?:pairing|notes?|works?)[\s:]*([^.!?]+)/i);
-        if (pairingMatch && pairingMatch[1]) {
-            return pairingMatch[1].trim();
-        }
-        
-        return "A wonderfully crafted cocktail experience!";
-    };
-
-    // Helper function to determine if ingredients look complete (have measurements)
-    const hasDetailedIngredients = (ingredients: string[]): boolean => {
-        return ingredients.some(ingredient => 
-            /\d+(?:\.\d+)?\s*(?:oz|ml|cups?|tbsp|tsp|cl|dash|splash)/i.test(ingredient)
-        );
+        // Fallback: use old poetic comment if enhanced not available
+        const poeticLines = [
+            `${suggestion && suggestion.title ? suggestion.title : 'Cocktail'}'s embrace, smooth and bright,`,
+            `A perfect blend for summer's delight.`
+        ];
+        const bartenderUpgrade = isBasic && recipes.premium ? 
+            `\n\n"Say, doll, ready to spice up your life with something a bit more... adventurous?" - Your 1920s Bartender` : 
+            '';
+        return poeticLines.join('\n') + bartenderUpgrade;
     };
 
     // Determine result type and render accordingly
@@ -258,37 +240,43 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                                     suggestion.snippet.toLowerCase().includes('instructions:'));
 
         if (hasCocktailStructure) {
-            // Extract ingredients with enhanced parsing
-            const ingredients = extractIngredients(suggestion.snippet);
+
+            // Extract ingredients with enhanced parsing (prefer full measurements)
+            let ingredients: string[] = [];
+            if (suggestion && suggestion.snippet) {
+                // Try to extract array from snippet if present
+                const arrayMatch = suggestion.snippet.match(/Ingredients:\s*\[([^\]]+)\]/i);
+                if (arrayMatch) {
+                    ingredients = arrayMatch[1]
+                        .split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/)
+                        .map((item: string) => item.replace(/^\s*['"]?|['"]?\s*$/g, '').trim())
+                        .filter((item: string) => item.length > 0);
+                } else {
+                    ingredients = extractIngredients(suggestion.snippet);
+                }
+            } else {
+                ingredients = ['Ingredients not specified'];
+            }
+
+            const instructions = extractInstructions(suggestion.snippet);
+            const cocktailName = cleanCocktailName(suggestion.title);
+            const isBasicRecipe = currentRecipeType === 'classic';
+            // Use enhanced comment from Gemini
+            const comment = getCocktailComment(suggestion, isBasicRecipe);
 
             // Format cocktail data
             const cocktailData: CocktailData = {
-                cocktailName: cleanCocktailName(suggestion.title),
+                cocktailName: cocktailName,
                 ingredients: ingredients,
-                instructions: extractInstructions(suggestion.snippet),
-                comment: suggestion.enhancedComment || extractComment(suggestion.snippet),
+                instructions: instructions,
+                comment: comment,
                 originalQuery: suggestion.originalQuery,
-                onUpgrade: undefined // handled by ResultsPopup
+                onUpgrade: recipes.premium && isBasicRecipe ? onUpgradeRequest : undefined
             };
-
-            // Add debugging info if ingredients don't have measurements
-            if (!hasDetailedIngredients(ingredients)) {
-                console.warn('Ingredients may be missing measurements:', ingredients);
-                console.log('Original snippet:', suggestion.snippet);
-            }
 
             return (
                 <div className="compact-card-container">
                     <CompactCocktailCard data={cocktailData} />
-                    {/* Toggle button for upgrade */}
-                    {recipes.premium && (
-                        <button
-                            style={{ marginTop: 12, background: '#dc2626', color: 'white', border: 'none', borderRadius: 4, padding: '6px 12px', cursor: 'pointer' }}
-                            onClick={onUpgradeRequest}
-                        >
-                            {currentRecipeType === 'classic' ? '🔥 Show Premium Recipe' : '⬅️ Back to Classic'}
-                        </button>
-                    )}
                 </div>
             );
         }
@@ -329,6 +317,14 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 </button>
                 <div className="popup-body">
                     {renderContent()}
+                    {/* Add button to switch to premium if available and not already viewing premium */}
+                    {currentRecipeType === 'classic' && recipes.premium && onUpgradeRequest && (
+                        <div style={{ textAlign: 'center', marginTop: 24 }}>
+                            <button className="switch-premium-btn" onClick={onUpgradeRequest}>
+                                See the Premium Drink
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
