@@ -37,8 +37,8 @@ interface CompactCocktailCardProps {
 // STANDARDIZED STYLES - Single source of truth for all cards
 const STANDARD_STYLES = {
   containerStyle: {
-    width: '667px',
-    maxWidth: '667px',
+    width: '60%',
+    maxWidth: '2048px',
     height: '60vh',
     maxHeight: '60vh',
     backgroundColor: '#111827',
@@ -117,19 +117,17 @@ const STANDARD_STYLES = {
     padding: '8px',
     flexShrink: 0,
     marginTop: 0,
-    // Cocktail-specific overrides
     border: '5px solid rgba(59,130,246,0.18)',
     boxShadow: '0 2px 8px 0 rgba(59,130,246,0.07)',
-    // Fixed height to ensure consistent layout
     minHeight: '90px',
-    maxHeight: '120px',
-    height: 'auto',
+    maxHeight: '100px',
+    height: '100%',
+    position: 'relative',
+    overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'flex-start',
     alignItems: 'center',
-    overflow: 'visible',
-    position: 'relative',
   } as React.CSSProperties,
 
   // Poetic text at top - fully visible 2 lines
@@ -158,20 +156,6 @@ const STANDARD_STYLES = {
     display: 'block',
   } as React.CSSProperties,
 
-  // Bartender message - separate row with space for button
-  upgradeCommentTextStyle: {
-    color: '#fbbf24',
-    fontSize: 'clamp(0.65rem, 2.2vw, 0.75rem)',
-    fontWeight: '500',
-    textAlign: 'left',
-    marginTop: '6px',
-    width: '78%', // Leave 22% for button (20% + margins)
-    wordWrap: 'break-word',
-    overflow: 'visible',
-    lineHeight: '1.2',
-    display: 'block',
-    paddingRight: '4px',
-  } as React.CSSProperties,
 
   // Button positioned at same height as text in bottom right
   upgradeButtonStyle: {
@@ -189,7 +173,7 @@ const STANDARD_STYLES = {
     width: '20%',
     minWidth: '60px',
     maxWidth: '120px',
-    height: 'calc(clamp(0.65rem, 2.2vw, 0.75rem) * 1.4)', // Match text height
+    height: 'calc(clamp(0.65rem, 2.2vw, 0.75rem) * 1.4)',
     lineHeight: '1.2',
     zIndex: 2,
     whiteSpace: 'nowrap',
@@ -198,6 +182,7 @@ const STANDARD_STYLES = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
+    pointerEvents: 'auto',
   } as React.CSSProperties,
 
   // Wrapper for proper content flow
@@ -304,9 +289,7 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
         <div style={STANDARD_STYLES.cardStyle}>
           {/* Header */}
           <div style={STANDARD_STYLES.headerStyle}>
-            <h2 style={STANDARD_STYLES.titleStyle} className="horoscope-header-special">
-              {data.cocktailName}
-            </h2>
+            <h2 className="card-title">{data.cocktailName}</h2>
             {/* Only show moon/ruler for horoscope cards */}
             {data.moonPhase && data.ruler && (
               <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', fontSize: '0.8rem' }}>
@@ -325,9 +308,6 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
             }}>
               <div style={STANDARD_STYLES.poeticTextStyle}>
                 {data.insight}
-              </div>
-              <div style={STANDARD_STYLES.personalCommentTextStyle}>
-                {data.theme}
               </div>
             </div>
             {/* Ingredients & Instructions Row */}
@@ -391,20 +371,19 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 <div key={index}>{line}</div>
               ))}
             </div>
-            {/* Bartender message + button row */}
+            {/* Bartender message */}
             <div style={STANDARD_STYLES.upgradeRowStyle}>
-              <div style={STANDARD_STYLES.upgradeCommentTextStyle}>
-                {upgradeText || '"Ready for an upgrade?" - Your Mixologist'}
-              </div>
-              <button 
-                style={STANDARD_STYLES.upgradeButtonStyle}
-                onClick={handleUpgrade}
-                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-              >
-                🔥 Upgrade
-              </button>
+              {upgradeText && <div>{upgradeText}</div>}
             </div>
+            {/* Upgrade button absolutely positioned bottom right */}
+            <button 
+              style={STANDARD_STYLES.upgradeButtonStyle}
+              onClick={handleUpgrade}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+            >
+              🔥 Upgrade
+            </button>
           </div>
         </div>
       );
@@ -423,31 +402,22 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 ))}
               </div>
             )}
-            
-            {/* Personal comment */}
-            {data.comment.personalComment && (
-              <div style={STANDARD_STYLES.personalCommentTextStyle}>
-                {data.comment.personalComment}
+            {/* Bartender message */}
+            {data.comment.upgradeComment && (
+              <div style={STANDARD_STYLES.upgradeRowStyle}>
+                <div>{data.comment.upgradeComment}</div>
               </div>
             )}
-            
-            {/* Bartender message + button row */}
-            {(data.comment.upgradeComment || shouldShowUpgrade) && (
-              <div style={STANDARD_STYLES.upgradeRowStyle}>
-                <div style={STANDARD_STYLES.upgradeCommentTextStyle}>
-                  {data.comment.upgradeComment || '"Ready for an upgrade?" - Your Mixologist'}
-                </div>
-                {shouldShowUpgrade && (
-                  <button 
-                    style={STANDARD_STYLES.upgradeButtonStyle}
-                    onClick={handleUpgrade}
-                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                  >
-                    🔥 Upgrade
-                  </button>
-                )}
-              </div>
+            {/* Upgrade button absolutely positioned bottom right */}
+            {shouldShowUpgrade && (
+              <button 
+                style={STANDARD_STYLES.upgradeButtonStyle}
+                onClick={handleUpgrade}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+              >
+                🔥 Upgrade
+              </button>
             )}
           </div>
         </div>
@@ -461,11 +431,9 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
           <div style={STANDARD_STYLES.poeticTextStyle}>
             Perfect cocktail for any occasion!
           </div>
-          {shouldShowUpgrade && (
+          {false && (
             <div style={STANDARD_STYLES.upgradeRowStyle}>
-              <div style={STANDARD_STYLES.upgradeCommentTextStyle}>
-                "Ready for an upgrade?" - Your Mixologist
-              </div>
+              <div></div>
               <button 
                 style={STANDARD_STYLES.upgradeButtonStyle}
                 onClick={handleUpgrade}
@@ -500,9 +468,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
         <div style={STANDARD_STYLES.cardStyle}>
           {/* Header - Simple title only for cocktails */}
           <div style={STANDARD_STYLES.headerStyle}>
-            <h2 style={STANDARD_STYLES.titleStyle} className="horoscope-header-special">
-              {data.cocktailName}
-            </h2>
+            <h2 className="card-title">{data.cocktailName}</h2>
           </div>
           {/* Comment section - now using FIXED layout */}
           {renderComment()}

@@ -118,13 +118,10 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             ingredients = ingredients
                 .map(item => {
                     let cleaned = item.trim();
-                    
-                    // Remove leading bullets, dashes, or numbers
-                    cleaned = cleaned.replace(/^[-•*\d+.\s]*/, '');
-                    
+                    // Remove leading bullets or dashes, but NOT numbers or decimals
+                    cleaned = cleaned.replace(/^[-•*\s]+/, '');
                     // Remove trailing periods but keep decimal points in measurements
                     cleaned = cleaned.replace(/\.$/, '');
-                    
                     return cleaned;
                 })
                 .filter(item => {
@@ -199,31 +196,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             .trim();
     };
 
-   // Get cocktail comment with upgrade button text based on available recipes
-    const getCocktailComment = (suggestion: any, isBasic: boolean = true): string => {
-        if (suggestion && suggestion.enhancedComment && suggestion.enhancedComment.text) {
-            let comment = suggestion.enhancedComment.text;
-            // Always add upgrade text if suggestion supports upgrade OR both recipes are stored
-            if (suggestion.supportsUpgrade || (storedRecipes.classic && storedRecipes.premium)) {
-                const upgradeText = isBasic ? 
-                    '\n\n"Say, ready for the premium version of this beauty?" - Your Mixologist' :
-                    '\n\n"How about we dial it back to the classic?" - Your Mixologist';
-                comment += upgradeText;
-            }
-            return comment;
-        }
-        
-        // Fallback: use poetic comment
-        const poeticLines = [
-            `${suggestion && suggestion.title ? suggestion.title : 'Cocktail'}'s embrace, smooth and bright,`,
-            `A perfect blend for any delight.`
-        ];
-        const upgradeText = (suggestion.supportsUpgrade || (storedRecipes.classic && storedRecipes.premium)) ? 
-            (isBasic ? 
-                '\n\n"Say, ready for the premium version of this beauty?" - Your Mixologist' :
-                '\n\n"How about we dial it back to the classic?" - Your Mixologist') : '';
-        return poeticLines.join('\n') + upgradeText;
-    };
     
     // Determine result type and render accordingly
     const renderContent = () => {
@@ -263,13 +235,11 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                     ? suggestion.instructions.join(', ') 
                     : suggestion.instructions || 'Mix with cosmic intention',
                 theme: suggestion.theme || 'Astrological influence',
-                insight: suggestion.insight || 'A mystical cocktail experience awaits.'
+                insight: suggestion.fourLineIdiom || suggestion.insight || 'A mystical cocktail experience awaits.'
             };
 
             return (
-                <div className="compact-card-container">
-                    <CompactHoroscopeCard data={horoscopeData} />
-                </div>
+                <CompactHoroscopeCard data={horoscopeData} />
             );
         }
 
@@ -299,15 +269,14 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
             const instructions = extractInstructions(suggestion.snippet);
             const cocktailName = cleanCocktailName(suggestion.title);
-            const isBasicRecipe = displayType === 'classic';
-            const comment = getCocktailComment(suggestion, isBasicRecipe);
 
             // Format cocktail data with local upgrade handler
+            // Use CompactCocktailCard for cocktail results, always pass poetic/comment text as 'comment'
             const cocktailData: CocktailData = {
                 cocktailName: cocktailName,
                 ingredients: ingredients,
                 instructions: instructions,
-                comment: comment,
+                comment: suggestion.enhancedComment?.text || '',
                 originalQuery: suggestion.originalQuery,
                 // Use local upgrade if both recipes stored, otherwise use external handler
                 onUpgrade: (storedRecipes.classic && storedRecipes.premium) ? 
@@ -316,9 +285,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             };
 
             return (
-                <div className="compact-card-container">
-                    <CompactCocktailCard data={cocktailData} />
-                </div>
+                <CompactCocktailCard data={cocktailData} />
             );
         }
 
