@@ -1,51 +1,3 @@
-/* Updated ResultsPopup.css using the standardized container system */
-
-/* Center the popup overlay */
-.results-popup-overlay {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    width: 440px;
-    height: 88vh;
-    max-width: 110vw;
-    max-height: 88vh;
-    background-color: rgba(0, 0, 0, 0.7);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000;
-    transform: translate(-50%, -50%);
-    border-radius: 20px;
-}
-
-@media (max-width: 650px) {
-    .results-popup-overlay {
-        width: 110vw;
-        height: 88vh;
-        max-width: 110vw;
-        max-height: 88vh;
-    }
-}
-
-/* STANDARDIZED popup content using horoscope-standard-parent dimensions */
-.results-popup-content {
-    background-color: #1a1a1a;
-    color: white;
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-    width: 100vw;
-    max-width: 100vw;
-    min-width: 0;
-    height: auto;
-    max-height: 100vh;
-    min-height: 0;
-    padding: 25px;
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    box-sizing: border-box;
-}
 
 /* Close button */
 .results-popup-close-button {
@@ -70,20 +22,6 @@
 .results-popup-close-button:hover {
     background-color: rgba(255, 255, 255, 0.1);
 }
-
-/* Main title */
-.popup-main-title {
-    color: white;
-    margin-bottom: 20px;
-    text-align: center;
-    font-size: 1.8em;
-    padding-right: 40px;
-    flex-shrink: 0;
-}
-
-/* Popup body - optimized for standardized size */
-
-/* Container for the compact card - STANDARDIZED to fill popup body */
 
 /* Loading spinner animation */
 @keyframes spin {
@@ -182,37 +120,54 @@
     font-style: italic;
 }
 
-/* Responsive adjustments - mobile-first */
-@media (max-width: 650px) {
-    .results-popup-content {
-        width: 100vw;
-        max-width: 100vw;
-        min-width: 0;
-        height: 80vh;
-        max-height: 80vh;
-        min-height: 0;
-        padding: 8px;
-    }
-    .popup-main-title {
-        font-size: 1.4em;
-        margin-bottom: 15px;
-    }
+/* Centered popup overlay for modal */
+.results-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    margin: 0;
+    padding: 0;
 }
 
-@media (max-width: 400px) {
-    .results-popup-content {
-        width: 100vw;
-        max-width: 100vw;
-        min-width: 0;
-        height: 80vh;
-        max-height: 80vh;
-        min-height: 0;
-        padding: 4px;
+/* --- Card Styles Consolidated --- */
+    .card-container {
+        width: 100%;
+        max-width: 667px;
+        height: 50vh;
+        max-height: 50vh;
+        background-color: #111827;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px;
+        box-sizing: border-box;
+        border-radius: 16px;
+        box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+        position: relative;
+        left: 0;
+        right: 0;
     }
-    .popup-main-title {
-        font-size: 1.2em;
+
+
+
+@media (max-width: 667px) {
+    .results-popup-overlay {
+        padding: 10px;
+    }
+    .card-container {
+        width: 100%;
+        max-width: 98vw;
+        margin: 16px auto;
+        left: 0;
+        right: 0;
     }
 }
-
-/* Text shadow overrides */
 

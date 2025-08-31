@@ -311,14 +311,12 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
     return (
         <div className="results-popup-overlay" onClick={handleOverlayClick}>
-            <div className="results-popup-content">
-                <button onClick={onClose} className="results-popup-close-button">
-                    &times;
-                </button>
-                <div>
-                    {renderContent()}
-                    {/* Removed: button to switch to premium */}
-                </div>
+            <button onClick={onClose} className="results-popup-close-button">
+                &times;
+            </button>
+            <div>
+                {renderContent()}
+                {/* Removed: button to switch to premium */}
             </div>
         </div>
     );

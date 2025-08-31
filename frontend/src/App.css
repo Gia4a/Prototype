@@ -46,12 +46,11 @@
   max-height: 100vh;
   width: auto;
   height: auto;
-  object-fit: contain;
+  object-fit: cover;
   display: block;
 }
 
-  
-    .overlay-search {
+.overlay-search {
       position: absolute;
       left: 50%;
       top: 20px;

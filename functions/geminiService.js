@@ -5,8 +5,7 @@ const { isFoodItem, isLiquorType, isFlavoredLiquor, isShooterQuery, FLAVORED_LIQ
 // Constants
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent';
 
-
-// --- ADDED: Season helpers ---
+// Season helpers
 function getCurrentSeason() {
     const month = new Date().getMonth(); // 0-indexed (0 = January, 11 = December)
     if (month >= 2 && month <= 4) { // March, April, May
@@ -20,22 +19,70 @@ function getCurrentSeason() {
     }
 }
 
-function getSeasonalIngredients(season) {
-    switch (season) {
-        case 'spring':
-            return 'fresh berries, rhubarb, mint, light florals';
-        case 'summer':
-            return 'watermelon, peaches, basil, tropical fruits';
-        case 'fall':
-            return 'apples, cranberries, pumpkin spice, cinnamon';
-        case 'winter':
-            return 'citrus (blood orange, grapefruit), warming spices, pine';
-        default:
-            return 'seasonal fruits and spices';
-    }
+// Theme detection for special occasions
+function getCurrentTheme() {
+    const now = new Date();
+    const month = now.getMonth(); // 0-indexed
+    const day = now.getDate();
+    
+    // Halloween (October)
+    if (month === 9) return { 
+        name: 'Halloween', 
+        ingredients: 'spiced rum, apple cider, cinnamon whiskey',
+        mention: 'Perfect for Halloween parties'
+    };
+    
+    // Christmas (December)
+    if (month === 11) return { 
+        name: 'Christmas', 
+        ingredients: 'cranberry juice, pomegranate juice, cinnamon',
+        mention: 'Perfect for holiday celebrations'
+    };
+    
+    // Valentine's Day (February)
+    if (month === 1) return { 
+        name: 'Valentine\'s', 
+        ingredients: 'strawberry vodka, cherry juice, pink drinks',
+        mention: 'Perfect for romantic occasions'
+    };
+    
+    // Mother's Day (May - 2nd Sunday, approx May 8-14)
+    if (month === 4 && day >= 8 && day <= 14) return { 
+        name: 'Mother\'s Day', 
+        ingredients: 'elderflower liqueur, peach schnapps, floral elements',
+        mention: 'Perfect for Mother\'s Day celebrations'
+    };
+    
+    // Father's Day (June - 3rd Sunday, approx June 15-21)
+    if (month === 5 && day >= 15 && day <= 21) return { 
+        name: 'Father\'s Day', 
+        ingredients: 'bourbon, whiskey, maple syrup',
+        mention: 'Perfect for Father\'s Day celebrations'
+    };
+    
+    // Labor Day (September - 1st Monday, approx Sept 1-7)
+    if (month === 8 && day <= 7) return { 
+        name: 'Labor Day', 
+        ingredients: 'classic American spirits, cola mixers',
+        mention: 'Perfect for Labor Day gatherings'
+    };
+    
+    // Breast Cancer Awareness (October - alternative to Halloween)
+    if (month === 9 && Math.random() > 0.5) return { 
+        name: 'Pink Ribbon', 
+        ingredients: 'pink grapefruit juice, strawberry, rosé wine',
+        mention: 'Supporting breast cancer awareness'
+    };
+    
+    // Default to bold/flavored for non-themed times
+    return { 
+        name: 'Bold', 
+        ingredients: 'flavored vodka, tropical liqueurs, unique mixers',
+        mention: 'For adventurous drinkers'
+    };
 }
 
-// Enhanced seasonal ingredients
+// Seasonal fruit juices
 const SEASONAL_FRUIT_JUICES = {
     spring: ['strawberry juice', 'rhubarb juice', 'elderflower cordial', 'fresh lemon juice with mint'],
     summer: ['watermelon juice', 'peach nectar', 'fresh berry juice', 'pineapple juice', 'mango juice'],
@@ -43,37 +90,13 @@ const SEASONAL_FRUIT_JUICES = {
     winter: ['blood orange juice', 'grapefruit juice', 'pomegranate juice', 'spiced apple cider']
 };
 
-// Random premium spirit selections
-const PREMIUM_SPIRITS = {
-    vodka: ['Grey Goose', 'Belvedere', 'Titos', 'Ketel One'],
-    rum: ['Mount Gay', 'Plantation', 'Diplomatico', 'Ron Zacapa'],
-    gin: ['Hendricks', 'Bombay Sapphire', 'Tanqueray', 'Aviation'],
-    whiskey: ['Woodford Reserve', 'Buffalo Trace', 'Bulleit', 'Makers Mark'],
-    tequila: ['Espolon', 'Herradura', 'Casamigos', 'Don Julio']
-};
-
-// Specialty liqueurs for randomness
+// Specialty liqueurs for home bar
 const SPECIALTY_LIQUEURS = [
     'elderflower liqueur', 'amaretto', 'triple sec', 'peach schnapps', 
     'coconut rum', 'vanilla vodka', 'cinnamon whiskey', 'honey bourbon'
 ];
 
-// Common home bar ingredients to promote in recipes
-const COMMON_INGREDIENTS = [
-    // Base spirits
-    'vodka', 'rum', 'gin', 'whiskey', 'tequila',
-    // Mixers & juices
-    'lemon juice', 'lime juice', 'orange juice', 'cranberry juice', 'pineapple juice', 'tomato juice',
-    // Syrups & sweeteners
-    'simple syrup', 'grenadine', 'honey', 'maple syrup',
-    // Sodas & mixers
-    'club soda', 'tonic water', 'ginger beer', 'cola', 'sprite', '7up',
-    // Common garnishes
-    'lemon', 'lime', 'orange', 'cherry', 'mint', 'olives',
-    // Basic bitters (only when essential)
-    'angostura bitters', 'orange bitters'
-];
-
+// Classic cocktails list
 const CLASSIC_COCKTAILS = [
     'moscow mule', 'old fashioned', 'manhattan', 'martini', 'margarita', 
     'mojito', 'daiquiri', 'whiskey sour', 'cosmopolitan', 'mai tai',
@@ -103,32 +126,20 @@ const SPECIALTY_CLASSIC_INGREDIENTS = {
     'last word': ['green chartreuse', 'maraschino liqueur']
 };
 
-// Helper function to get random seasonal fruit juice
+// Helper functions
 function getRandomSeasonalJuice(season) {
     const seasonalJuices = SEASONAL_FRUIT_JUICES[season] || SEASONAL_FRUIT_JUICES.summer;
     return seasonalJuices[Math.floor(Math.random() * seasonalJuices.length)];
 }
 
-// Helper function to get random flavored spirit
 function getRandomFlavoredSpirit() {
     return FLAVORED_LIQUORS[Math.floor(Math.random() * FLAVORED_LIQUORS.length)];
 }
 
-// Helper function to get random premium spirit
-function getRandomPremiumSpirit(baseSpirit) {
-    const premiumOptions = PREMIUM_SPIRITS[baseSpirit.toLowerCase()];
-    if (premiumOptions) {
-        return premiumOptions[Math.floor(Math.random() * premiumOptions.length)];
-    }
-    return baseSpirit;
-}
-
-// Helper function to get random specialty liqueur
 function getRandomSpecialtyLiqueur() {
     return SPECIALTY_LIQUEURS[Math.floor(Math.random() * SPECIALTY_LIQUEURS.length)];
 }
 
-// Helper function to check if query is for a classic cocktail
 function isClassicCocktailRequest(query) {
     const normalizedQuery = query.toLowerCase().trim();
     return CLASSIC_COCKTAILS.some(cocktail => 
@@ -139,7 +150,6 @@ function isClassicCocktailRequest(query) {
     );
 }
 
-// Get a random cocktail name for a spirit (not restricted to classics)
 function getRandomCocktailForSpirit(spirit) {
     const cocktailNames = [
         'Twilight', 'Sunset', 'Garden', 'Storm', 'Breeze', 'Fizz', 'Splash', 'Mist',
@@ -149,16 +159,16 @@ function getRandomCocktailForSpirit(spirit) {
     return `${spirit.charAt(0).toUpperCase() + spirit.slice(1)} ${randomName}`;
 }
 
-// More robust JSON extraction and parsing
+// JSON extraction and parsing
 function extractAndParseJSON(responseText) {
     console.log("Raw response length:", responseText.length);
     console.log("Raw response preview:", responseText.substring(0, 200) + "...");
     
     try {
-        // Step 1: Remove markdown code blocks
+        // Remove markdown code blocks
         let cleanText = responseText.replace(/```(?:json|JSON)?\s*([\s\S]*?)\s*```/g, '$1');
         
-        // Step 2: Find JSON boundaries
+        // Find JSON boundaries
         let startIdx = cleanText.indexOf('[');
         let endIdx = cleanText.lastIndexOf(']');
         
@@ -172,10 +182,10 @@ function extractAndParseJSON(responseText) {
             throw new Error('No valid JSON structure found');
         }
         
-        // Step 3: Extract JSON portion
+        // Extract JSON portion
         cleanText = cleanText.substring(startIdx, endIdx + 1);
         
-        // Step 4: Try parsing as-is first
+        // Try parsing as-is first
         try {
             const directParse = JSON.parse(cleanText);
             console.log("Direct parse successful");
@@ -184,33 +194,23 @@ function extractAndParseJSON(responseText) {
             console.log("Direct parse failed, attempting cleanup:", directError.message);
         }
         
-        // Step 5: Aggressive cleanup for malformed JSON
+        // Cleanup for malformed JSON
         cleanText = cleanText
-            // Remove trailing commas
-            .replace(/,(\s*[}\]])/g, '$1')
-            // Fix unquoted keys
-            .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":')
-            // Handle unescaped quotes in values
-            .replace(/:\s*"([^"]*)"([^"]*)"([^"]*?)"\s*([,}\]])/g, ':"$1\\"$2\\"$3"$4')
-            // Fix values that should be quoted
+            .replace(/,(\s*[}\]])/g, '$1') // Remove trailing commas
+            .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":') // Fix unquoted keys
             .replace(/:\s*([^",\[\]{}]+?)(\s*[,}\]])/g, (match, value, ending) => {
                 const trimmed = value.trim();
-                // Don't quote numbers, booleans, null, or already quoted strings
                 if (/^(-?\d+\.?\d*|true|false|null|".*")$/.test(trimmed)) {
                     return ':' + trimmed + ending;
                 }
-                // Quote and escape other values
                 return ':"' + trimmed.replace(/"/g, '\\"') + '"' + ending;
             });
-        
-        console.log("Cleaned JSON (first 200 chars):", cleanText.substring(0, 200));
         
         const parsed = JSON.parse(cleanText);
         return Array.isArray(parsed) ? parsed : [parsed];
         
     } catch (error) {
-        console.error("All parsing attempts failed:", error.message);
-        console.error("Original text length:", responseText.length);
+        console.error("JSON parsing failed:", error.message);
         
         // Extract any readable information for fallback
         const titleMatch = responseText.match(/"title":\s*"([^"]+)"/i);
@@ -225,41 +225,45 @@ function extractAndParseJSON(responseText) {
     }
 }
 
-// Enhanced prompts with specific recipes to avoid repetition
+// Prompt functions
 const getClassicCocktailPrompt = (query) => {
     const randomSeed = Math.floor(Math.random() * 1000);
     const specialtyItems = SPECIALTY_CLASSIC_INGREDIENTS[query.toLowerCase()] || [];
     const allowedSpecialty = specialtyItems.length > 0 ? `You may use these specialty items for authenticity: ${specialtyItems.join(', ')}` : '';
+    const currentSeason = getCurrentSeason();
+    const seasonalJuice = getRandomSeasonalJuice(currentSeason);
+    const theme = getCurrentTheme();
     
-        return `
+    return `
 Return a JSON array with exactly 2 cocktail recipes for the classic "${query}":
 
-INGREDIENT RESTRICTIONS (CRITICAL):
+INGREDIENT RESTRICTIONS:
 - Maximum 3 total between spirits and liqueurs combined
 - Use 1-2 spirits, 0-2 liqueurs
 - For mixers/garnishes: ONLY common kitchen ingredients: ${KITCHEN_MIXERS.join(', ')}
 - ${allowedSpecialty}
-- Always include "oz" in measurements like "2 oz", "1 oz", "0.5 oz"
+- OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it enhances the cocktail
+- Always include "oz" in measurements
 
 Format:
 [
     {
         "title": "Classic ${query}",
-        "snippet": "Ingredients: [authentic classic recipe with exact measurements including 'oz', and seasonal fruit can be included in basic recipe]. Instructions: [traditional method]",
+        "snippet": "Ingredients: [authentic classic recipe with exact measurements including 'oz']. Instructions: [traditional method]",
         "filePath": null,
         "why": "authentic classic recipe",
         "hasUpgrade": true
     },
     {
-        "title": "Seasonal ${query}",
-        "snippet": "Ingredients: [classic recipe with seasonal fruit juice addition]. Instructions: [enhanced method]",
+        "title": "${theme.name} ${query} Special",
+        "snippet": "Ingredients: [classic base with ${theme.ingredients}, optional seasonal juice if it enhances, measurements with 'oz']. Instructions: [enhanced method]. Theme: ${theme.mention}",
         "filePath": null,
-        "why": "seasonal interpretation",
+        "why": "${theme.name.toLowerCase()} themed upgrade",
         "hasUpgrade": false
     }
 ]
 
-CRITICAL: Use the AUTHENTIC classic ${query} recipe with proper measurements including "oz". Seasonal fruit can be included in basic recipe. Add seasonal fruit juice to second recipe.
+CRITICAL: First recipe must be authentic classic ${query}. Second uses themed ingredients: ${theme.ingredients}. Seasonal juice is OPTIONAL.
 Seed: ${randomSeed}
 `;
 };
@@ -269,7 +273,7 @@ const getShooterPrompt = (query) => {
     const randomFlavoredSpirit = getRandomFlavoredSpirit();
     
     return `
-Create a shooter recipe for "${query}" using interesting flavored spirits and liqueurs.
+Create a shooter recipe for "${query}" using flavored spirits and liqueurs.
 
 Return JSON array:
 [{"title": "${query} Shot", "snippet": "Ingredients: 0.5 oz ${randomFlavoredSpirit}, 0.5 oz [complementary liqueur], dash of [mixer]. Instructions: [method - shake/layer/build], serve immediately in shot glass.", "filePath": null, "why": "perfect ${query}-inspired shooter", "hasUpgrade": false}]
@@ -289,15 +293,15 @@ const getFoodPairingPrompt = (query) => {
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
     
     return `
-Recommend a specific cocktail pairing for "${query}" using seasonal ingredients.
+Recommend a specific cocktail pairing for "${query}".
 
 Return JSON array:
-[{"title": "Perfect Pairing for ${query}", "snippet": "Cocktail: [specific cocktail name]. Ingredients: [detailed list with measurements including 'oz' like '2 oz vodka', '1 oz lime juice', '0.5 oz ${seasonalJuice}']. Instructions: [complete preparation method]. Pairing Notes: [why this works with ${query}]", "filePath": "willowpark.net", "why": "expert food pairing", "hasUpgrade": true}]
+[{"title": "Perfect Pairing for ${query}", "snippet": "Cocktail: [specific cocktail name]. Ingredients: [detailed list with measurements including 'oz' like '2 oz vodka', '1 oz lime juice']. OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it complements the pairing. Instructions: [complete preparation method]. Pairing Notes: [why this works with ${query}]", "filePath": "willowpark.net", "why": "expert food pairing", "hasUpgrade": true}]
 
 Requirements:
 - Name a specific cocktail that pairs well
-- Include ALL ingredient measurements with "oz" (2 oz, 1 oz, 0.5 oz, dash, etc.)
-- Include seasonal fruit juice: ${seasonalJuice}
+- Include ALL ingredient measurements with "oz" 
+- OPTIONAL: Include seasonal fruit juice (${seasonalJuice}) only if it complements the food pairing
 - Complete preparation instructions
 - Explain the flavor pairing logic
 - Use accessible ingredients only
@@ -311,43 +315,37 @@ const getLiquorPrompt = (query) => {
     const currentSeason = getCurrentSeason();
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
     const specialtyLiqueur = getRandomSpecialtyLiqueur();
-    const premiumSpirit = getRandomPremiumSpirit(query);
+    const theme = getCurrentTheme();
     
     return `
-Return a JSON array with exactly 2 random cocktail recipes featuring "${query}" as the main spirit:
+Return a JSON array with exactly 2 cocktail recipes featuring "${query}" as the main spirit:
 
-INGREDIENT RESTRICTIONS (CRITICAL):
+INGREDIENT RESTRICTIONS:
 - Maximum 3 total between spirits and liqueurs combined
-- Use 1-2 spirits (${query} must be primary)
-- Use 0-2 liqueurs maximum
-- Include seasonal fruit juice: ${seasonalJuice}
-- Consider premium spirits like: ${premiumSpirit}
-- Consider specialty liqueurs like: ${specialtyLiqueur}
+- Use 1-2 spirits (${query} must be primary), 0-2 liqueurs maximum
+- OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it enhances the cocktail
+- Consider flavored spirits and specialty liqueurs: ${specialtyLiqueur}
 - Always include "oz" in measurements
 
 Format:
 [
   {
-    "title": "${randomCocktailName}",
-    "snippet": "Ingredients: [2 oz ${premiumSpirit}, seasonal juice, specialty liqueur, with exact measurements including 'oz']. Instructions: [complete method]",
+    "title": "Classic ${randomCocktailName}",
+    "snippet": "Ingredients: [2 oz ${query}, optional seasonal juice if it enhances, simple mixers with exact measurements including 'oz']. Instructions: [complete method]",
     "filePath": null,
-    "why": "creative ${query} cocktail",
+    "why": "classic ${query} cocktail",
     "hasUpgrade": true
   },
   {
-    "title": "Seasonal ${query} Refresher",
-    "snippet": "Ingredients: [2 oz ${query}, ${seasonalJuice}, simple mixers with measurements including 'oz']. Instructions: [refreshing method]",
+    "title": "${theme.name} ${query} Special",
+    "snippet": "Ingredients: [2 oz ${query}, themed ingredients like ${theme.ingredients}, optional seasonal juice if it enhances, measurements with 'oz']. Instructions: [bold method]. Theme: ${theme.mention}",
     "filePath": null,
-    "why": "seasonal ${query} creation",
+    "why": "${theme.name.toLowerCase()} themed creation",
     "hasUpgrade": false
   }
 ]
 
-EXAMPLES of valid seasonal combinations:
-- 2 oz ${premiumSpirit} + 1 oz ${specialtyLiqueur} + 1 oz ${seasonalJuice} + 0.5 oz lime juice
-- 2 oz ${query} + 0.5 oz elderflower liqueur + 1 oz ${seasonalJuice} + club soda
-
-CRITICAL: Include "oz" in ALL measurements. Add seasonal fruit juice. Use premium/flavored spirits for variety.
+CRITICAL: Use restrictions (max 3 spirits+liqueurs). Seasonal juice is OPTIONAL. Mention theme in second recipe.
 Seed: ${randomSeed}
 `;
 };
@@ -358,15 +356,15 @@ const getCocktailPrompt = (query) => {
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
     const randomFlavored = getRandomFlavoredSpirit();
     const randomSpecialty = getRandomSpecialtyLiqueur();
+    const theme = getCurrentTheme();
     
     return `
-Return a JSON array with exactly 2 random cocktail recipes inspired by "${query}":
+Return a JSON array with exactly 2 cocktail recipes inspired by "${query}":
 
-INGREDIENT RESTRICTIONS (CRITICAL):
+INGREDIENT RESTRICTIONS:
 - Maximum 3 total between spirits and liqueurs combined
-- Use 1-2 spirits (can mix premium brands, flavored spirits)
-- Use 0-2 liqueurs maximum
-- Include seasonal fruit juice: ${seasonalJuice}
+- Use 1-2 spirits, 0-2 liqueurs maximum
+- OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it fits the cocktail concept
 - Consider flavored spirits: ${randomFlavored}
 - Consider specialty liqueurs: ${randomSpecialty}
 - Always include "oz" in measurements
@@ -374,77 +372,52 @@ INGREDIENT RESTRICTIONS (CRITICAL):
 Format:
 [
   {
-    "title": "Seasonal ${query} Creation",
-    "snippet": "Ingredients: [follow restrictions with exact measurements including 'oz' like '2 oz gin', '1 oz ${randomSpecialty}', '1 oz ${seasonalJuice}']. Instructions: [complete step-by-step method]",
+    "title": "${query} Classic",
+    "snippet": "Ingredients: [traditional interpretation with exact measurements including 'oz', optional seasonal juice if it enhances]. Instructions: [complete method]",
     "filePath": null,
-    "why": "creative seasonal ${query} interpretation",
+    "why": "classic ${query} interpretation",
     "hasUpgrade": true
   },
   {
-    "title": "Premium ${query} Experience",
-    "snippet": "Ingredients: [upgraded version with premium spirits and seasonal juice, measurements with 'oz']. Instructions: [enhanced preparation method]",
+    "title": "${theme.name} ${query}",
+    "snippet": "Ingredients: [bold version using ${theme.ingredients}, optional seasonal juice if it fits, measurements with 'oz']. Instructions: [enhanced method]. Theme: ${theme.mention}",
     "filePath": null,
-    "why": "premium ${query} creation",
+    "why": "${theme.name.toLowerCase()} themed creation",
     "hasUpgrade": false
   }
 ]
 
-EXAMPLES of valid seasonal combinations:
-- 2 oz premium gin + 1 oz elderflower liqueur + 1 oz ${seasonalJuice} + lime juice
-- 1.5 oz ${randomFlavored} + 0.5 oz ${randomSpecialty} + 1 oz ${seasonalJuice} + club soda
-
-CRITICAL: Create unique seasonal recipes with premium ingredients. Include "oz" in ALL measurements. Add seasonal fruit juice.
+CRITICAL: Follow restrictions (max 3 spirits+liqueurs). Seasonal juice is OPTIONAL. Mention theme in second recipe.
 Seed: ${randomSeed}
 `;
 };
 
-// Enhanced fallback with proper measurements and seasonal elements
+// Fallback responses
 function createFallbackResponse(query, category = 'general') {
     const currentSeason = getCurrentSeason();
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
-    const randomPremium = getRandomPremiumSpirit('vodka');
-    
-    const randomVariations = {
-        food: [
-            `Wine & Cocktail Pairing for ${query}`,
-            `Perfect Drink Match for ${query}`, 
-            `Beverage Harmony with ${query}`
-        ],
-        liquor: [
-            `Classic ${query} Cocktail`,
-            `Traditional ${query} Recipe`,
-            `Premium ${query} Creation`
-        ],
-        general: [
-            `${query} Inspired Cocktail`,
-            `Craft ${query} Creation`,
-            `Mixologist's ${query} Special`
-        ]
-    };
-    
-    const titles = randomVariations[category] || randomVariations.general;
-    const randomTitle = titles[Math.floor(Math.random() * titles.length)];
+    const theme = getCurrentTheme();
     
     const fallbackData = {
         food: [{
-            title: randomTitle,
-            snippet: `Cocktail: Seasonal Spritz. Ingredients: 2 oz white wine, 1 oz elderflower liqueur, 1 oz ${seasonalJuice}, 0.5 oz lime juice, 2 oz club soda, lime wheel garnish. Instructions: Build over ice in wine glass, stir gently, garnish with lime. Pairing Notes: The crisp acidity and seasonal fruit complement ${query} beautifully.`,
+            title: `Perfect Pairing for ${query}`,
+            snippet: `Cocktail: Seasonal Spritz. Ingredients: 2 oz white wine, 1 oz elderflower liqueur, 0.5 oz lime juice, 2 oz club soda, lime wheel garnish. Instructions: Build over ice in wine glass, stir gently, garnish with lime. Pairing Notes: The crisp, clean flavors complement ${query} beautifully.`,
             filePath: "willowpark.net",
             why: "Professional pairing recommendation based on flavor harmony.",
             hasUpgrade: true
         }],
         liquor: [{
-            title: randomTitle,
-            snippet: `Ingredients: 2 oz ${query}, 1 oz ${seasonalJuice}, 0.75 oz fresh lemon juice, 0.5 oz simple syrup, lemon twist garnish. Instructions: Combine all ingredients except garnish in shaker with ice, shake vigorously for 10 seconds, strain into chilled coupe glass, express lemon twist over drink and drop in.`,
+            title: `Classic ${query} Cocktail`,
+            snippet: `Ingredients: 2 oz ${query}, 0.75 oz fresh lemon juice, 0.5 oz simple syrup, lemon twist garnish. Instructions: Combine all ingredients except garnish in shaker with ice, shake vigorously for 10 seconds, strain into chilled coupe glass, express lemon twist over drink and drop in.`,
             filePath: null,
-            why: "Seasonal preparation showcasing the spirit's character.",
+            why: "Classic preparation showcasing the spirit's character.",
             hasUpgrade: true
         }],
         general: [{
-            title: randomTitle,
-            snippet: `Ingredients: 2 oz ${randomPremium}, 1 oz elderflower liqueur, 1 oz ${seasonalJuice}, 0.75 oz fresh lime juice, 0.25 oz simple syrup, 3 oz tonic water, cucumber wheel garnish. Instructions: Muddle cucumber in shaker, add spirits and juices, shake with ice, strain over fresh ice in highball glass, top with tonic, garnish with cucumber wheel.`,
+            title: `${query} Inspired Cocktail`,
+            snippet: `Ingredients: 2 oz vodka, 1 oz elderflower liqueur, 0.75 oz fresh lime juice, 0.5 oz simple syrup, 3 oz tonic water, cucumber wheel garnish. Instructions: Add spirits and citrus to shaker with ice, shake well, strain over fresh ice in highball glass, top with tonic, garnish with cucumber wheel.`,
             filePath: null,
-            why: "Expert mixologist creation with seasonal flavors.",
+            why: "Expert mixologist creation with balanced flavors.",
             hasUpgrade: true
         }]
     };
@@ -452,7 +425,7 @@ function createFallbackResponse(query, category = 'general') {
     return fallbackData[category] || fallbackData.general;
 }
 
-// Main Function with enhanced settings
+// Main function
 async function fetchAndProcessGeminiResults(query, apiKey) {
     if (!apiKey) {
         throw new Error('API key for Gemini service is not configured.');
@@ -488,7 +461,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
         category = 'general';
     }
 
-    // Enhanced API Request with better settings for variety
+    // API Request
     const requestBody = {
         contents: [{
             parts: [{
@@ -496,25 +469,23 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
             }]
         }],
         generationConfig: {
-            temperature: 0.8,        // Higher for more variety
-            topK: 50,               // More creative options
-            topP: 0.9,              // Better creativity balance
-            maxOutputTokens: 1024,   // More space for detailed recipes
-            candidateCount: 1        // Single response for consistency
+            temperature: 0.8,
+            topK: 50,
+            topP: 0.9,
+            maxOutputTokens: 1024,
+            candidateCount: 1
         }
     };
 
     try {
-        console.log("Sending request to Gemini API with enhanced seasonal settings...");
+        console.log("Sending request to Gemini API...");
         
         const geminiResponse = await axios.post(
             `${GEMINI_API_URL}?key=${apiKey}`,
             requestBody,
             {
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                timeout: 30000  // 30 second timeout
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 30000
             }
         );
 
@@ -542,7 +513,7 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
 
         // Ensure we always return at least one result
         if (mappedResults.length === 0) {
-            console.log("No valid results, using enhanced fallback");
+            console.log("No valid results, using fallback");
             return createFallbackResponse(query, category);
         }
 
@@ -551,25 +522,16 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
 
     } catch (error) {
         console.error('Gemini API Error:', error.message);
-        
-        // Return appropriate fallback based on error type
-        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
-            console.log("Timeout error, using fallback response");
-        } else {
-            console.log("API error, using fallback response");
-        }
-        
         return createFallbackResponse(query, category);
     }
 }
 
-// Enhanced cocktail comment generation
+// Cocktail comment generation
 async function generateCocktailComment(cocktailName, ingredients, season, apiKey, hasUpgrade = false) {
     if (!apiKey) {
         throw new Error('API key for Gemini service is not configured.');
     }
 
-    const currentDate = new Date();
     const currentSeason = season || getCurrentSeason();
     
     const promptText = `
@@ -579,17 +541,16 @@ Format as JSON:
 {
     "poeticLine1": "First poetic line about the cocktail (under 50 characters)",
     "poeticLine2": "Second poetic line completing the thought (under 50 characters)",
-    "poeticLine3": "A single sentence, in the style of a 1920s bartender, describing this as a premium, adventurous drink (under 80 characters)",
+    "poeticLine3": "A single sentence, in the style of a 1920s bartender, describing this as an adventurous drink (under 80 characters)",
     "showUpgradeButton": ${hasUpgrade}
 }
 
 Requirements:
 - Three lines that flow poetically together
-- Reference the ${currentSeason} season and ingredients
-- poeticLine3 must be a single sentence, 1920s bartender style, describing a premium/adventurous drink (max 80 characters)
-- Keep poeticLine1 and poeticLine2 under 50 characters for better display
+- Reference the ${currentSeason} season and ingredients naturally
+- poeticLine3 must be 1920s bartender style, single sentence (max 80 characters)
+- Keep poeticLine1 and poeticLine2 under 50 characters
 - Valid JSON structure only
-- Focus on the drink's appeal and seasonal connection
 `;
 
     const requestBody = {
@@ -626,7 +587,6 @@ Requirements:
         
         if (parsed && parsed[0]) {
             const result = parsed[0];
-            // Return structured comment data
             return {
                 text: `${result.poeticLine1}\n${result.poeticLine2}\n${result.poeticLine3}`,
                 showUpgradeButton: result.showUpgradeButton || hasUpgrade
@@ -638,11 +598,11 @@ Requirements:
     } catch (error) {
         console.error('Gemini comment generation error:', error.message);
         
-        // Enhanced fallback poetic comment
+        // Fallback poetic comment
         const fallbackPoetic = [
             `${currentSeason}'s perfect blend, smooth and bright,`,
             `A cocktail crafted for pure delight,`,
-            `Sip and savor summer's finest bite.`
+            `Sip and savor the season's finest bite.`
         ];
         
         return {
@@ -652,63 +612,81 @@ Requirements:
     }
 }
 
-// Enhanced seasonal upgrade recipe
-async function generateSeasonalUpgrade(originalCocktail, upgradeType, season, apiKey) {
-
+// Themed upgrade generation
+async function generateThemedUpgrade(originalCocktail, upgradeType, season, apiKey) {
     if (!apiKey) {
         throw new Error('API key for Gemini service is not configured.');
     }
 
     const currentSeason = season || getCurrentSeason();
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
-    const premiumSpirit = getRandomPremiumSpirit('vodka');
     const specialtyLiqueur = getRandomSpecialtyLiqueur();
+    const theme = getCurrentTheme();
 
     const upgradePrompts = {
-        seasonal: `Create a ${currentSeason} seasonal upgrade of "${originalCocktail}" using seasonal fruit juice: ${seasonalJuice}`,
-        spicy: `Create a spicy/bold upgrade of "${originalCocktail}" using flavored spirits and bold ingredients`,
-        premium: `Create a premium upgrade of "${originalCocktail}" using top-shelf spirits: ${premiumSpirit} and specialty liqueurs: ${specialtyLiqueur}`,
-        festive: `Create a festive/holiday upgrade of "${originalCocktail}" with seasonal themes and special ingredients`
+        themed: `Create a ${theme.name} themed upgrade of "${originalCocktail}" using ${theme.ingredients}`,
+        bold: `Create a bold upgrade of "${originalCocktail}" using flavored spirits and unique ingredients`,
+        seasonal: `Create a ${currentSeason} seasonal upgrade of "${originalCocktail}" with seasonal elements`
     };
 
     const promptText = `
-${upgradePrompts[upgradeType] || upgradePrompts.seasonal}
+${upgradePrompts[upgradeType] || upgradePrompts.themed}
 
 Return JSON array:
-[{"title": "Upgraded ${originalCocktail}", "snippet": "Ingredients: [detailed list with exact measurements including 'oz' like '2 oz ${premiumSpirit}', '1 oz ${specialtyLiqueur}', '1 oz ${seasonalJuice}']. Instructions: [complete preparation method with any special techniques]", "filePath": null, "why": "explanation of what makes this an upgrade", "hasUpgrade": false}]
+[{"title": "${theme.name} ${originalCocktail}", "snippet": "Ingredients: [detailed list with exact measurements including 'oz', themed ingredients like ${theme.ingredients}]. OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it enhances the upgrade. Instructions: [complete preparation method]. Theme: ${theme.mention}", "filePath": null, "why": "${theme.name.toLowerCase()} themed upgrade with bold flavors", "hasUpgrade": false}]
 
 Requirements:
-- Include EXACT measurements with "oz" for all ingredients (2 oz, 1 oz, 0.5 oz, dash, etc.)
-- Use seasonal elements for ${currentSeason}: ${getSeasonalIngredients(currentSeason)}
-- Include seasonal fruit juice: ${seasonalJuice}
-- Use premium spirits and specialty liqueurs for upgrades
+- Include EXACT measurements with "oz" for all ingredients
+- Use themed ingredients: ${theme.ingredients}
+- OPTIONAL: Include seasonal fruit juice (${seasonalJuice}) only if it enhances the upgrade
 - Explain what makes this an upgrade from the original
 - Include complete step-by-step instructions
+- Mention the theme in the snippet
 - Valid JSON structure only
 `;
 
-    // --- API call and response parsing logic ---
     const requestBody = {
-        contents: [{ role: 'user', parts: [{ text: promptText }] }]
+        contents: [{
+            parts: [{
+                text: promptText
+            }]
+        }],
+        generationConfig: {
+            temperature: 0.8,
+            topK: 50,
+            topP: 0.9,
+            maxOutputTokens: 512,
+            candidateCount: 1
+        }
     };
+
     try {
         const geminiResponse = await axios.post(
             `${GEMINI_API_URL}?key=${apiKey}`,
             requestBody,
-            { headers: { 'Content-Type': 'application/json' }, timeout: 20000 }
+            {
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 20000
+            }
         );
+
+        if (!geminiResponse.data?.candidates?.[0]?.content?.parts?.[0]?.text) {
+            throw new Error('Invalid response structure from Gemini API');
+        }
+
         const responseText = geminiResponse.data.candidates[0].content.parts[0].text;
         return extractAndParseJSON(responseText);
+        
     } catch (error) {
         console.error('Gemini upgrade generation error:', error.message);
         return createFallbackResponse(originalCocktail, 'general');
     }
 }
 
-// Export the main functions for use in other modules
+// Export functions
 module.exports = {
     fetchAndProcessGeminiResults,
     generateCocktailComment,
-    generateSeasonalUpgrade,
-    // ... any other functions you want to export from this file
+    generateThemedUpgrade, // Renamed from generateSeasonalUpgrade
+    getCurrentTheme // Export for use in other modules if needed
 };
