@@ -3,7 +3,7 @@
 
 const STANDARD_STYLES = {
   containerStyle: {
-    width: '60%',
+    width: '100%',
     maxWidth: '2048px',
     height: '60vh',
     maxHeight: '60vh',

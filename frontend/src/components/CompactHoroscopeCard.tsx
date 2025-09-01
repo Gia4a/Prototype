@@ -28,6 +28,10 @@ interface CocktailData {
     personalComment?: string;
     upgradeComment?: string;
   };
+  enhancedComment?: {
+    text: string;
+    showUpgradeButton: boolean;
+  };
   bartenderLine?: string;
   originalQuery?: string;
   onUpgrade?: (upgradeType: string) => void;
@@ -109,17 +113,20 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
   // Handle upgrade button click
   const handleUpgrade = () => {
     if (data.onUpgrade) {
-  const upgradeTypes = ['seasonal', 'spicy', 'elevate', 'festive'];
+      const upgradeTypes = ['seasonal', 'spicy', 'elevate', 'festive'];
       const randomUpgrade = upgradeTypes[Math.floor(Math.random() * upgradeTypes.length)];
       data.onUpgrade(randomUpgrade);
     }
   };
 
   // Determine if upgrade functionality should be available
-  const shouldShowUpgrade = data.onUpgrade && data.originalQuery;
+  const shouldShowUpgrade = data.onUpgrade || (data.originalQuery && data.enhancedComment?.showUpgradeButton);
 
   // Render comment content based on type - FIXED LAYOUT
   const renderComment = () => {
+    // Get bartenderLine from the correct location
+    const bartenderLine = data.bartenderLine || null;
+
     if (typeof data.comment === 'string') {
       const lines = data.comment.split('\n');
       return (
@@ -131,21 +138,23 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 <div key={index}>{line}</div>
               ))}
             </div>
-            {/* Bartender message with spacing */}
-            {data.bartenderLine && (
+            {/* Bartender message with spacing - ALWAYS show if present */}
+            {bartenderLine && (
               <div style={{...STANDARD_STYLES.upgradeRowStyle, marginTop: '10px', marginBottom: '2px', color: '#fbbf24', fontStyle: 'italic', fontSize: '0.95em', textAlign: 'center'}}>
-                {data.bartenderLine}
+                {bartenderLine}
               </div>
             )}
             {/* Upgrade button absolutely positioned bottom right */}
-            <button 
-              style={STANDARD_STYLES.upgradeButtonStyle}
-              onClick={handleUpgrade}
-              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
-              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-            >
-              🔥 Upgrade
-            </button>
+            {shouldShowUpgrade && (
+              <button 
+                style={STANDARD_STYLES.upgradeButtonStyle}
+                onClick={handleUpgrade}
+                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+              >
+                🔥 Upgrade
+              </button>
+            )}
           </div>
         </div>
       );
@@ -164,7 +173,13 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 ))}
               </div>
             )}
-            {/* Bartender message */}
+            {/* Bartender message - ALWAYS show if present */}
+            {bartenderLine && (
+              <div style={{...STANDARD_STYLES.upgradeRowStyle, marginTop: '10px', marginBottom: '2px', color: '#fbbf24', fontStyle: 'italic', fontSize: '0.95em', textAlign: 'center'}}>
+                {bartenderLine}
+              </div>
+            )}
+            {/* Upgrade comment */}
             {data.comment.upgradeComment && (
               <div style={STANDARD_STYLES.upgradeRowStyle}>
                 <div>{data.comment.upgradeComment}</div>
@@ -186,14 +201,20 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
       );
     }
 
-    // Fallback with upgrade button if available
+    // Fallback with bartender line and upgrade button if available
     return (
       <div style={STANDARD_STYLES.commentSectionStyle}>
         <div style={STANDARD_STYLES.commentSectionButtonWrapper}>
           <div style={STANDARD_STYLES.poeticTextStyle}>
             Perfect cocktail for any occasion!
           </div>
-          {false && (
+          {/* Bartender message - ALWAYS show if present */}
+          {bartenderLine && (
+            <div style={{...STANDARD_STYLES.upgradeRowStyle, marginTop: '10px', marginBottom: '2px', color: '#fbbf24', fontStyle: 'italic', fontSize: '0.95em', textAlign: 'center'}}>
+              {bartenderLine}
+            </div>
+          )}
+          {shouldShowUpgrade && (
             <div style={STANDARD_STYLES.upgradeRowStyle}>
               <div></div>
               <button 

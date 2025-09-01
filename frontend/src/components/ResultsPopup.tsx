@@ -372,7 +372,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 ingredients: ingredients,
                 instructions: instructions,
                 comment: suggestion.enhancedComment?.text || '',
-                bartenderLine: suggestion.enhancedComment?.bartenderLine || '',
+                bartenderLine: suggestion.bartenderLine || '',
                 originalQuery: suggestion.originalQuery,
                 // Use local upgrade if both recipes stored, otherwise use external handler
                 onUpgrade: (storedRecipes.classic && storedRecipes.elevate) ? 
@@ -426,7 +426,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             <button onClick={onClose} className="results-popup-close-button">
                 &times;
             </button>
-            <div>
+            <div className="universal-card-container"> {/* Add this class */}
                 {renderContent()}
             </div>
         </div>
