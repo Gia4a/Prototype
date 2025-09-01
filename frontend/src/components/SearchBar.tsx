@@ -55,7 +55,7 @@ interface SearchBarProps {
     onLoadingChange: (loading: boolean) => void;
     onError: (error: string) => void;
     isLoading: boolean;
-    onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void; // New prop for upgrades
+    onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
@@ -67,6 +67,92 @@ const SearchBar: React.FC<SearchBarProps> = ({
     const [query, setQuery] = useState('');
     const [showCamera, setShowCamera] = useState(false);
     const cameraRef = useRef<CameraCaptureHandle>(null);
+
+    // Helper function to process mixologist response
+    const processResponse = (responseData: MixologistResponse): MixologistResponse => {
+        // Check if this is a food pairing response with structured data in results
+        if (responseData.results && responseData.results.length > 0) {
+            const firstResult = responseData.results[0];
+            
+            // Check if the first result has the structured pairing data we need
+            if (firstResult.winePairing && firstResult.spiritPairing && firstResult.beerPairing) {
+                console.log('Found structured food pairing data in results');
+                
+                // Return the structured result directly, preserving the original query
+                return {
+                    ...firstResult,
+                    originalQuery: responseData.originalQuery,
+                    filePath: "willowpark.net" // Force food pairing detection
+                };
+            }
+            
+            // Check if it's a food pairing based on filePath or content patterns
+            const isFoodPairing = firstResult.filePath === "willowpark.net" ||
+                                 firstResult.snippet?.toLowerCase().includes('pairing notes:') ||
+                                 firstResult.title?.toLowerCase().includes('perfect pairing for') ||
+                                 responseData.filePath === "willowpark.net";
+            
+            if (isFoodPairing) {
+                console.log('Detected food pairing response, parsing snippet');
+                
+                // Parse the snippet to extract pairing information
+                const snippet = firstResult.snippet || responseData.snippet || '';
+                const parsedPairings = parseSnippetForPairings(snippet);
+                
+                return {
+                    ...firstResult,
+                    originalQuery: responseData.originalQuery,
+                    filePath: "willowpark.net",
+                    winePairing: parsedPairings.wine,
+                    spiritPairing: parsedPairings.spirit,
+                    beerPairing: parsedPairings.beer
+                };
+            }
+        }
+        
+        // Return original response if no special processing needed
+        return responseData;
+    };
+
+    // Helper function to parse snippet for pairing information
+    const parseSnippetForPairings = (snippet: string) => {
+        const defaultPairings = {
+            wine: { name: "Wine Selection", notes: "Wine pairing information not available." },
+            spirit: { name: "Spirit Selection", notes: "Spirit pairing information not available." },
+            beer: { name: "Beer Selection", notes: "Beer pairing information not available." }
+        };
+
+        if (!snippet) return defaultPairings;
+
+        // Extract wine pairing
+        const wineMatch = snippet.match(/Wine Pairing:\s*([^.]+)\.?\s*Wine Notes:\s*([^.]*\.(?:[^.]*\.)*)/i);
+        if (wineMatch) {
+            defaultPairings.wine = {
+                name: wineMatch[1].trim(),
+                notes: wineMatch[2].trim()
+            };
+        }
+
+        // Extract spirit pairing  
+        const spiritMatch = snippet.match(/Spirit Pairing:\s*([^.]+)\.?\s*Spirit Notes:\s*([^.]*\.(?:[^.]*\.)*)/i);
+        if (spiritMatch) {
+            defaultPairings.spirit = {
+                name: spiritMatch[1].trim(),
+                notes: spiritMatch[2].trim()
+            };
+        }
+
+        // Extract beer pairing
+        const beerMatch = snippet.match(/Beer Pairing:\s*([^.]+)\.?\s*Beer Notes:\s*([^.]*\.(?:[^.]*\.)*)/i);
+        if (beerMatch) {
+            defaultPairings.beer = {
+                name: beerMatch[1].trim(),
+                notes: beerMatch[2].trim()
+            };
+        }
+
+        return defaultPairings;
+    };
 
     // Call the mixologist Cloud Function
     const callMixologist = async (searchQuery: string) => {
@@ -88,10 +174,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
             const result = await getMixologistSuggestion({ query: searchQuery.trim() });
             const responseData = result.data;
 
-            console.log('Mixologist response:', responseData);
+            console.log('Raw mixologist response:', responseData);
+            
+            // Process the response to handle food pairings and other special cases
+            const processedResponse = processResponse(responseData);
+            
+            console.log('Processed response:', processedResponse);
 
-            // Always pass the response, even if it's an error type
-            onNewSuggestion(responseData, searchQuery);
+            // Always pass the processed response
+            onNewSuggestion(processedResponse, searchQuery);
             
         } catch (error: any) {
             console.error("Error calling mixologist function:", error);

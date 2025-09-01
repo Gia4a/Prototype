@@ -24,8 +24,8 @@ interface MixologistResponse {
 }
 
 const App: React.FC = () => {
-    const [recipes, setRecipes] = useState<{classic: any, premium: any}>({classic: null, premium: null});
-    const [currentRecipeType, setCurrentRecipeType] = useState<'classic' | 'premium'>('classic');
+    const [recipes, setRecipes] = useState<{classic: any, elevate: any}>({classic: null, elevate: null});
+    const [currentRecipeType, setCurrentRecipeType] = useState<'classic' | 'elevate'>('classic');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
@@ -40,19 +40,19 @@ const App: React.FC = () => {
                 title: 'Mixologist Recommendation',
                 searchType: 'general'
             };
-            setRecipes({classic: structuredData, premium: null});
+            setRecipes({classic: structuredData, elevate: null});
         } else if (suggestion) {
-            // If backend returns results array, split into classic and premium
+            // If backend returns results array, split into classic and elevate
             if (suggestion.results && Array.isArray(suggestion.results) && suggestion.results.length >= 2) {
                 setRecipes({
                     classic: suggestion.results[0],
-                    premium: suggestion.results[1]
+                    elevate: suggestion.results[1]
                 });
             } else {
-                setRecipes({classic: suggestion, premium: null});
+                setRecipes({classic: suggestion, elevate: null});
             }
         } else {
-            setRecipes({classic: null, premium: null});
+            setRecipes({classic: null, elevate: null});
         }
         
         setCurrentRecipeType('classic');
@@ -76,14 +76,14 @@ const App: React.FC = () => {
     // Close results popup
     const handleCloseResults = () => {
         setShowResults(false);
-        setRecipes({classic: null, premium: null});
+    setRecipes({classic: null, elevate: null});
         setCurrentRecipeType('classic');
         setError(null);
     };
 
     // Handle upgrade toggle
     const handleUpgradeToggle = () => {
-        setCurrentRecipeType(currentRecipeType === 'classic' ? 'premium' : 'classic');
+    setCurrentRecipeType(currentRecipeType === 'classic' ? 'elevate' : 'classic');
     };
 
     // Toggle horoscope grid visibility
@@ -135,7 +135,7 @@ const App: React.FC = () => {
                                 },
                                 ...result
                             };
-                            setRecipes({classic: horoscopeData, premium: null});
+                            setRecipes({classic: horoscopeData, elevate: null});
                             setCurrentRecipeType('classic');
                             setError(null);
                             setShowResults(true);

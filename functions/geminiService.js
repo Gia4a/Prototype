@@ -293,20 +293,37 @@ const getFoodPairingPrompt = (query) => {
     const seasonalJuice = getRandomSeasonalJuice(currentSeason);
     
     return `
-Recommend a specific cocktail pairing for "${query}".
+Create comprehensive beverage pairings for "${query}".
 
-Return JSON array:
-[{"title": "Perfect Pairing for ${query}", "snippet": "Cocktail: [specific cocktail name]. Ingredients: [detailed list with measurements including 'oz' like '2 oz vodka', '1 oz lime juice']. OPTIONAL: Consider seasonal fruit juice (${seasonalJuice}) if it complements the pairing. Instructions: [complete preparation method]. Pairing Notes: [why this works with ${query}]", "filePath": "willowpark.net", "why": "expert food pairing", "hasUpgrade": true}]
+Return JSON array with 3 pairing options:
+[{"title": "Perfect Pairings for ${query}",
+    "snippet": "Wine Pairing: [specific wine name]. Wine Notes: [detailed explanation why this wine works with ${query}, include flavor profiles and how they complement the dish]. Spirit Pairing: [specific cocktail or spirit]. Spirit Notes: [detailed explanation of the spirit pairing, include preparation if cocktail]. Beer Pairing: [specific beer style/name]. Beer Notes: [detailed explanation of beer pairing with ${query}].",
+    "filePath": "willowpark.net",
+    "why": "comprehensive beverage pairing guide",
+    "hasUpgrade": false,
+    "winePairing": {
+        "name": "[specific wine name]",
+        "notes": "[detailed wine pairing explanation]"
+    },
+    "spiritPairing": {
+        "name": "[specific cocktail or spirit name]", 
+        "notes": "[detailed spirit pairing explanation with preparation if cocktail]"
+    },
+    "beerPairing": {
+        "name": "[specific beer name or style]",
+        "notes": "[detailed beer pairing explanation]"
+    }
+}]
 
 Requirements:
-- Name a specific cocktail that pairs well
-- Include ALL ingredient measurements with "oz" 
-- OPTIONAL: Include seasonal fruit juice (${seasonalJuice}) only if it complements the food pairing
-- Complete preparation instructions
-- Explain the flavor pairing logic
-- Use accessible ingredients only
-- Unique suggestion (seed: ${randomSeed})
-- Valid JSON structure`;
+- Consider ${query}'s flavor profile, cooking method, and texture
+- Wine: suggest specific variety, explain acidity/tannin/flavor interactions
+- Spirit: can be neat spirit, cocktail with recipe, or mixed drink
+- Beer: specific style or brand, explain hop/malt/yeast characteristics
+- Each pairing note should be 2-3 sentences explaining WHY it works
+- Consider ${currentSeason} seasonal appropriateness
+- Unique recommendations (seed: ${randomSeed})
+- Valid JSON structure only`;
 };
 
 const getLiquorPrompt = (query) => {
@@ -501,15 +518,43 @@ async function fetchAndProcessGeminiResults(query, apiKey) {
 
         // Parse the response
         let resultsFromApi = extractAndParseJSON(responseText);
-        
+
         // Validate and clean results
-        const mappedResults = resultsFromApi.map((item, index) => ({
+        let mappedResults = resultsFromApi.map((item, index) => ({
             id: item.id || `gemini-result-${index}-${Date.now()}`,
             title: item.title || `Recommendation ${index + 1}`,
             filePath: item.filePath || null,
             snippet: item.snippet || 'No details available.',
             hasUpgrade: item.hasUpgrade || false
         })).filter(result => result.title && result.snippet);
+
+        // Attach enhancedComment for both classic and elevated (if present)
+        if (mappedResults.length > 0) {
+            // Try to get ingredients for each result (fallback to parsing snippet)
+            const getIngredientsFromSnippet = (snippet) => {
+                const match = snippet.match(/Ingredients?:\s*\[?([^\]]+)\]?/i);
+                if (match && match[1]) {
+                    return match[1].split(',').map(s => s.trim());
+                }
+                return [];
+            };
+            const season = getCurrentSeason();
+            // Generate comments for both classic and elevated
+            const commentPromises = mappedResults.map((result, idx) =>
+                generateCocktailComment(
+                    result.title,
+                    getIngredientsFromSnippet(result.snippet),
+                    season,
+                    apiKey,
+                    idx === 0 ? 'classic' : 'elevated'
+                )
+            );
+            const comments = await Promise.all(commentPromises);
+            mappedResults = mappedResults.map((result, idx) => ({
+                ...result,
+                enhancedComment: comments[idx]
+            }));
+        }
 
         // Ensure we always return at least one result
         if (mappedResults.length === 0) {
@@ -535,21 +580,26 @@ async function generateCocktailComment(cocktailName, ingredients, season, apiKey
     const currentSeason = season || getCurrentSeason();
     
     const promptText = `
-Create a single poetic cocktail description for "${cocktailName}" that works for both classic and premium versions.
+Create a single poetic cocktail description for "${cocktailName}" that works for both classic and elevated versions.
 
 Format as JSON:
 {
-    "poeticLine1": "First line: cocktail influencer tweet style, poetic idiom about this cocktail (50 characters max)",
-    "poeticLine2": "Second line: completing the poetic thought, influencer style (50 characters max)"
+    "poeticLine1": "First line: cocktail influencer tweet style, poetic idiom about this cocktail (100 characters max)",
+    "poeticLine2": "Second line: completing the poetic thought, influencer style (100 characters max)",
+    "bartenderLine": "Third line: 1920s Chicago bartender, playful and teasing, recommends trying something new if classic, or going back to the regular cocktail if elevated. Make this line different every time, with unique slang and playful tone. (100 characters max)"
 }
 
 Requirements:
 - Write like a food influencer posting on Twitter
 - Use poetic idioms and metaphors about the cocktail
 - Reference ${currentSeason} season naturally
-- Both lines should work for any version of this cocktail
-- Keep each line under 50 characters
+- Both poetic lines should work for any version of this cocktail
+- The bartender line must be playful, in a 1920s Chicago accent, and always different (use random slang/phrasing)
+- If the cocktail is classic, bartender teases to try the elevated/new version
+- If the cocktail is elevated, bartender teases to try the regular/classic version
+- Keep each line under 100 characters
 - Valid JSON only
+- Do not repeat bartender lines for the same cocktail in the same session
 `;
 
     const requestBody = {

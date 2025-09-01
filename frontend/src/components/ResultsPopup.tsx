@@ -1,16 +1,96 @@
+    // Helper function to extract dish name from title or query (moved up for use in parseFoodPairingData)
+    const extractDishName = (title: string, query?: string): string => {
+        if (!title && !query) return "this dish";
+        const source = title || query || "";
+        return source.replace(/^(Perfect Pairing for|Perfect Pairings for)\s*/i, '').trim() || "this dish";
+    };
+
+    // Enhanced parsing function for food pairing
+    const parseFoodPairingData = (suggestion: any): FoodPairingData | null => {
+        const snippet = suggestion.snippet || suggestion.suggestion || '';
+        const title = suggestion.title || '';
+        if (!snippet) return null;
+        // Enhanced regex patterns to capture each pairing section
+        const winePairingMatch = snippet.match(/Wine Pairing:\s*([^.]+)\.\s*Wine Notes:\s*([^.]*(?:\.[^.]*)*?)(?=\s*Spirit Pairing:|$)/i);
+        const spiritPairingMatch = snippet.match(/Spirit Pairing:\s*([^.]+)\.\s*Spirit Notes:\s*([^.]*(?:\.[^.]*)*?)(?=\s*Beer Pairing:|$)/i);
+        const beerPairingMatch = snippet.match(/Beer Pairing:\s*([^.]+)\.\s*Beer Notes:\s*([^.]*(?:\.[^.]*)*?)(?=\s*$|$)/i);
+        // Fallback patterns if the above don't work
+        let wineName = 'Wine Selection';
+        let wineNotes = 'Wine pairing information not available.';
+        let spiritName = 'Spirit Selection';
+        let spiritNotes = 'Spirit pairing information not available.';
+        let beerName = 'Beer Selection';
+        let beerNotes = 'Beer pairing information not available.';
+        // Parse wine pairing
+        if (winePairingMatch) {
+            wineName = winePairingMatch[1].trim();
+            wineNotes = winePairingMatch[2].trim();
+            wineNotes = wineNotes.replace(/\s+/g, ' ').replace(/\.$/, '');
+        }
+        // Parse spirit pairing
+        if (spiritPairingMatch) {
+            spiritName = spiritPairingMatch[1].trim();
+            spiritNotes = spiritPairingMatch[2].trim();
+            spiritNotes = spiritNotes.replace(/\s+/g, ' ').replace(/\.$/, '');
+        }
+        // Parse beer pairing
+        if (beerPairingMatch) {
+            beerName = beerPairingMatch[1].trim();
+            beerNotes = beerPairingMatch[2].trim();
+            beerNotes = beerNotes.replace(/\s+/g, ' ').replace(/\.$/, '');
+        }
+        return {
+            dishName: extractDishName(title, suggestion.originalQuery),
+            comment: suggestion.enhancedComment?.text || '',
+            winePairing: {
+                name: wineName,
+                notes: wineNotes
+            },
+            spiritPairing: {
+                name: spiritName,
+                notes: spiritNotes
+            },
+            beerPairing: {
+                name: beerName,
+                notes: beerNotes
+            }
+        };
+    };
+
+    // Enhanced detection logic for food pairing
+    const detectFoodPairing = (suggestion: any): boolean => {
+        if (!suggestion) return false;
+        const snippet = suggestion.snippet || suggestion.suggestion || '';
+        const title = suggestion.title || '';
+        // Check for the specific pattern in your data
+        const hasAllThreePairings = snippet.includes('Wine Pairing:') && 
+                                   snippet.includes('Spirit Pairing:') && 
+                                   snippet.includes('Beer Pairing:');
+        const hasPairingInTitle = title.toLowerCase().includes('pairing') ||
+                                 title.toLowerCase().includes('trio') ||
+                                 title.toLowerCase().includes('steakhouse');
+        const hasWillowParkSource = suggestion.filePath === "willowpark.net";
+        // Check if it has the structured pairing format
+        const hasStructuredPairings = snippet.includes('Wine Notes:') && 
+                                     snippet.includes('Spirit Notes:') && 
+                                     snippet.includes('Beer Notes:');
+        return hasAllThreePairings || hasWillowParkSource || (hasPairingInTitle && hasStructuredPairings);
+    };
 import React, { useEffect, useState } from 'react';
 import './ResultsPopup.css';
 import CompactHoroscopeCard, { CompactCocktailCard } from './CompactHoroscopeCard';
 import type { HoroscopeData, CocktailData } from './CompactHoroscopeCard';
+import FoodPairingCard from './FoodPairingCard';
+import type { FoodPairingData } from './FoodPairingCard';
 
 interface ResultsPopupProps {
     isOpen: boolean;
     onClose: () => void;
     recipes: {
         classic: any;
-        premium: any;
+        elevate: any;
     };
-    currentRecipeType: 'classic' | 'premium';
+    currentRecipeType: 'classic' | 'elevate';
     error: string | null;
     visible?: boolean;
     onUpgradeRequest?: () => void;
@@ -28,20 +108,20 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     const isVisible = isOpen || visible || false;
     
     // Local state to store both recipes
-    const [storedRecipes, setStoredRecipes] = useState<{classic: any, premium: any}>({
+    const [storedRecipes, setStoredRecipes] = useState<{classic: any, elevate: any}>({
         classic: null,
-        premium: null
+        elevate: null
     });
     
     // Local state to track which recipe to display
-    const [displayType, setDisplayType] = useState<'classic' | 'premium'>('classic');
+    const [displayType, setDisplayType] = useState<'classic' | 'elevate'>('classic');
 
     // Store both recipes when they come in
     useEffect(() => {
-        if (recipes.classic || recipes.premium) {
+        if (recipes.classic || recipes.elevate) {
             setStoredRecipes(prev => ({
                 classic: recipes.classic || prev.classic,
-                premium: recipes.premium || prev.premium
+                elevate: recipes.elevate || prev.elevate
             }));
         }
     }, [recipes]);
@@ -53,10 +133,10 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
     // Handle upgrade button click - switch between stored recipes
     const handleLocalUpgrade = () => {
-        if (storedRecipes.classic && storedRecipes.premium) {
-            setDisplayType(prev => prev === 'classic' ? 'premium' : 'classic');
+        if (storedRecipes.classic && storedRecipes.elevate) {
+            setDisplayType(prev => prev === 'classic' ? 'elevate' : 'classic');
         } else if (onUpgradeRequest) {
-            // Fallback to original upgrade request if premium not stored
+            // Fallback to original upgrade request if elevate not stored
             onUpgradeRequest();
         }
     };
@@ -82,14 +162,10 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
     }
 
     // Get the recipe to display based on current display type
-    const suggestion = displayType === 'premium' && storedRecipes.premium ? 
-        storedRecipes.premium : storedRecipes.classic;
+    const suggestion = displayType === 'elevate' && storedRecipes.elevate ? 
+        storedRecipes.elevate : storedRecipes.classic;
 
-    const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
-        if (event.target === event.currentTarget) {
-            onClose();
-        }
-    };
+    // (moved above for use in parseFoodPairingData)
 
     // Enhanced helper function to extract ingredients WITH measurements
     const extractIngredients = (text: string): string[] => {
@@ -109,7 +185,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             // If we only got one line, try splitting by commas but be careful with measurements
             if (ingredients.length === 1 && ingredients[0].includes(',')) {
                 ingredients = ingredients[0]
-                    .split(/,(?=\s*\d)|,(?=\s*[A-Z•])|;/)
+                    .split(/,(?=\s*\d)|,(?=\s*[A-Zâ€¢])|;/)
                     .map(item => item.trim())
                     .filter(item => item.length > 0);
             }
@@ -119,7 +195,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 .map(item => {
                     let cleaned = item.trim();
                     // Remove leading bullets or dashes, but NOT numbers or decimals
-                    cleaned = cleaned.replace(/^[-•*\s]+/, '');
+                    cleaned = cleaned.replace(/^[-â€¢*\s]+/, '');
                     // Remove trailing periods but keep decimal points in measurements
                     cleaned = cleaned.replace(/\.$/, '');
                     return cleaned;
@@ -161,7 +237,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             // Clean up the instructions
             instructions = instructions
                 .replace(/\s+/g, ' ') // Normalize whitespace
-                .replace(/^[-•*]\s*/, '') // Remove leading bullets
+                .replace(/^[-â€¢*]\s*/, '') // Remove leading bullets
                 .trim();
             
             return instructions;
@@ -171,7 +247,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
         const sentences = text.split(/[.!?]/).map(s => s.trim()).filter(s => s.length > 10);
         for (const sentence of sentences) {
             if (sentence.match(/\b(mix|stir|shake|add|pour|fill|garnish|serve|combine|build|muddle|strain|layer)/i)) {
-                return sentence.replace(/^[-•*]\s*/, '').trim();
+                return sentence.replace(/^[-â€¢*]\s*/, '').trim();
             }
         }
         
@@ -196,7 +272,6 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             .trim();
     };
 
-    
     // Determine result type and render accordingly
     const renderContent = () => {
         if (error) {
@@ -213,6 +288,27 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 <div className="error-section">
                     <h3>No Results</h3>
                     <p>No recommendations found for your search.</p>
+                </div>
+            );
+        }
+
+        // Enhanced food pairing detection and parsing
+        if (detectFoodPairing(suggestion)) {
+            const foodPairingData = parseFoodPairingData(suggestion);
+            if (foodPairingData) {
+                return <FoodPairingCard data={foodPairingData} />;
+            }
+            // Fallback if parsing fails, show raw data for debugging
+            return (
+                <div className="error-section">
+                    <h3>Pairing Information</h3>
+                    <p>Unable to parse pairing details properly.</p>
+                    <div className="text-xs text-gray-500 mt-2">
+                        <details>
+                            <summary>Raw Data</summary>
+                            <pre>{JSON.stringify(suggestion, null, 2)}</pre>
+                        </details>
+                    </div>
                 </div>
             );
         }
@@ -271,15 +367,15 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             const cocktailName = cleanCocktailName(suggestion.title);
 
             // Format cocktail data with local upgrade handler
-            // Use CompactCocktailCard for cocktail results, always pass poetic/comment text as 'comment'
             const cocktailData: CocktailData = {
                 cocktailName: cocktailName,
                 ingredients: ingredients,
                 instructions: instructions,
                 comment: suggestion.enhancedComment?.text || '',
+                bartenderLine: suggestion.enhancedComment?.bartenderLine || '',
                 originalQuery: suggestion.originalQuery,
                 // Use local upgrade if both recipes stored, otherwise use external handler
-                onUpgrade: (storedRecipes.classic && storedRecipes.premium) ? 
+                onUpgrade: (storedRecipes.classic && storedRecipes.elevate) ? 
                     () => handleLocalUpgrade() : 
                     (onUpgradeRequest || undefined)
             };
@@ -315,6 +411,14 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
                 </div>
             </div>
         );
+    };
+
+    // Handle overlay click to close popup if clicked outside the content
+    const handleOverlayClick = (event: React.MouseEvent<HTMLDivElement>) => {
+        // Only close if the user clicks directly on the overlay, not on children
+        if (event.target === event.currentTarget) {
+            onClose();
+        }
     };
 
     return (
