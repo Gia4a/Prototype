@@ -45,7 +45,7 @@
 /* Universal card container - used by ALL card types */
 .universal-card-container {
     width: 100%;
-    max-width: 667px;
+    max-width: 433px;
     height: 50vh;
     max-height: 50vh;
     background-color: transparent;
@@ -121,7 +121,7 @@
 /* General search result styling */
 .general-search-result {
     color: white;
-    padding: 20px;
+    padding: 5px;
     height: 100%;
     display: flex;
     flex-direction: column;
@@ -129,12 +129,15 @@
 }
 
 .search-result-title {
-    color: #4CAF50;
-    margin-bottom: 20px;
+    color: #fff;
+    font-size: 0.65rem;
+    font-weight: bold;
+    margin-bottom: 2px;
+    padding-top: 2px;
+    padding-bottom: 2px;
     text-align: center;
-    font-size: 1.6em;
-    border-bottom: 1px solid #333;
-    padding-bottom: 10px;
+    letter-spacing: 0.03em;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.18);
 }
 
 .search-result-content {
@@ -164,13 +167,13 @@
    MOBILE RESPONSIVE BREAKPOINT - 667px
    =========================================== */
 
-@media (max-width: 667px) {
+@media (max-width: 433px) {
     /* Universal card container mobile adjustments */
     .universal-card-container {
         width: 100vw !important;
-        max-width: 100vw !important;
-        height: 70vh !important;
-        max-height: 70vh !important;
+        max-width: 433px !important;
+        height: 50vh !important;
+        max-height: 50vh !important;
         min-width: 0 !important;
         margin: 0 !important;
         border-radius: 0 !important;

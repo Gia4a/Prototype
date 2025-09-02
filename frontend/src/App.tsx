@@ -1,12 +1,11 @@
-// App.tsx - Updated with properly positioned daily horoscope button
+// App.tsx - Fixed with proper types and imports
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
-import type { HoroscopeResult } from './components/Horoscope';
 import './App.css';
 
-// Interface for mixologist response (simplified without upgrade service dependency)
+// Interface for mixologist response
 interface MixologistResponse {
     originalQuery: string;
     suggestion: string;
@@ -22,6 +21,20 @@ interface MixologistResponse {
         personalComment?: string;
         upgradeComment?: string;
     };
+}
+
+// Add the missing HoroscopeResult interface
+interface HoroscopeResult {
+    cocktailName: string;
+    theme: string;
+    insight: string;
+    ingredients?: string[];
+    instructions?: string;
+    sign?: string;
+    moonPhase?: string;
+    ruler?: string;
+    element?: string;
+    fourLineIdiom?: string;
 }
 
 const App: React.FC = () => {
@@ -87,27 +100,19 @@ const App: React.FC = () => {
 
     // Toggle horoscope grid visibility
     const toggleHoroscopeGrid = () => {
-        console.log('Toggling horoscope grid. Current state:', showHoroscope);
         setShowHoroscope(!showHoroscope);
     };
-
-    // Close horoscope grid
-    const closeHoroscopeGrid = () => {
-        console.log('Closing horoscope grid');
-        setShowHoroscope(false);
-    };
-
-    console.log('App render - showHoroscope:', showHoroscope);
 
     return (
         <div className="app-container">
             <div className="image-container">
                 <img 
-                    src="/Bar_pig.png" 
-                    alt="Blind Pig Bar" 
+                    src="tips_thirst.png" 
+                    alt="tips & thirst" 
                     className="main-background-image"
                 />
-        
+                
+                {/* Search Bar Container - Centered */}
                 <div className="overlay-search">
                     <SearchBar
                         onNewSuggestion={handleNewSuggestion}
@@ -116,26 +121,19 @@ const App: React.FC = () => {
                         isLoading={isLoading}
                     />
                 </div>
-                
-                {/* Horoscope Button */}
-                <button
-                    onClick={toggleHoroscopeGrid}
-                    className="daily-horoscope-button"
-                    aria-label="Open Astro Cocktails"
-                >
-                    Astro Cocktails
-                </button>
 
-                {/* Loading Indicator */}
-                {isLoading && (
-                    <div className="loading-container">
-                        <div className="loading-spinner" />
-                        <p>Crafting your perfect cocktail...</p>
-                    </div>
-                )}
+                {/* Daily Horoscope Button */}
+                <div className="daily-horoscope-container">
+                    <button 
+                        onClick={toggleHoroscopeGrid} 
+                        className="daily-horoscope-button"
+                    >
+                       Astro Cocktails
+                    </button>
+                </div>
             </div>
 
-            {/* Horoscope Grid - MOVED OUTSIDE image-container with close handler */}
+            {/* Horoscope Grid - Outside image-container */}
             {showHoroscope && (
                 <Horoscope 
                     onSignSelect={(sign, result: HoroscopeResult) => {
@@ -160,11 +158,29 @@ const App: React.FC = () => {
                     }}
                     onLoadingChange={handleLoadingChange}
                     onError={handleError}
-                    onClose={closeHoroscopeGrid}
                 />
             )}
 
-            {/* Results popup with enhanced features */}
+            {/* Loading Indicator */}
+            {isLoading && (
+                <div className="loading-container" style={{ 
+                    position: 'fixed', 
+                    top: '50%', 
+                    left: '50%', 
+                    transform: 'translate(-50%, -50%)',
+                    color: 'white',
+                    textAlign: 'center',
+                    background: 'rgba(0, 0, 0, 0.8)',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    zIndex: 9999
+                }}>
+                    <div className="loading-spinner" />
+                    <p>Crafting your perfect cocktail...</p>
+                </div>
+            )}
+
+            {/* Results popup */}
             <ResultsPopup
                 isOpen={showResults}
                 onClose={handleCloseResults}

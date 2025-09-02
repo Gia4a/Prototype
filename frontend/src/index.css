@@ -18,11 +18,11 @@ body {
   padding: 0;
   height: 100vh;
   overflow: hidden;
-  background-color: #242424; /* Solid background color instead of image */
+  background-color: #000; /* Changed from #242424 to black */
 }
 
 #root {
-  height: 100vh;
+  height: calc(100vh - 35px);
   overflow: hidden;
   padding: 0;
   margin: 0;

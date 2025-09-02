@@ -426,7 +426,7 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
             <button onClick={onClose} className="results-popup-close-button">
                 &times;
             </button>
-            <div className="universal-card-container"> {/* Add this class */}
+            <div>
                 {renderContent()}
             </div>
         </div>

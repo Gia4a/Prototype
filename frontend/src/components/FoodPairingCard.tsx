@@ -54,7 +54,19 @@ const FoodPairingCard: React.FC<FoodPairingCardProps> = ({ data }) => {
 
   return (
     <>
-      <div className="universal-card-container">
+      <style>{`
+        @media (max-width: 667px) {
+          .responsive-container {
+            width: 100vw !important;
+            max-width: 100vw !important;
+            min-width: 0 !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            border-radius: 0 0 16px 16px !important;
+          }
+        }
+      `}</style>
+      <div style={STANDARD_STYLES.containerStyle} className="responsive-container">
         <div style={STANDARD_STYLES.cardStyle}>
           {/* Header */}
           <div style={STANDARD_STYLES.headerStyle}>
