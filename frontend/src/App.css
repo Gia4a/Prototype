@@ -4,7 +4,7 @@
 
 .app-container {
   position: relative;
-  height: 100%;
+  height: 100vh;
   width: 100%;
   overflow: hidden;
   background-color: #000;
@@ -27,7 +27,7 @@
   position: static;
   width: 100%;
   height: auto;
-  max-height: 100%;
+  max-height: 100vh;
   object-fit: contain;
   object-position: center center;
   display: block;
@@ -37,9 +37,9 @@
 .overlay-search {
   position: absolute;
   left: 50%;
-  top: 50px;
+  bottom: 150px;
   transform: translateX(-50%);
-  width: min(380px, 90%);
+  width: min(430px, 100%);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -49,22 +49,22 @@
 /* Daily horoscope button container - positioned below the notch */
 .daily-horoscope-container {
   position: absolute;
-  left: 20px;
-  bottom: 20px;
+  left: 10px;
+  bottom: 80px;
   z-index: 1002;
 }
 
 /* Circular button styling */
 .daily-horoscope-button {
-  width: 65px;
-  height: 65px;
+  width: 85px;
+  height: 85px;
   border-radius: 50%;
   background-color: #1a1a2e;
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 17px;
+  font-size: 15px;
   font-weight: bold;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transition: transform 0.2s;
@@ -78,16 +78,66 @@
   background-color: #333;
 }
 
-/* Horoscope grid container - positioned within ViewportFrame */
+/* Horoscope grid container - positioned at top of mobile frame */
 .horoscope-grid-container {
   position: absolute;
-  top: 50%;
+  top: 0px; /* Position below the notch area */
   left: 50%;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
   z-index: 1010;
-  width: 380px;
-  height: 320px;
+  width: 100%; /* Use percentage for responsive width */
+  max-width: 430px; /* Max width for larger screens */
   box-sizing: border-box;
+  padding: 5px;
+}
+
+/* Horoscope grid styling - 2 rows of 6 */
+.horoscope-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 4px;
+  width: 100%;
+}
+
+/* Individual horoscope sign container */
+.horoscope-sign-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Sign button styling - smaller for 6 columns */
+.horoscope-sign-button {
+  width: 65px;
+  height: 65px;
+  background: transparent;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  box-shadow: none;
+  transition: transform 0.2s;
+  cursor: pointer;
+}
+
+.horoscope-sign-button:hover {
+  transform: scale(1.1);
+}
+
+/* Sign name styling - smaller text */
+.horoscope-sign-name {
+  margin-top: 0px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white;
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* Loading spinner */
@@ -120,22 +170,22 @@
 @keyframes disappear-to-button {
   0% {
     opacity: 1;
-    transform: scale(1) translate(0, 0);
+    transform: translateX(-50%) scale(1);
   }
   100% {
     opacity: 0;
-    transform: scale(0.2) translate(50px, -50px);
+    transform: translateX(-50%) scale(0.2);
   }
 }
 
 @keyframes reappear-from-button {
   0% {
     opacity: 0;
-    transform: scale(0.2) translate(50px, -50px);
+    transform: translateX(-50%) scale(0.2);
   }
   100% {
     opacity: 1;
-    transform: scale(1) translate(0, 0);
+    transform: translateX(-50%) scale(1);
   }
 }
 
@@ -166,4 +216,26 @@
   text-align: center;
   align-items: center;
   justify-content: center;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 380px) {
+  .horoscope-grid-container {
+    width: 95%;
+    padding: 8px;
+  }
+  
+  .horoscope-grid {
+    gap: 6px;
+  }
+  
+  .horoscope-sign-button {
+    width: 40px;
+    height: 40px;
+    font-size: 24px;
+  }
+  
+  .horoscope-sign-name {
+    font-size: 10px;
+  }
 }

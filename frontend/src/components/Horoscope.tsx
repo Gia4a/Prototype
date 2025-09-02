@@ -202,7 +202,7 @@ class HoroscopeRecipes {
         citrus: "lemon_juice",
         sweetener: "simple_syrup",
         mixer: "soda_water",
-        instructions: ["Add 2oz gin, 1oz lemon juice, 0.5oz simple_syrup to glass with ice", "Top with soda water", "Stir"],
+        instructions: ["Add 2oz gin, 1oz lemon juice, 0.5oz simple syrup to glass with ice", "Top with soda water", "Stir"],
         theme: "Mental expansion"
       },
       air_first_quarter: {
@@ -404,7 +404,6 @@ class HoroscopeRecipes {
 }
 
 const FIREBASE_FUNCTION_URL = "https://us-central1-blind-pig-bar.cloudfunctions.net/getAllRecipesForSign";
-// Updated to use proxy for development and direct URL for production
 
 const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) => void }) => {
   const [isAnimating, setIsAnimating] = useState(false);
@@ -415,8 +414,8 @@ const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) =
     setTimeout(() => {
       onSignSelect(sign);
       setIsAnimating(false);
-      setIsVisible(false); // Keep the grid hidden after animation
-    }, 500); // Match animation duration
+      setIsVisible(false);
+    }, 500);
   };
 
   return (
@@ -425,53 +424,27 @@ const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) =
         <div
           className={`horoscope-grid-container ${isAnimating ? 'disappear' : ''}`}
           onAnimationEnd={() => setIsAnimating(false)}
-          style={{ 
-            display: 'grid', 
-            gridTemplateColumns: 'repeat(4, 1fr)', 
-            gap: '15px', 
-            width: '100%',
-            maxWidth: '600px',
-            margin: '0 auto',
-          }}
         >
-          {ASTROLOGY_SIGNS.map((sign) => (
-            <div
-              key={sign.name}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}
-            >
-              <button
-                onClick={() => handleSignClick(sign)}
-                style={{
-                  width: '80px',
-                  height: '80px',
-                  background: 'transparent',
-                  borderRadius: '50%',
-                  border: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '47px',
-                  fontWeight: 'bold',
-                  boxShadow: 'none',
-                  transition: 'transform 0.2s',
-                  cursor: 'pointer'
-                }}
-                onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
-                onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-              >
-                {sign.symbol}
-              </button>
-              
-              <span style={{ marginTop: '8px', fontSize: '16px', fontWeight: '500', color: 'white' }}>
-                {sign.displayName}
-              </span>
-            </div>
-          ))}
+          <div className="horoscope-grid">
+            {ASTROLOGY_SIGNS.map((sign) => (
+              <div key={sign.name} className="horoscope-sign-container">
+                <button
+                  className="horoscope-sign-button"
+                  onClick={() => handleSignClick(sign)}
+                  onMouseOver={(e) => (e.currentTarget.style.transform = 'scale(1.1)')}
+                  onMouseOut={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+                >
+                  {sign.symbol}
+                </button>
+                
+                <span className="horoscope-sign-name">
+                  {sign.displayName}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
-
-      {/* Remove CompactHoroscopeCard here; it should be rendered by the parent after result is generated */}
     </>
   );
 };
@@ -487,7 +460,7 @@ interface HoroscopeResult {
   instructions: string;
   theme: string;
   insight: string;
-  planetaryAlignments?: string; // Optional field for planetary alignments
+  planetaryAlignments?: string;
 }
 
 interface HoroscopeProps {
@@ -506,9 +479,8 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
     if (onLoadingChange) onLoadingChange(true);
 
     try {
-      // Call your Firebase Cloud Function instead of direct Gemini API
       const response = await fetch(FIREBASE_FUNCTION_URL, {
-        method: 'POST', // Ensure POST method is used
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -523,22 +495,11 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
         throw new Error(`Firebase function error: ${response.status}`);
       }
 
-      // Expect clean JSON response from your Firebase function
       const astrologyData = await response.json();
       console.log('Firebase response:', astrologyData);
 
-      // Your Firebase function should return something like:
-      // {
-      //   moonPhase: "waning_gibbous",
-      //   fourLineIdiom: "Gemini, the moon begins its gentle retreat. Time to harvest what you've carefully sown. Your mercury-blessed journey bears sweet fruit. Gratitude fills the air spaces within.",
-      //   dailyTheme: "Releasing thoughts with mercury influence",
-      //   planetaryAlignments: "Mercury aligns favorably with current lunar energies"
-      // }
-
-      // Get recipe based on moon phase from Firebase response
       const recipe = horoscopeRecipes.getRecipe(sign.name, astrologyData.moonPhase);
 
-      // Create ingredients array from recipe components
       const ingredients = [];
       if (recipe.recipe.base_spirit) ingredients.push(`2oz ${recipe.recipe.base_spirit.replace('_', ' ')}`);
       if (recipe.recipe.mixer) ingredients.push(recipe.recipe.mixer.replace('_', ' '));

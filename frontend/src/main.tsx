@@ -14,7 +14,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     fontFamily: 'system-ui, -apple-system, sans-serif',
     margin: 0,
     padding: 0,
-    position: 'relative' // Ensure relative for label positioning
+    //position: 'relative' // Ensure relative for label positioning
   }}>
     <div style={{
       position: 'absolute',
@@ -31,7 +31,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
     <div style={{
       width: '430px',
-      height: '932px',
+      height: '100vh',
       background: '#000',
       borderRadius: '40px',
       padding: '8px',
@@ -39,7 +39,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
       position: 'relative',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center'
+      justifyContent: 'flex-start',
     }}>
       <div style={{
         width: '100%',
@@ -51,7 +51,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'flex-start'
       }}>
         {/* Notch */}
         <div style={{
@@ -75,7 +75,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          justifyContent: 'center'
+          justifyContent: 'flex-start'
         }}>
           {children}
         </div>
