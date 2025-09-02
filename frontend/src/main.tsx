@@ -1,10 +1,87 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
-import './index.css' // Keep or modify Vite's default global styles
+import './index.css'
+
+// Viewport Frame Component
+const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  return (
+    <div style={{
+      background: '#1a1a1a',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      minHeight: '100vh',
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+      margin: 0,
+      padding: 0
+    }}>
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        right: '20px',
+        background: 'rgba(0, 0, 0, 0.8)',
+        padding: '10px 15px',
+        borderRadius: '8px',
+        fontSize: '12px',
+        color: '#888'
+      }}>
+        430 × 932 Development Frame
+      </div>
+      
+      <div style={{
+        width: '430px',
+        height: '932px',
+        background: '#000',
+        borderRadius: '40px',
+        padding: '8px',
+        boxShadow: '0 0 30px rgba(0, 0, 0, 0.5)',
+        position: 'relative'
+      }}>
+        <div style={{
+          width: '100%',
+          height: '100%',
+          borderRadius: '32px',
+          overflow: 'hidden',
+          position: 'relative',
+          background: '#242424'
+        }}>
+          {/* Notch */}
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: '150px',
+            height: '30px',
+            background: '#000',
+            borderRadius: '0 0 20px 20px',
+            zIndex: 100
+          }} />
+          
+          {/* App Content Area */}
+          <div style={{
+            width: '100%',
+            height: '100%',
+            paddingTop: '35px',
+            paddingLeft: '0px',
+            paddingRight: '0px',
+            paddingBottom: '0px',
+            overflow: 'hidden',
+            color: 'rgba(255, 255, 255, 0.87)'
+          }}>
+            {children}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <App />
+    <ViewportFrame>
+      <App />
+    </ViewportFrame>
   </React.StrictMode>,
 )

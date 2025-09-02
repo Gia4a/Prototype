@@ -1,8 +1,9 @@
-// App.tsx - Fixed version with restored UI and current functionality
+// App.tsx - Updated with properly positioned daily horoscope button
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
+import type { HoroscopeResult } from './components/Horoscope';
 import './App.css';
 
 // Interface for mixologist response (simplified without upgrade service dependency)
@@ -60,8 +61,6 @@ const App: React.FC = () => {
         setShowResults(true);
     };
 
-
-
     // Handle loading state changes
     const handleLoadingChange = (loading: boolean) => {
         setIsLoading(loading);
@@ -76,20 +75,29 @@ const App: React.FC = () => {
     // Close results popup
     const handleCloseResults = () => {
         setShowResults(false);
-    setRecipes({classic: null, elevate: null});
+        setRecipes({classic: null, elevate: null});
         setCurrentRecipeType('classic');
         setError(null);
     };
 
     // Handle upgrade toggle
     const handleUpgradeToggle = () => {
-    setCurrentRecipeType(currentRecipeType === 'classic' ? 'elevate' : 'classic');
+        setCurrentRecipeType(currentRecipeType === 'classic' ? 'elevate' : 'classic');
     };
 
     // Toggle horoscope grid visibility
     const toggleHoroscopeGrid = () => {
+        console.log('Toggling horoscope grid. Current state:', showHoroscope);
         setShowHoroscope(!showHoroscope);
     };
+
+    // Close horoscope grid
+    const closeHoroscopeGrid = () => {
+        console.log('Closing horoscope grid');
+        setShowHoroscope(false);
+    };
+
+    console.log('App render - showHoroscope:', showHoroscope);
 
     return (
         <div className="app-container">
@@ -99,8 +107,7 @@ const App: React.FC = () => {
                     alt="Blind Pig Bar" 
                     className="main-background-image"
                 />
-                
-                {/* Search Bar Overlay */}
+        
                 <div className="overlay-search">
                     <SearchBar
                         onNewSuggestion={handleNewSuggestion}
@@ -109,71 +116,64 @@ const App: React.FC = () => {
                         isLoading={isLoading}
                     />
                 </div>
-
-                {/* Daily Horoscope Button */}
-                <div className="daily-horoscope-container">
-                    <button onClick={toggleHoroscopeGrid} className="daily-horoscope-button">
-                        🔮 {showHoroscope ? 'Hide Horoscope' : 'Horoscope Cocktails'}
-                    </button>
-                </div>
-
-                {/* Horoscope Grid */}
-                {showHoroscope && (
-                    <Horoscope 
-                        onSignSelect={(sign, result) => {
-                            setShowHoroscope(false);
-                            const horoscopeData: MixologistResponse = {
-                                originalQuery: sign.name,
-                                suggestion: result.cocktailName,
-                                title: result.cocktailName,
-                                content: result.theme,
-                                why: result.insight,
-                                enhancedComment: {
-                                    poeticDescription: result.theme,
-                                    personalComment: result.insight,
-                                    upgradeComment: undefined
-                                },
-                                ...result
-                            };
-                            setRecipes({classic: horoscopeData, elevate: null});
-                            setCurrentRecipeType('classic');
-                            setError(null);
-                            setShowResults(true);
-                        }}
-                        onLoadingChange={handleLoadingChange}
-                        onError={handleError}
-                    />
-                )}
+                
+                {/* Horoscope Button */}
+                <button
+                    onClick={toggleHoroscopeGrid}
+                    className="daily-horoscope-button"
+                    aria-label="Open Astro Cocktails"
+                >
+                    Astro Cocktails
+                </button>
 
                 {/* Loading Indicator */}
                 {isLoading && (
-                    <div className="loading-container" style={{ 
-                        position: 'absolute', 
-                        top: '50%', 
-                        left: '50%', 
-                        transform: 'translate(-50%, -50%)',
-                        color: 'white',
-                        textAlign: 'center',
-                        background: 'rgba(0, 0, 0, 0.8)',
-                        padding: '20px',
-                        borderRadius: '8px'
-                    }}>
+                    <div className="loading-container">
                         <div className="loading-spinner" />
                         <p>Crafting your perfect cocktail...</p>
                     </div>
                 )}
-
-                {/* Results popup with enhanced features */}
-                <ResultsPopup
-                    isOpen={showResults}
-                    onClose={handleCloseResults}
-                    recipes={recipes}
-                    currentRecipeType={currentRecipeType}
-                    error={error}
-                    visible={showResults}
-                    onUpgradeRequest={handleUpgradeToggle}
-                />
             </div>
+
+            {/* Horoscope Grid - MOVED OUTSIDE image-container with close handler */}
+            {showHoroscope && (
+                <Horoscope 
+                    onSignSelect={(sign, result: HoroscopeResult) => {
+                        setShowHoroscope(false);
+                        const horoscopeData: MixologistResponse = {
+                            originalQuery: sign.name,
+                            suggestion: result.cocktailName,
+                            title: result.cocktailName,
+                            content: result.theme,
+                            why: result.insight,
+                            enhancedComment: {
+                                poeticDescription: result.theme,
+                                personalComment: result.insight,
+                                upgradeComment: undefined
+                            },
+                            ...result
+                        };
+                        setRecipes({classic: horoscopeData, elevate: null});
+                        setCurrentRecipeType('classic');
+                        setError(null);
+                        setShowResults(true);
+                    }}
+                    onLoadingChange={handleLoadingChange}
+                    onError={handleError}
+                    onClose={closeHoroscopeGrid}
+                />
+            )}
+
+            {/* Results popup with enhanced features */}
+            <ResultsPopup
+                isOpen={showResults}
+                onClose={handleCloseResults}
+                recipes={recipes}
+                currentRecipeType={currentRecipeType}
+                error={error}
+                visible={showResults}
+                onUpgradeRequest={handleUpgradeToggle}
+            />
         </div>
     );
 };
