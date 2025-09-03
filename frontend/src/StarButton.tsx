@@ -27,13 +27,13 @@ const StarButton: React.FC<StarButtonProps> = ({ onClick, className = '' }) => {
             <span>L</span>
             <span>S</span>
             <span>•</span>
-            <span>✨</span>
-          </div>
-          <div className="center-icon">Zodicups</div>
-        </div>
-      </div>
-    </div>
-  );
-};
+                    <span>✨</span>
+                  </div>
+                  <div className="center-icon">Zodicups</div>
+                </div>
+              </div>
+            </div>
+          );
+}
 
 export default StarButton;

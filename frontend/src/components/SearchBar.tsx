@@ -16,27 +16,6 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
-// Eye icon component
-const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
-    <span
-        onClick={disabled ? undefined : onClick}
-        style={{
-            display: 'inline-block',
-            verticalAlign: 'middle',
-            cursor: disabled ? 'not-allowed' : 'pointer',
-            opacity: disabled ? 0.5 : 1,
-            width: 28,
-            height: 28
-        }}
-    >
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <ellipse cx="12" cy="12" rx="10" ry="6" />
-            <circle cx="12" cy="12" r="3" />
-            <circle cx="12" cy="12" r="1" fill="currentColor" />
-        </svg>
-    </span>
-);
-
 // Interfaces
 interface MixologistResponse {
     originalQuery: string;
@@ -56,16 +35,19 @@ interface SearchBarProps {
     onError: (error: string) => void;
     isLoading: boolean;
     onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void;
+    showCamera: boolean;
+    onCameraToggle: () => void;
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
     onNewSuggestion, 
     onLoadingChange, 
     onError, 
-    isLoading 
+    isLoading,
+    showCamera,
+    onCameraToggle
 }) => {
     const [query, setQuery] = useState('');
-    const [showCamera, setShowCamera] = useState(false);
     const cameraRef = useRef<CameraCaptureHandle>(null);
 
     // Helper function to process mixologist response
@@ -203,7 +185,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
 
     const handleCameraCapture = (imageData: string) => {
         if (cameraRef.current) cameraRef.current.stopCamera();
-        setShowCamera(false);
+        onCameraToggle(); // Use the parent's toggle function
         if (imageData) {
             // For now, treat camera capture as a general request
             callMixologist("Analyze this drink or food item from image");
@@ -221,13 +203,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
         }
     };
 
-    const handleCameraClick = () => {
-        if (!isLoading) {
-            setShowCamera(false);
-            setTimeout(() => setShowCamera(true), 0);
-        }
-    };
-
     return (
         <div style={{ marginBottom: '20px' }}>
             <form onSubmit={handleSubmit} style={{ 
@@ -242,7 +217,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     onChange={handleInputChange}
                     placeholder="Ask the Mixologist (e.g., Pho, vodka, Old Fashioned recipe)"
                     style={{
-                        padding: 'clamp(8px, 2vw, 10px) clamp(40px, 12vw, 50px) clamp(8px, 2vw, 10px) clamp(8px, 2vw, 10px)',
+                        padding: 'clamp(8px, 2vw, 10px)',
                         width: '100%',
                         boxSizing: 'border-box',
                         border: '1px solid #ccc',
@@ -252,18 +227,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     disabled={isLoading}
                     autoComplete="off"
                 />
-                <div style={{
-                    position: 'absolute',
-                    right: 'clamp(8px, 2vw, 10px)',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 2,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                }}>
-                    <EyeIcon onClick={handleCameraClick} disabled={isLoading} />
-                </div>
             </form>
 
             {/* Camera Modal */}
@@ -283,7 +246,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     }}
                     onClick={() => {
                         if (cameraRef.current) cameraRef.current.stopCamera();
-                        setShowCamera(false);
+                        onCameraToggle();
                     }}
                 >
                     <div
@@ -300,7 +263,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         <button
                             onClick={() => {
                                 if (cameraRef.current) cameraRef.current.stopCamera();
-                                setShowCamera(false);
+                                onCameraToggle();
                             }}
                             style={{
                                 position: 'absolute',

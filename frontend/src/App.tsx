@@ -1,10 +1,10 @@
-// App.tsx - Fixed with proper types and imports
+// App.tsx - Updated with ButtonRow component
 import React, { useState } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
+import ButtonRow from './components/ButtonRow';
 import './App.css';
-import StarButton from './StarButton';
 
 // Interface for mixologist response
 interface MixologistResponse {
@@ -45,6 +45,7 @@ const App: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [showResults, setShowResults] = useState(false);
     const [showHoroscope, setShowHoroscope] = useState(false);
+    const [showCamera, setShowCamera] = useState(false);
 
     // Handle new suggestions from search
     const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
@@ -104,6 +105,11 @@ const App: React.FC = () => {
         setShowHoroscope(!showHoroscope);
     };
 
+    // Toggle camera visibility
+    const toggleCamera = () => {
+        setShowCamera(!showCamera);
+    };
+
     return (
         <div className="app-container">
             <div className="image-container">
@@ -120,11 +126,17 @@ const App: React.FC = () => {
                         onLoadingChange={handleLoadingChange}
                         onError={handleError}
                         isLoading={isLoading}
+                        showCamera={showCamera}
+                        onCameraToggle={toggleCamera}
                     />
                 </div>
 
-                {/* Daily Horoscope Button replaced with StarButton */}
-                <StarButton onClick={toggleHoroscopeGrid} />
+                {/* Button Row with Horoscope Star and Camera Eye */}
+                <ButtonRow 
+                    onHoroscopeClick={toggleHoroscopeGrid}
+                    onCameraClick={toggleCamera}
+                    isLoading={isLoading}
+                />
             </div>
 
             {/* Horoscope Grid - Outside image-container */}

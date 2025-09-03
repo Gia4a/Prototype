@@ -110,12 +110,15 @@ const CompactHoroscopeCard: React.FC<CompactHoroscopeCardProps> = ({ data }) => 
 };
 
 const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
+  // Toggle state for button text and recipe type
+  const [upgradeState, setUpgradeState] = React.useState<'Tips' | 'Thirst'>('Tips');
+
   // Handle upgrade button click
   const handleUpgrade = () => {
     if (data.onUpgrade) {
-      const upgradeTypes = ['seasonal', 'spicy', 'elevate', 'festive'];
-      const randomUpgrade = upgradeTypes[Math.floor(Math.random() * upgradeTypes.length)];
-      data.onUpgrade(randomUpgrade);
+      const nextState = upgradeState === 'Tips' ? 'Thirst' : 'Tips';
+      setUpgradeState(nextState);
+      data.onUpgrade(nextState.toLowerCase());
     }
   };
 
@@ -152,7 +155,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
               >
-                🔥 Upgrade
+                {upgradeState === 'Tips' ? '💡 Tips' : '💧 Thirst'}
               </button>
             )}
           </div>
@@ -193,7 +196,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
               >
-                🔥 Upgrade
+                {upgradeState === 'Tips' ? '💡 Tips' : '💧 Thirst'}
               </button>
             )}
           </div>
@@ -223,7 +226,7 @@ const CompactCocktailCard: React.FC<CompactCocktailCardProps> = ({ data }) => {
                 onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#b91c1c'}
                 onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
               >
-                🔥 Upgrade
+                {upgradeState === 'Tips' ? '💡 Tips' : '💧 Thirst'}
               </button>
             </div>
           )}
