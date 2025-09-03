@@ -1,5 +1,116 @@
 import React from 'react';
-import StarButton from '../StarButton';
+
+// Star Button Component with spinning text and all styling
+const StarButton = ({ onClick }: { onClick: () => void }) => (
+    <div
+        onClick={onClick}
+        style={{
+            position: 'relative',
+            width: '105px',
+            height: '105px',
+            cursor: 'pointer',
+            transition: 'transform 0.3s ease',
+        }}
+        onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.1) rotate(-10deg)';
+        }}
+        onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+        }}
+    >
+        {/* Star shape */}
+        <div style={{
+            width: '100%',
+            height: '100%',
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+            border: '3px solid',
+            borderImage: 'linear-gradient(135deg, #4169e1, #7c3aed) 1',
+            boxShadow: `
+                0 0 15px rgba(65, 105, 225, 0.4),
+                0 4px 10px rgba(0, 0, 0, 0.3),
+                inset 0 1px 2px rgba(255, 255, 255, 0.1)
+            `,
+            position: 'relative',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+        }}>
+            {/* Sparkle effect */}
+            <div style={{
+                content: '',
+                position: 'absolute',
+                top: '-2px',
+                left: '-2px',
+                right: '-2px',
+                bottom: '-2px',
+                background: 'linear-gradient(45deg, transparent, rgba(135, 206, 235, 0.2), transparent)',
+                clipPath: 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)',
+                animation: 'sparkle 3s ease-in-out infinite',
+                zIndex: -1,
+            }} />
+        </div>
+
+        {/* Spinning text */}
+        <div style={{
+            position: 'absolute',
+            width: '100px',
+            height: '100px',
+            animation: 'spin-text 8s linear infinite',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+        }}>
+            {'DAILY HOROSCOPE•'.split('').map((char, index) => (
+                <span
+                    key={index}
+                    style={{
+                        position: 'absolute',
+                        left: '50%',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        color: '#87ceeb',
+                        textShadow: '0 0 3px rgba(135, 206, 235, 0.8)',
+                        transformOrigin: '0 55px',
+                        whiteSpace: 'nowrap',
+                        transform: `rotate(${index * (360 / 15)}deg) translateX(-50%)`,
+                    }}
+                >
+                    {char}
+                </span>
+            ))}
+        </div>
+
+        {/* Center icon */}
+        <div style={{
+            position: 'absolute',
+            top: '40%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            color: '#fff',
+            fontSize: '17px',
+            fontWeight: 'bold',
+            textAlign: 'center',
+            pointerEvents: 'none',
+            zIndex: 2,
+            textShadow: '0 2px 8px rgba(65, 105, 225, 0.4), 0 0 6px #7c3aed',
+        }}>
+            ✦
+        </div>
+
+        <style>{`
+            @keyframes spin-text {
+                from { transform: translate(-50%, -50%) rotate(0deg); }
+                to { transform: translate(-50%, -50%) rotate(360deg); }
+            }
+            
+            @keyframes sparkle {
+                0%, 100% { opacity: 0; }
+                50% { opacity: 1; }
+            }
+        `}</style>
+    </div>
+);
 
 // Eye icon component with blinking animation
 const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean }) => (
@@ -137,7 +248,7 @@ const ButtonRow: React.FC<ButtonRowProps> = ({ onHoroscopeClick, onCameraClick, 
             alignItems: 'center',
             gap: '15px', // Space between buttons
         }}>
-            {/* Daily Horoscope Star Button using StarButton component */}
+            {/* Daily Horoscope Star Button */}
             <StarButton onClick={onHoroscopeClick} />
 
             {/* Camera Eye Button */}

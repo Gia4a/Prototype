@@ -1,20 +1,8 @@
 import React, { useState, useRef } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getFunctions, httpsCallable } from 'firebase/functions';
+import { useMutation } from '@tanstack/react-query';
+import { fetchMixologistSuggestion } from '../api';
 import CameraCapture from './CameraCapture';
 import type { CameraCaptureHandle } from './CameraCapture';
-
-const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-};
-
-// Initialize Firebase App
-const app = initializeApp(firebaseConfig);
-const functions = getFunctions(app);
 
 // Interfaces
 interface MixologistResponse {
@@ -50,7 +38,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
     const [query, setQuery] = useState('');
     const cameraRef = useRef<CameraCaptureHandle>(null);
 
-    // Helper function to process mixologist response
     const processResponse = (responseData: MixologistResponse): MixologistResponse => {
         // Check if this is a food pairing response with structured data in results
         if (responseData.results && responseData.results.length > 0) {
@@ -136,56 +123,44 @@ const SearchBar: React.FC<SearchBarProps> = ({
         return defaultPairings;
     };
 
-    // Call the mixologist Cloud Function
-    const callMixologist = async (searchQuery: string) => {
+    // TanStack Query mutation for mixologist suggestion
+    const mutation = useMutation({
+        mutationFn: (searchQuery: string) => fetchMixologistSuggestion(searchQuery.trim()) as Promise<MixologistResponse>,
+        onSuccess: (responseData: MixologistResponse) => {
+            const processedResponse = processResponse(responseData);
+            onNewSuggestion(processedResponse, query);
+        },
+        onError: (error) => {
+            console.error('Mixologist API error:', error);
+            const fallbackResponse: MixologistResponse = {
+                originalQuery: query,
+                suggestion: `Sorry, I couldn't process your request for "${query}". Please try again.`,
+                title: 'Search Error',
+                searchType: 'error'
+            };
+            onNewSuggestion(fallbackResponse, query);
+            onError(`Failed to get suggestion for "${query}"`);
+        },
+        onSettled: () => {
+            onLoadingChange(false);
+        }
+    });
+
+    const callMixologist = (searchQuery: string) => {
         if (!searchQuery.trim()) {
             onError('Please enter a search term');
             return;
         }
-
         onLoadingChange(true);
-        
-        try {
-            console.log('Calling mixologist with query:', searchQuery);
-            
-            const getMixologistSuggestion = httpsCallable<
-                { query: string },
-                MixologistResponse
-            >(functions, 'getMixologistSuggestion');
-
-            const result = await getMixologistSuggestion({ query: searchQuery.trim() });
-            const responseData = result.data;
-
-            console.log('Raw mixologist response:', responseData);
-            
-            // Process the response to handle food pairings and other special cases
-            const processedResponse = processResponse(responseData);
-            
-            console.log('Processed response:', processedResponse);
-
-            // Always pass the processed response
-            onNewSuggestion(processedResponse, searchQuery);
-            
-        } catch (error: any) {
-            console.error("Error calling mixologist function:", error);
-            
-            // Create a fallback response for display
-            const fallbackResponse: MixologistResponse = {
-                originalQuery: searchQuery,
-                suggestion: `Sorry, I couldn't process your request for "${searchQuery}". Please try again.`,
-                title: 'Search Error',
-                searchType: 'error'
-            };
-            
-            onNewSuggestion(fallbackResponse, searchQuery);
-        } finally {
-            onLoadingChange(false);
-        }
+        mutation.mutate(searchQuery);
     };
 
     const handleCameraCapture = (imageData: string) => {
-        if (cameraRef.current) cameraRef.current.stopCamera();
+        if (cameraRef.current) {
+            cameraRef.current.stopCamera();
+        }
         onCameraToggle(); // Use the parent's toggle function
+        
         if (imageData) {
             // For now, treat camera capture as a general request
             callMixologist("Analyze this drink or food item from image");
@@ -224,7 +199,7 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         borderRadius: '4px',
                         fontSize: 'clamp(14px, 4vw, 16px)'
                     }}
-                    disabled={isLoading}
+                    disabled={mutation.isPending}
                     autoComplete="off"
                 />
             </form>
@@ -245,7 +220,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
                         justifyContent: 'center',
                     }}
                     onClick={() => {
-                        if (cameraRef.current) cameraRef.current.stopCamera();
+                        if (cameraRef.current) {
+                            cameraRef.current.stopCamera();
+                        }
                         onCameraToggle();
                     }}
                 >
@@ -262,7 +239,9 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     >
                         <button
                             onClick={() => {
-                                if (cameraRef.current) cameraRef.current.stopCamera();
+                                if (cameraRef.current) {
+                                    cameraRef.current.stopCamera();
+                                }
                                 onCameraToggle();
                             }}
                             style={{

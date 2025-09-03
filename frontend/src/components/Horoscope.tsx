@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import { fetchHoroscope } from '../api';
 
 interface AstrologySign {
   name: string;
@@ -403,7 +405,6 @@ class HoroscopeRecipes {
   }
 }
 
-const FIREBASE_FUNCTION_URL = "https://us-central1-blind-pig-bar.cloudfunctions.net/getAllRecipesForSign";
 
 const HoroscopeGrid = ({ onSignSelect }: { onSignSelect: (sign: AstrologySign) => void }) => {
   const [isAnimating, setIsAnimating] = useState(false);
@@ -472,34 +473,10 @@ interface HoroscopeProps {
 const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, onError }) => {
   const horoscopeRecipes = new HoroscopeRecipes();
 
-  const handleSignSelect = async (sign: AstrologySign) => {
-    console.log('=== HOROSCOPE SIGN SELECT ===');
-    console.log('Selected sign:', sign);
-
-    if (onLoadingChange) onLoadingChange(true);
-
-    try {
-      const response = await fetch(FIREBASE_FUNCTION_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          sign: sign.name,
-          displayName: sign.displayName,
-          date: new Date().toISOString()
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Firebase function error: ${response.status}`);
-      }
-
-      const astrologyData = await response.json();
-      console.log('Firebase response:', astrologyData);
-
-      const recipe = horoscopeRecipes.getRecipe(sign.name, astrologyData.moonPhase);
-
+  const mutation = useMutation({
+    mutationFn: ({ sign, displayName }: { sign: string; displayName: string }) => fetchHoroscope(sign, displayName),
+    onSuccess: (astrologyData: any, variables: { sign: string; displayName: string }) => {
+      const recipe = horoscopeRecipes.getRecipe(variables.sign, astrologyData.moonPhase);
       const ingredients = [];
       if (recipe.recipe.base_spirit) ingredients.push(`2oz ${recipe.recipe.base_spirit.replace('_', ' ')}`);
       if (recipe.recipe.mixer) ingredients.push(recipe.recipe.mixer.replace('_', ' '));
@@ -509,8 +486,6 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
       if (recipe.recipe.sweetener) ingredients.push(recipe.recipe.sweetener.replace('_', ' '));
       if (recipe.recipe.cream) ingredients.push(recipe.recipe.cream.replace('_', ' '));
       if (recipe.recipe.seasoning) ingredients.push(recipe.recipe.seasoning.replace('_', ' '));
-
-      // Build result with Firebase-provided data
       const result: HoroscopeResult = {
         sign: recipe.sign,
         cocktailName: recipe.recipe.name,
@@ -520,22 +495,22 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
         ingredients: ingredients,
         instructions: recipe.recipe.instructions.join(', '),
         theme: astrologyData.dailyTheme || recipe.recipe.theme,
-        insight: astrologyData.fourLineIdiom, // Directly use the 4-line idiom from Firebase
-        planetaryAlignments: astrologyData.planetaryAlignments // Include planetary alignments
+        insight: astrologyData.fourLineIdiom,
+        planetaryAlignments: astrologyData.planetaryAlignments
       };
-
-      console.log('Firebase-enhanced HoroscopeResult:', result);
-      onSignSelect(sign, result);
-
-    } catch (error) {
-      console.error('Error fetching data from Firebase function:', error);
-
-      if (onError) {
-        onError('Unable to connect to cosmic servers.');
-      }
-    } finally {
+      onSignSelect({ name: variables.sign, symbol: '', displayName: variables.displayName }, result);
+    },
+    onError: () => {
+      if (onError) onError('Unable to connect to cosmic servers.');
+    },
+    onSettled: () => {
       if (onLoadingChange) onLoadingChange(false);
     }
+  });
+
+  const handleSignSelect = (sign: AstrologySign) => {
+    if (onLoadingChange) onLoadingChange(true);
+    mutation.mutate({ sign: sign.name, displayName: sign.displayName });
   };
 
   return (

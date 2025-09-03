@@ -126,173 +126,199 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
 
   const handleCancel = () => {
     stopCamera();
-    onCapture(''); // Signal cancellation
+    // No need to call onCapture for cancellation, just close
   };
 
   return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
+    // Full screen popup overlay to match your other cards
+    <div style={{
+      position: 'fixed',
+      top: 0,
+      left: 0,
+      width: '100%',
+      height: '100%',
+      backgroundColor: 'rgba(0, 0, 0, 0.95)',
+      zIndex: 2000,
+      display: 'flex',
       alignItems: 'center',
-      gap: '15px',
-      padding: '10px',
-      backgroundColor: '#1a1a1a',
-      borderRadius: '12px'
+      justifyContent: 'center',
     }}>
-      {/* Camera Preview */}
-      <div style={{ 
-        position: 'relative',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        border: '2px solid #333'
-      }}>
-        <video 
-          ref={videoRef} 
-          autoPlay 
-          playsInline 
-          muted
-          style={{ 
-            width: '300px', 
-            height: '400px', // Portrait for bottle scanning
-            backgroundColor: '#000',
-            display: 'block',
-            objectFit: 'cover'
-          }} 
-        />
-        
-        {/* Scanning Guide Overlay */}
-        {cameraReady && (
-          <div style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            width: '200px',
-            height: '280px',
-            border: '2px solid #00ff00',
-            borderRadius: '8px',
-            pointerEvents: 'none'
-          }}>
-            <div style={{
-              position: 'absolute',
-              top: '-30px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              color: '#00ff00',
-              fontSize: '12px',
-              backgroundColor: 'rgba(0,0,0,0.7)',
-              padding: '4px 8px',
-              borderRadius: '4px',
-              whiteSpace: 'nowrap'
-            }}>
-              Position bottle here
-            </div>
-          </div>
-        )}
-        
-        {/* Loading State */}
-        {!cameraReady && !error && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0,0,0,0.8)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            gap: '10px'
-          }}>
-            <div style={{
-              width: '30px',
-              height: '30px',
-              border: '3px solid #333',
-              borderTop: '3px solid #00ff00',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite'
-            }} />
-            <div>Initializing camera...</div>
-          </div>
-        )}
-      </div>
-
-      {/* Instructions */}
-      {cameraReady && !error && (
-        <div style={{ 
-          color: '#ccc', 
-          fontSize: '13px',
-          textAlign: 'center',
-          maxWidth: '280px',
-          lineHeight: '1.4'
-        }}>
-          📸 Point camera at bottle label for best recognition
-        </div>
-      )}
-
-      {/* Action Buttons */}
+      {/* Card container matching your other popup dimensions */}
       <div style={{ 
         display: 'flex', 
-        gap: '12px',
-        alignItems: 'center'
+        flexDirection: 'column', 
+        alignItems: 'center',
+        gap: '15px',
+        padding: '20px',
+        backgroundColor: '#1a1a1a',
+        borderRadius: '12px',
+        maxWidth: '380px',
+        maxHeight: '80%',
+        overflow: 'auto',
+        border: '2px solid #333'
       }}>
-        <button 
-          type="button" 
-          onClick={capturePhoto}
-          disabled={!cameraReady || isCapturing}
-          style={{
-            padding: '12px 24px',
-            backgroundColor: cameraReady && !isCapturing ? '#00ff00' : '#555',
-            color: cameraReady && !isCapturing ? '#000' : '#ccc',
-            border: 'none',
-            borderRadius: '25px',
-            cursor: cameraReady && !isCapturing ? 'pointer' : 'not-allowed',
-            fontSize: '14px',
-            fontWeight: 'bold',
-            minWidth: '120px',
-            transition: 'all 0.2s'
-          }}
-        >
-          {isCapturing ? '📸 Processing...' : cameraReady ? '📸 Identify Drink' : 'Loading...'}
-        </button>
-        
-        <button 
-          type="button" 
-          onClick={handleCancel}
-          style={{
-            padding: '12px 20px',
-            backgroundColor: 'transparent',
-            color: '#ff4444',
-            border: '1px solid #ff4444',
-            borderRadius: '25px',
-            cursor: 'pointer',
-            fontSize: '14px'
-          }}
-        >
-          Cancel
-        </button>
-      </div>
-
-      {/* Error Display */}
-      {error && (
+        {/* Camera Preview */}
         <div style={{ 
-          color: '#ff4444', 
-          fontSize: '13px',
-          textAlign: 'center',
-          backgroundColor: 'rgba(255,68,68,0.1)',
-          padding: '10px',
-          borderRadius: '6px',
-          border: '1px solid rgba(255,68,68,0.3)',
-          maxWidth: '280px'
+          position: 'relative',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          border: '2px solid #333'
         }}>
-          {error}
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            playsInline 
+            muted
+            style={{ 
+              width: '300px', 
+              height: '400px', // Portrait for bottle scanning
+              backgroundColor: '#000',
+              display: 'block',
+              objectFit: 'cover'
+            }} 
+          />
+          
+          {/* Scanning Guide Overlay */}
+          {cameraReady && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '200px',
+              height: '280px',
+              border: '2px solid #00ff00',
+              borderRadius: '8px',
+              pointerEvents: 'none'
+            }}>
+              <div style={{
+                position: 'absolute',
+                top: '-30px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                color: '#00ff00',
+                fontSize: '12px',
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                whiteSpace: 'nowrap'
+              }}>
+                Position bottle here
+              </div>
+            </div>
+          )}
+          
+          {/* Loading State */}
+          {!cameraReady && !error && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.8)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              gap: '10px'
+            }}>
+              <div style={{
+                width: '30px',
+                height: '30px',
+                border: '3px solid #333',
+                borderTop: '3px solid #00ff00',
+                borderRadius: '50%',
+                animation: 'spin 1s linear infinite'
+              }} />
+              <div>Initializing camera...</div>
+            </div>
+          )}
         </div>
-      )}
 
-      {/* Hidden canvas for processing */}
-      <canvas ref={canvasRef} style={{ display: 'none' }} />
+        {/* Instructions */}
+        {cameraReady && !error && (
+          <div style={{ 
+            color: '#ccc', 
+            fontSize: '13px',
+            textAlign: 'center',
+            maxWidth: '280px',
+            lineHeight: '1.4'
+          }}>
+            📸 Point camera at bottle label for best recognition
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px',
+          alignItems: 'center'
+        }}>
+          <button 
+            type="button" 
+            onClick={capturePhoto}
+            disabled={!cameraReady || isCapturing}
+            style={{
+              padding: '12px 24px',
+              backgroundColor: cameraReady && !isCapturing ? '#00ff00' : '#555',
+              color: cameraReady && !isCapturing ? '#000' : '#ccc',
+              border: 'none',
+              borderRadius: '25px',
+              cursor: cameraReady && !isCapturing ? 'pointer' : 'not-allowed',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              minWidth: '120px',
+              transition: 'all 0.2s'
+            }}
+          >
+            {isCapturing ? '📸 Processing...' : cameraReady ? '📸 Identify Drink' : 'Loading...'}
+          </button>
+          
+          <button 
+            type="button" 
+            onClick={handleCancel}
+            style={{
+              padding: '12px 20px',
+              backgroundColor: 'transparent',
+              color: '#ff4444',
+              border: '1px solid #ff4444',
+              borderRadius: '25px',
+              cursor: 'pointer',
+              fontSize: '14px'
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+
+        {/* Error Display */}
+        {error && (
+          <div style={{ 
+            color: '#ff4444', 
+            fontSize: '13px',
+            textAlign: 'center',
+            backgroundColor: 'rgba(255,68,68,0.1)',
+            padding: '10px',
+            borderRadius: '6px',
+            border: '1px solid rgba(255,68,68,0.3)',
+            maxWidth: '280px'
+          }}>
+            {error}
+          </div>
+        )}
+
+        {/* Hidden canvas for processing */}
+        <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}</style>
+      </div>
     </div>
   );
 });
