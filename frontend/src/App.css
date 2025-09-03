@@ -1,103 +1,206 @@
+/* Center icon/text inside star button */
+.center-icon {
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 17px;
+  font-weight: bold;
+  text-align: center;
+  pointer-events: none;
+  z-index: 2;
+  text-shadow: 0 2px 8px rgba(65, 105, 225, 0.4), 0 0 6px #7c3aed;
+}
 /* ========================================
-   FIXED CSS - Works with ViewportFrame component
+   FIXED CSS - Restricted to 430 x 932 mobile frame only
    ======================================== */
 
 .app-container {
   position: relative;
-  height: 100vh;
-  width: 100%;
+  height: 932px; /* Fixed height instead of 100vh */
+  width: 430px;  /* Fixed width instead of 100% */
   overflow: hidden;
   background-color: #000;
+  max-height: 932px;
+  max-width: 430px;
 }
 
-/* Image container - fills the ViewportFrame content area */
+/* Image container - fills the mobile frame content area only */
 .image-container {
   position: relative;
-  height: 100%;
-  width: 100%;
+  height: 932px; /* Fixed height */
+  width: 430px;  /* Fixed width */
   background-color: #000;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
+  max-height: 932px;
+  max-width: 430px;
 }
 
-/* Main background image - fills container and stays centered */
+/* Main background image - contained within 430x932 frame */
 .main-background-image {
   position: static;
-  width: 100%;
+  width: 430px;
   height: auto;
-  max-height: 100vh;
-  object-fit: contain;
+  max-height: 932px;
+  max-width: 430px;
+  object-fit: cover;
   object-position: center center;
   display: block;
 }
 
-/* Search bar - positioned below the notch */
+/* Search bar - positioned within the 430x932 frame */
 .overlay-search {
   position: absolute;
-  left: 50%;
-  bottom: 150px;
+  left: 215px; /* 50% of 430px */
+  bottom: 230px;
   transform: translateX(-50%);
-  width: min(430px, 100%);
+  width: 380px;
+  max-width: 400px; /* Ensure it doesn't exceed frame width */
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1001;
 }
 
-/* Daily horoscope button container - positioned below the notch */
+/* Daily horoscope button container - positioned within frame */
 .daily-horoscope-container {
   position: absolute;
   left: 10px;
-  bottom: 80px;
+  bottom: 130px;
   z-index: 1002;
+  max-width: 390px; /* Keep within frame bounds */
 }
 
-/* Circular button styling */
+/* UPDATED: Star-shaped button with spinning text */
 .daily-horoscope-button {
-  width: 85px;
-  height: 85px;
-  border-radius: 50%;
-  background-color: #1a1a2e;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  font-weight: bold;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: transform 0.2s;
-  transform: rotate(-12deg);
-  border: 4px solid blue;
+  position: relative;
+  width: 105px;
+  height: 105px;
   cursor: pointer;
+  transition: transform 0.3s ease;
 }
 
 .daily-horoscope-button:hover {
   transform: scale(1.1) rotate(-10deg);
-  background-color: #333;
 }
 
-/* Horoscope grid container - positioned at top of mobile frame */
+/* Star shape using clip-path */
+.star-shape {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  border: 3px solid;
+  border-image: linear-gradient(135deg, #4169e1, #7c3aed) 1;
+  box-shadow: 
+    0 0 15px rgba(65, 105, 225, 0.4),
+    0 4px 10px rgba(0, 0, 0, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.1);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Spinning text container */
+.spinning-text {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  animation: spin-text 8s linear infinite;
+}
+
+.spinning-text span {
+  position: absolute;
+  left: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  color: #87ceeb;
+  text-shadow: 0 0 3px rgba(135, 206, 235, 0.8);
+  transform-origin: 0 55px;
+  white-space: nowrap;
+}
+
+/* Position each letter around the circle */
+.spinning-text span:nth-child(1) { transform: rotate(0deg) translateX(-50%); }
+.spinning-text span:nth-child(2) { transform: rotate(20deg) translateX(-50%); }
+.spinning-text span:nth-child(3) { transform: rotate(40deg) translateX(-50%); }
+.spinning-text span:nth-child(4) { transform: rotate(60deg) translateX(-50%); }
+.spinning-text span:nth-child(5) { transform: rotate(80deg) translateX(-50%); }
+.spinning-text span:nth-child(6) { transform: rotate(100deg) translateX(-50%); }
+.spinning-text span:nth-child(7) { transform: rotate(120deg) translateX(-50%); }
+.spinning-text span:nth-child(8) { transform: rotate(140deg) translateX(-50%); }
+.spinning-text span:nth-child(9) { transform: rotate(160deg) translateX(-50%); }
+.spinning-text span:nth-child(10) { transform: rotate(180deg) translateX(-50%); }
+.spinning-text span:nth-child(11) { transform: rotate(200deg) translateX(-50%); }
+.spinning-text span:nth-child(12) { transform: rotate(220deg) translateX(-50%); }
+.spinning-text span:nth-child(13) { transform: rotate(240deg) translateX(-50%); }
+.spinning-text span:nth-child(14) { transform: rotate(260deg) translateX(-50%); }
+.spinning-text span:nth-child(15) { transform: rotate(280deg) translateX(-50%); }
+.spinning-text span:nth-child(16) { transform: rotate(300deg) translateX(-50%); }
+.spinning-text span:nth-child(17) { transform: rotate(320deg) translateX(-50%); }
+.spinning-text span:nth-child(18) { transform: rotate(340deg) translateX(-50%); }
+
+@keyframes spin-text {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse-star {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+/* Additional sparkle effect */
+.star-shape::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, transparent, rgba(135, 206, 235, 0.2), transparent);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  animation: sparkle 3s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}
+
+/* Horoscope grid container - positioned within 430x932 frame */
 .horoscope-grid-container {
   position: absolute;
   top: 0px; /* Position below the notch area */
-  left: 50%;
+  left: 215px; /* 50% of 430px */
   transform: translateX(-50%);
   z-index: 1010;
-  width: 100%; /* Use percentage for responsive width */
-  max-width: 430px; /* Max width for larger screens */
+  width: 430px; /* Fixed width within frame */
+  max-width: 430px;
   box-sizing: border-box;
   padding: 5px;
 }
 
-/* Horoscope grid styling - 2 rows of 6 */
+/* Horoscope grid styling - 2 rows of 6, contained within frame */
 .horoscope-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  gap: 4px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  gap: 6px;
   width: 100%;
+  max-width: 430px;
 }
 
 /* Individual horoscope sign container */
@@ -108,20 +211,21 @@
   justify-content: center;
 }
 
-/* Sign button styling - smaller for 6 columns */
+/* Sign button styling - sized for 430px width */
 .horoscope-sign-button {
-  width: 65px;
-  height: 65px;
-  background: transparent;
-  border-radius: 50%;
-  border: none;
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(135deg, #1a1a2e 0%, #7c3aed 100%);
+  clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  border: 2px solid;
+  border-image: linear-gradient(135deg, #4169e1, #7c3aed) 1;
+  color: white;
+  font-size: 28px;
+  font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 24px;
-  font-weight: bold;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3);
   transition: transform 0.2s;
   cursor: pointer;
 }
@@ -130,17 +234,17 @@
   transform: scale(1.1);
 }
 
-/* Sign name styling - smaller text */
+/* Sign name styling - sized for frame */
 .horoscope-sign-name {
   margin-top: 0px;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 500;
   color: white;
   text-align: center;
   line-height: 1.2;
 }
 
-/* Loading spinner */
+/* Loading spinner - contained within frame */
 .loading-spinner {
   border: 4px solid #f3f3f3;
   border-top: 4px solid #3498db;
@@ -156,7 +260,7 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Error message styling */
+/* Error message styling - contained within frame */
 .error-message {
   margin-top: 10px;
   text-align: center;
@@ -164,9 +268,10 @@
   padding: 8px 12px;
   border-radius: 4px;
   color: white;
+  max-width: 380px;
 }
 
-/* Animation classes */
+/* Animation classes - no viewport units */
 @keyframes disappear-to-button {
   0% {
     opacity: 1;
@@ -197,16 +302,16 @@
   animation: reappear-from-button 0.5s forwards;
 }
 
-/* Card title styling */
+/* Card title styling - sized for 430px frame */
 .card-title {
-  font-size: min(2rem, max(0.7rem, 8vw));
+  font-size: 32px; /* Fixed size instead of responsive units */
   font-weight: bold;
   margin: 0 auto;
   text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.7);
   color: white;
   white-space: nowrap;
   overflow: hidden;
-  max-width: 100%;
+  max-width: 380px; /* Contained within frame */
   width: 100%;
   line-height: 1.2;
   min-width: 0;
@@ -218,24 +323,16 @@
   justify-content: center;
 }
 
-/* Responsive adjustments for smaller screens */
-@media (max-width: 380px) {
-  .horoscope-grid-container {
-    width: 95%;
-    padding: 8px;
-  }
-  
-  .horoscope-grid {
-    gap: 6px;
-  }
-  
-  .horoscope-sign-button {
-    width: 40px;
-    height: 40px;
-    font-size: 24px;
-  }
-  
-  .horoscope-sign-name {
-    font-size: 10px;
-  }
+/* Ensure nothing extends beyond 430x932 frame */
+* {
+  box-sizing: border-box;
+}
+
+/* Container to ensure all content stays within bounds */
+.frame-boundary {
+  position: relative;
+  width: 430px;
+  height: 932px;
+  overflow: hidden;
+  background: #000;
 }

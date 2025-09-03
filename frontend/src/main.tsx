@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.tsx'
+
 import './index.css'
 
 // Viewport Frame Component
@@ -31,7 +32,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     </div>
     <div style={{
       width: '430px',
-      height: '100vh',
+      height: '932px',
       background: '#000',
       borderRadius: '40px',
       padding: '8px',
@@ -43,7 +44,7 @@ const ViewportFrame: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     }}>
       <div style={{
         width: '100%',
-        height: '100%',
+        height: '932px',
         borderRadius: '32px',
         overflow: 'hidden',
         position: 'relative',

@@ -4,6 +4,7 @@ import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
 import './App.css';
+import StarButton from './StarButton';
 
 // Interface for mixologist response
 interface MixologistResponse {
@@ -122,15 +123,8 @@ const App: React.FC = () => {
                     />
                 </div>
 
-                {/* Daily Horoscope Button */}
-                <div className="daily-horoscope-container">
-                    <button 
-                        onClick={toggleHoroscopeGrid} 
-                        className="daily-horoscope-button"
-                    >
-                       Astro Cocktails
-                    </button>
-                </div>
+                {/* Daily Horoscope Button replaced with StarButton */}
+                <StarButton onClick={toggleHoroscopeGrid} />
             </div>
 
             {/* Horoscope Grid - Outside image-container */}
