@@ -76,8 +76,12 @@ const FoodPairingCard: React.FC<FoodPairingCardProps> = ({ data }) => {
           {/* Comment Section - Now contains the pairing selection buttons */}
           <div style={{
             ...STANDARD_STYLES.commentSectionStyle,
-            minHeight: '14.4%', // Reduced by 40% from 24%
-            maxHeight: '14.4%'
+            minHeight: '21%',
+            maxHeight: '21%',
+            fontSize: 'clamp(0.85rem, 2vw, 1rem)',
+            wordBreak: 'break-word',
+            lineHeight: '1.3',
+            textOverflow: 'ellipsis'
           }}>
             <div style={STANDARD_STYLES.commentSectionButtonWrapper}>
               {/* Pairing Selection Buttons */}

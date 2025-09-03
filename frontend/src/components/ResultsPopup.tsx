@@ -423,10 +423,10 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
     return (
         <div className="results-popup-overlay" onClick={handleOverlayClick}>
-            <button onClick={onClose} className="results-popup-close-button">
-                &times;
-            </button>
-            <div>
+            <div className="universal-card-container" style={{ position: 'relative' }}>
+                <button onClick={onClose} className="results-popup-close-button">
+                    &times;
+                </button>
                 {renderContent()}
             </div>
         </div>
