@@ -77,6 +77,42 @@
         return hasAllThreePairings || hasWillowParkSource || (hasPairingInTitle && hasStructuredPairings);
     };
 import React, { useEffect, useState } from 'react';
+import ShooterCocktailCard from './ShooterCocktailCard';
+import type { ShooterCocktailData } from './ShooterCocktailCard';
+// Camera-captured shooter/cocktail detection
+const detectCameraRecipe = (suggestion: any): boolean => {
+    if (!suggestion) return false;
+    return (
+        suggestion.detectedLiquor && 
+        suggestion.shooter && 
+        suggestion.cocktail &&
+        suggestion.shooter.name &&
+        suggestion.cocktail.name &&
+        Array.isArray(suggestion.shooter.ingredients) &&
+        Array.isArray(suggestion.cocktail.ingredients)
+    );
+};
+
+const parseCameraRecipeData = (suggestion: any): ShooterCocktailData | null => {
+    if (!detectCameraRecipe(suggestion)) return null;
+    return {
+        detectedLiquor: suggestion.detectedLiquor,
+        shooter: {
+            name: suggestion.shooter.name,
+            ingredients: suggestion.shooter.ingredients,
+            instructions: suggestion.shooter.instructions,
+            glassType: suggestion.shooter.glassType,
+            garnish: suggestion.shooter.garnish
+        },
+        cocktail: {
+            name: suggestion.cocktail.name,
+            ingredients: suggestion.cocktail.ingredients,
+            instructions: suggestion.cocktail.instructions,
+            glassType: suggestion.cocktail.glassType,
+            garnish: suggestion.cocktail.garnish
+        }
+    };
+};
 import './ResultsPopup.css';
 import CompactHoroscopeCard, { CompactCocktailCard } from './CompactHoroscopeCard';
 import type { HoroscopeData, CocktailData } from './CompactHoroscopeCard';
@@ -274,6 +310,26 @@ const ResultsPopup: React.FC<ResultsPopupProps> = ({
 
     // Determine result type and render accordingly
     const renderContent = () => {
+        // Check for camera-captured recipe (shooter + cocktail combo)
+        if (detectCameraRecipe(suggestion)) {
+            const cameraRecipeData = parseCameraRecipeData(suggestion);
+            if (cameraRecipeData) {
+                return <ShooterCocktailCard data={cameraRecipeData} />;
+            }
+            // Fallback if parsing fails
+            return (
+                <div className="error-section">
+                    <h3>Recipe Recognition</h3>
+                    <p>Unable to parse camera-captured recipe data properly.</p>
+                    <div className="text-xs text-gray-500 mt-2">
+                        <details>
+                            <summary>Raw Data</summary>
+                            <pre>{JSON.stringify(suggestion, null, 2)}</pre>
+                        </details>
+                    </div>
+                </div>
+            );
+        }
         if (error) {
             return (
                 <div className="error-section">
