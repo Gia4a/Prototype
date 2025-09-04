@@ -3,7 +3,7 @@ const functions = require('firebase-functions');
 const cors = require('cors')({ origin: true });
 const admin = require('firebase-admin');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-const { HttpsError } = require("firebase-functions/v1/https"); // This is the key line!
+const { HttpsError } = require("firebase-functions/v1/https");
 
 admin.initializeApp();
 
@@ -19,14 +19,18 @@ const {
   PLANETARY_MODIFIERS 
 } = require('./horescopeRecipe');
 
-// --- Enhanced mixologist and upgrade endpoints ---
-// Use only 1st Gen functions
-// const { onCall, HttpsError } = require('firebase-functions/v2/https');
+// Import camera/image recognition functions
+const { 
+  detectLiquorFromImage, 
+  getRecipesFromLiquor, 
+  getRecipesFromImage, 
+  getShooterFromImage 
+} = require('./shooters');
+
+// Import enhanced mixologist and upgrade endpoints
 const { fetchAndProcessGeminiResults, generateCocktailComment, generateSeasonalUpgrade } = require('./geminiService');
 const { extractBestRecipe } = require('./cocktail');
 const { isFoodItem, isLiquorType, isFlavoredLiquor } = require('./constants');
-
-
 
 // Helper function to clean and parse JSON from Gemini responses
 function cleanAndParseGeminiJSON(responseText) {
@@ -74,6 +78,180 @@ function cleanAndParseGeminiJSON(responseText) {
         };
     }
 }
+
+// ================== CAMERA/IMAGE RECOGNITION ENDPOINTS ==================
+
+// API Endpoint: Process image to get both shooter and cocktail recipes
+exports.getRecipesFromCameraImage = functions.https.onCall(
+  async (data, context) => {
+    const { imageData } = data;
+
+    if (!imageData || typeof imageData !== 'string') {
+      throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
+    }
+
+    const apiKey = functions.config().generativelanguage.key;
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      console.log('Processing camera image for liquor recognition and recipe generation...');
+
+      const result = await getRecipesFromImage(imageData, apiKey);
+
+      if (!result.success) {
+        throw new HttpsError('not-found', result.error || 'Could not process image');
+      }
+
+      return {
+        success: true,
+        detectedLiquor: result.detectedLiquor,
+        shooter: result.shooter,
+        cocktail: result.cocktail,
+        message: `Detected ${result.detectedLiquor} and generated both shooter and cocktail recipes!`
+      };
+
+    } catch (error) {
+      console.error('Error in getRecipesFromCameraImage:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError('internal', `Failed to process camera image: ${error.message}`);
+    }
+  }
+);
+
+// API Endpoint: Legacy shooter-only function (for backward compatibility)
+exports.getShooterFromCameraImage = functions.https.onCall(
+  async (data, context) => {
+    const { imageData } = data;
+
+    if (!imageData || typeof imageData !== 'string') {
+      throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
+    }
+
+    const apiKey = functions.config().generativelanguage.key;
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      console.log('Processing camera image for shooter recipe (legacy function)...');
+
+      const result = await getShooterFromImage(imageData, apiKey);
+
+      if (!result.success) {
+        throw new HttpsError('not-found', result.error || 'Could not process image');
+      }
+
+      return {
+        success: true,
+        detectedLiquor: result.detectedLiquor,
+        recipe: result.recipe,
+        message: `Detected ${result.detectedLiquor} and generated shooter recipe!`
+      };
+
+    } catch (error) {
+      console.error('Error in getShooterFromCameraImage:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError('internal', `Failed to process camera image: ${error.message}`);
+    }
+  }
+);
+
+// API Endpoint: Just detect liquor from image (no recipe generation)
+exports.detectLiquorFromCameraImage = functions.https.onCall(
+  async (data, context) => {
+    const { imageData } = data;
+
+    if (!imageData || typeof imageData !== 'string') {
+      throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
+    }
+
+    const apiKey = functions.config().generativelanguage.key;
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      console.log('Detecting liquor from camera image...');
+
+      const result = await detectLiquorFromImage(imageData, apiKey);
+
+      if (!result.success) {
+        throw new HttpsError('not-found', result.error || 'Could not detect liquor in image');
+      }
+
+      return {
+        success: true,
+        detectedLiquor: result.detectedLiquor,
+        confidence: result.confidence,
+        message: `Successfully detected: ${result.detectedLiquor}`
+      };
+
+    } catch (error) {
+      console.error('Error in detectLiquorFromCameraImage:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError('internal', `Failed to detect liquor from image: ${error.message}`);
+    }
+  }
+);
+
+// API Endpoint: Generate recipes from known liquor name
+exports.getRecipesFromLiquorName = functions.https.onCall(
+  async (data, context) => {
+    const { liquorName } = data;
+
+    if (!liquorName || typeof liquorName !== 'string') {
+      throw new HttpsError('invalid-argument', 'Liquor name is required and must be a string');
+    }
+
+    const apiKey = functions.config().generativelanguage.key;
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      console.log(`Generating recipes for liquor: ${liquorName}`);
+
+      const recipes = await getRecipesFromLiquor(liquorName, apiKey);
+
+      if (!recipes.shooter && !recipes.cocktail) {
+        throw new HttpsError('internal', 'Could not generate recipes');
+      }
+
+      return {
+        success: true,
+        liquorName: liquorName,
+        shooter: recipes.shooter,
+        cocktail: recipes.cocktail,
+        message: `Generated both shooter and cocktail recipes for ${liquorName}!`
+      };
+
+    } catch (error) {
+      console.error('Error in getRecipesFromLiquorName:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError('internal', `Failed to generate recipes: ${error.message}`);
+    }
+  }
+);
+
+// ================== EXISTING HOROSCOPE ENDPOINTS ==================
 
 // API Endpoint: Get specific recipe
 exports.getRecipe = functions.https.onRequest((req, res) => {
@@ -229,14 +407,6 @@ exports.getStats = functions.https.onRequest((req, res) => {
   });
 });
 
-// Cloud Function: getMixologistSuggestion
-exports.getMixologistSuggestion = functions.https.onCall(
-  async (data, context) => {
-    // ... your logic
-    // And when you need to throw an error:
-    throw new HttpsError('invalid-argument', 'Your query cannot be empty.');
-  }
-);
 // API Endpoint: Get all base recipes (for debugging)
 exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
   cors(req, res, () => {
@@ -248,71 +418,23 @@ exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
   });
 });
 
-// Helper function for current moon phase
-function getCurrentMoonPhase() {
-  const phases = [
-    'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
-    'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
-  ];
-  const now = new Date();
-  const dayOfMonth = now.getDate();
-  const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
-  return phases[phaseIndex];
-}
-
-// Improved Gemini API integration
-async function callGeminiAPI(prompt) {
-  try {
-    const apiKey = functions.config().generativelanguage.key;
-
-    if (!apiKey) {
-      throw new Error('Generative Language API Key not configured');
-    }
-
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
-
-    const result = await model.generateContent({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3,
-        topK: 10,
-        topP: 0.8,
-        maxOutputTokens: 1024
-      }
-    });
-
-    const response = await result.response;
-    if (response && response.candidates && response.candidates.length > 0) {
-      return response.candidates[0].content.parts[0].text;
-    } else {
-      throw new Error("Gemini response was empty or malformed.");
-    }
-
-  } catch (error) {
-    console.error("Gemini API error:", error.message);
-    throw error;
-  }
-}
-
-
 // Enhanced mixologist function with comment generation
 exports.getMixologistSuggestion = functions.https.onCall(
   async (data, context) => {
     const { query } = data;
 
     if (!query || typeof query !== 'string') {
-  throw new functions.https.HttpsError('invalid-argument', 'Query is required and must be a string');
+      throw new functions.https.HttpsError('invalid-argument', 'Query is required and must be a string');
     }
 
     const trimmedQuery = query.trim();
     if (trimmedQuery.length === 0) {
-  throw new functions.https.HttpsError('invalid-argument', 'Query cannot be empty');
+      throw new functions.https.HttpsError('invalid-argument', 'Query cannot be empty');
     }
 
     const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
+      throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {
@@ -387,19 +509,19 @@ exports.getMixologistSuggestion = functions.https.onCall(
 // New function for handling upgrade requests
 exports.getUpgradedCocktail = functions.https.onCall(
   async (data, context) => {
-  const { originalQuery, upgradeType } = data;
+    const { originalQuery, upgradeType } = data;
 
     if (!originalQuery || typeof originalQuery !== 'string') {
-  throw new functions.https.HttpsError('invalid-argument', 'Original query is required');
+      throw new functions.https.HttpsError('invalid-argument', 'Original query is required');
     }
 
     if (!upgradeType || typeof upgradeType !== 'string') {
-  throw new functions.https.HttpsError('invalid-argument', 'Upgrade type is required');
+      throw new functions.https.HttpsError('invalid-argument', 'Upgrade type is required');
     }
 
     const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
+      throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {
@@ -463,19 +585,19 @@ exports.getUpgradedCocktail = functions.https.onCall(
 // Optional: Function to get just enhanced comment for existing recipes
 exports.getEnhancedComment = functions.https.onCall(
   async (data, context) => {
-  const { cocktailName, ingredients } = data;
+    const { cocktailName, ingredients } = data;
 
     if (!cocktailName || typeof cocktailName !== 'string') {
-  throw new functions.https.HttpsError('invalid-argument', 'Cocktail name is required');
+      throw new functions.https.HttpsError('invalid-argument', 'Cocktail name is required');
     }
 
     if (!ingredients || !Array.isArray(ingredients)) {
-  throw new functions.https.HttpsError('invalid-argument', 'Ingredients array is required');
+      throw new functions.https.HttpsError('invalid-argument', 'Ingredients array is required');
     }
 
     const apiKey = functions.config().generativelanguage.key;
     if (!apiKey) {
-  throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
+      throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
 
     try {
@@ -522,3 +644,50 @@ exports.getBatchRecipes = functions.https.onRequest((req, res) => {
     });
   });
 });
+
+// Helper function for current moon phase
+function getCurrentMoonPhase() {
+  const phases = [
+    'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
+    'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
+  ];
+  const now = new Date();
+  const dayOfMonth = now.getDate();
+  const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
+  return phases[phaseIndex];
+}
+
+// Improved Gemini API integration
+async function callGeminiAPI(prompt) {
+  try {
+    const apiKey = functions.config().generativelanguage.key;
+
+    if (!apiKey) {
+      throw new Error('Generative Language API Key not configured');
+    }
+
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+
+    const result = await model.generateContent({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.3,
+        topK: 10,
+        topP: 0.8,
+        maxOutputTokens: 1024
+      }
+    });
+
+    const response = await result.response;
+    if (response && response.candidates && response.candidates.length > 0) {
+      return response.candidates[0].content.parts[0].text;
+    } else {
+      throw new Error("Gemini response was empty or malformed.");
+    }
+
+  } catch (error) {
+    console.error("Gemini API error:", error.message);
+    throw error;
+  }
+}
