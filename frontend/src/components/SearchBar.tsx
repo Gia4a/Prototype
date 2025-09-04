@@ -1,8 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { fetchMixologistSuggestion } from '../api';
-import CameraCapture from './CameraCapture';
-import type { CameraCaptureHandle } from './CameraCapture';
 
 // Interfaces
 interface MixologistResponse {
@@ -23,20 +21,16 @@ interface SearchBarProps {
     onError: (error: string) => void;
     isLoading: boolean;
     onUpgradeRequest?: (originalQuery: string, upgradeType: string) => void;
-    showCamera: boolean;
-    onCameraToggle: () => void;
+    showCamera: boolean; // Keep for compatibility but not used
+    onCameraToggle: () => void; // Keep for compatibility but not used
 }
 
 const SearchBar: React.FC<SearchBarProps> = ({ 
     onNewSuggestion, 
     onLoadingChange, 
-    onError, 
-    isLoading,
-    showCamera,
-    onCameraToggle
+    onError 
 }) => {
     const [query, setQuery] = useState('');
-    const cameraRef = useRef<CameraCaptureHandle>(null);
 
     const processResponse = (responseData: MixologistResponse): MixologistResponse => {
         // Check if this is a food pairing response with structured data in results
@@ -155,18 +149,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
         mutation.mutate(searchQuery);
     };
 
-    const handleCameraCapture = (imageData: string) => {
-        if (cameraRef.current) {
-            cameraRef.current.stopCamera();
-        }
-        onCameraToggle(); // Use the parent's toggle function
-        
-        if (imageData) {
-            // For now, treat camera capture as a general request
-            callMixologist("Analyze this drink or food item from image");
-        }
-    };
-
     const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setQuery(event.target.value);
     };
@@ -179,12 +161,15 @@ const SearchBar: React.FC<SearchBarProps> = ({
     };
 
     return (
-        <div style={{ marginBottom: '20px' }}>
+        <div className="universal-card-container" style={{ 
+            position: 'relative', 
+            margin: '0 auto', 
+            marginBottom: '20px' 
+        }}>
             <form onSubmit={handleSubmit} style={{ 
                 display: 'inline-block', 
-                position: 'relative', 
-                width: 'clamp(280px, 70vw, 390px)',
-                maxWidth: 'calc(100vw - 80px)'
+                width: '100%',
+                maxWidth: '100%'
             }}>
                 <input
                     type="text"
@@ -203,66 +188,6 @@ const SearchBar: React.FC<SearchBarProps> = ({
                     autoComplete="off"
                 />
             </form>
-
-            {/* Camera Modal */}
-            {showCamera && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 0,
-                        left: 0,
-                        width: '100vw',
-                        height: '100vh',
-                        background: 'rgba(0,0,0,0.6)',
-                        zIndex: 1000,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}
-                    onClick={() => {
-                        if (cameraRef.current) {
-                            cameraRef.current.stopCamera();
-                        }
-                        onCameraToggle();
-                    }}
-                >
-                    <div
-                        style={{
-                            background: '#222',
-                            padding: 24,
-                            borderRadius: 12,
-                            boxShadow: '0 4px 32px rgba(0,0,0,0.4)',
-                            position: 'relative',
-                            minWidth: 320,
-                        }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        <button
-                            onClick={() => {
-                                if (cameraRef.current) {
-                                    cameraRef.current.stopCamera();
-                                }
-                                onCameraToggle();
-                            }}
-                            style={{
-                                position: 'absolute',
-                                top: 8,
-                                right: 8,
-                                background: 'transparent',
-                                border: 'none',
-                                color: '#fff',
-                                fontSize: 24,
-                                cursor: 'pointer',
-                                zIndex: 2
-                            }}
-                            aria-label="Close camera preview"
-                        >
-                            ×
-                        </button>
-                        <CameraCapture ref={cameraRef} onCapture={handleCameraCapture} />
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

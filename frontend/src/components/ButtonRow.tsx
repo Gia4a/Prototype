@@ -61,13 +61,13 @@ const StarButton = ({ onClick }: { onClick: () => void }) => (
             left: '50%',
             transform: 'translate(-50%, -50%)',
         }}>
-            {'DAILY HOROSCOPE•'.split('').map((char, index) => (
+            {'ASTRO•ZODICUPS•'.split('').map((char, index) => (
                 <span
                     key={index}
                     style={{
                         position: 'absolute',
                         left: '50%',
-                        fontSize: '10px',
+                        fontSize: '12px',
                         fontWeight: 'bold',
                         color: '#87ceeb',
                         textShadow: '0 0 3px rgba(135, 206, 235, 0.8)',

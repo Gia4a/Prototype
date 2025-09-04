@@ -1,9 +1,11 @@
-// App.tsx - Updated with ButtonRow component
-import React, { useState } from 'react';
+// App.tsx - Updated with Camera Modal at App level
+import React, { useState, useRef } from 'react';
 import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
 import ButtonRow from './components/ButtonRow';
+import CameraCapture from './components/CameraCapture';
+import type { CameraCaptureHandle } from './components/CameraCapture';
 import './App.css';
 
 // Interface for mixologist response
@@ -46,6 +48,9 @@ const App: React.FC = () => {
     const [showResults, setShowResults] = useState(false);
     const [showHoroscope, setShowHoroscope] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
+    
+    // Camera ref at App level
+    const cameraRef = useRef<CameraCaptureHandle>(null);
 
     // Handle new suggestions from search
     const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
@@ -107,7 +112,29 @@ const App: React.FC = () => {
 
     // Toggle camera visibility
     const toggleCamera = () => {
+        if (showCamera && cameraRef.current) {
+            cameraRef.current.stopCamera();
+        }
         setShowCamera(!showCamera);
+    };
+
+    // Handle camera capture - moved to App level
+    const handleCameraCapture = (imageData: string) => {
+        if (cameraRef.current) {
+            cameraRef.current.stopCamera();
+        }
+        setShowCamera(false);
+        
+        if (imageData) {
+            // For now, treat camera capture as a general request
+            // You can implement actual image analysis here
+            handleNewSuggestion({
+                originalQuery: "Camera captured image",
+                suggestion: "Analyzing drink or food item from image...",
+                title: "Image Analysis",
+                searchType: "camera"
+            });
+        }
     };
 
     return (
@@ -126,8 +153,8 @@ const App: React.FC = () => {
                         onLoadingChange={handleLoadingChange}
                         onError={handleError}
                         isLoading={isLoading}
-                        showCamera={showCamera}
-                        onCameraToggle={toggleCamera}
+                        showCamera={false} // Remove camera logic from SearchBar
+                        onCameraToggle={() => {}} // Empty function since camera is handled at App level
                     />
                 </div>
 
@@ -138,6 +165,106 @@ const App: React.FC = () => {
                     isLoading={isLoading}
                 />
             </div>
+
+            {/* Camera Modal - Card style within mobile frame */}
+            {showCamera && (
+                <div
+                    className="universal-card-container"
+                    style={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '215px', // Same as your search bar - 50% of 430px mobile frame
+                        transform: 'translate(-50%, -50%)',
+                        width: '380px',
+                        maxWidth: '400px',
+                        height: '600px',
+                        maxHeight: '700px',
+                        background: 'rgba(20, 20, 30, 0.95)',
+                        borderRadius: '12px',
+                        border: '2px solid rgba(255, 255, 255, 0.2)',
+                        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+                        zIndex: 9999,
+                        overflow: 'hidden',
+                        backdropFilter: 'blur(10px)',
+                        padding: '15px',
+                        boxSizing: 'border-box'
+                    }}
+                    onClick={e => e.stopPropagation()}
+                >
+                    {/* Close button */}
+                    <button
+                        onClick={() => {
+                            if (cameraRef.current) {
+                                cameraRef.current.stopCamera();
+                            }
+                            setShowCamera(false);
+                        }}
+                        style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '10px',
+                            background: 'rgba(255, 255, 255, 0.1)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            borderRadius: '50%',
+                            color: '#fff',
+                            fontSize: '18px',
+                            width: '35px',
+                            height: '35px',
+                            cursor: 'pointer',
+                            zIndex: 10000,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 'bold',
+                            backdropFilter: 'blur(5px)'
+                        }}
+                        aria-label="Close camera preview"
+                    >
+                        ×
+                    </button>
+
+                    
+                    {/* Camera container */}
+                    <div
+                        style={{
+                            width: '100%',
+                            height: 'calc(100% - 60px)', // Account for title and padding
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: 0,
+                            border: 'none',
+                            background: 'transparent',
+                            borderRadius: 0
+                        }}
+                    >
+                        <CameraCapture ref={cameraRef} onCapture={handleCameraCapture} />
+                    </div>
+                </div>
+            )}
+            
+            {/* Backdrop overlay when camera is open */}
+            {showCamera && (
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        background: 'rgba(0, 0, 0, 0.6)',
+                        zIndex: 9998,
+                        backdropFilter: 'blur(2px)'
+                    }}
+                    onClick={() => {
+                        if (cameraRef.current) {
+                            cameraRef.current.stopCamera();
+                        }
+                        setShowCamera(false);
+                    }}
+                />
+            )}
 
             {/* Horoscope Grid - Outside image-container */}
             {showHoroscope && (

@@ -130,55 +130,40 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
   };
 
   return (
-    // Full screen popup overlay to match your other cards
     <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
       width: '100%',
       height: '100%',
-      backgroundColor: 'rgba(0, 0, 0, 0.95)',
-      zIndex: 2000,
       display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: 'column',
+      gap: '10px',
+      fontFamily: 'inherit',
+      minHeight: 0,
     }}>
-      {/* Card container matching your other popup dimensions */}
-      <div style={{ 
-        display: 'flex', 
-        flexDirection: 'column', 
-        alignItems: 'center',
-        gap: '15px',
-        padding: '20px',
-        backgroundColor: '#1a1a1a',
-        borderRadius: '12px',
-        maxWidth: '380px',
-        maxHeight: '80%',
-        overflow: 'auto',
-        border: '2px solid #333'
-      }}>
-        {/* Camera Preview */}
-        <div style={{ 
+        {/* Camera preview - fills container */}
+        <div style={{
           position: 'relative',
+          flex: 1,
+          minHeight: 0,
+          height: '100%',
           borderRadius: '8px',
           overflow: 'hidden',
-          border: '2px solid #333'
+          backgroundColor: '#000'
         }}>
-          <video 
-            ref={videoRef} 
-            autoPlay 
-            playsInline 
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
             muted
-            style={{ 
-              width: '300px', 
-              height: '400px', // Portrait for bottle scanning
-              backgroundColor: '#000',
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
               display: 'block',
-              objectFit: 'cover'
-            }} 
+              backgroundColor: '#000'
+            }}
           />
           
-          {/* Scanning Guide Overlay */}
+          {/* Scanning guide overlay */}
           {cameraReady && (
             <div style={{
               position: 'absolute',
@@ -197,8 +182,9 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
                 left: '50%',
                 transform: 'translateX(-50%)',
                 color: '#00ff00',
-                fontSize: '12px',
-                backgroundColor: 'rgba(0,0,0,0.7)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                backgroundColor: 'rgba(0,0,0,0.8)',
                 padding: '4px 8px',
                 borderRadius: '4px',
                 whiteSpace: 'nowrap'
@@ -225,49 +211,48 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
               gap: '10px'
             }}>
               <div style={{
-                width: '30px',
-                height: '30px',
+                width: '40px',
+                height: '40px',
                 border: '3px solid #333',
                 borderTop: '3px solid #00ff00',
                 borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
+                animation: 'cameraSpin 1s linear infinite'
               }} />
-              <div>Initializing camera...</div>
+              <div style={{ fontSize: '16px' }}>Initializing camera...</div>
             </div>
           )}
         </div>
 
-        {/* Instructions */}
+        {/* Instructions - simplified */}
         {cameraReady && !error && (
           <div style={{ 
             color: '#ccc', 
-            fontSize: '13px',
+            fontSize: '12px',
             textAlign: 'center',
-            maxWidth: '280px',
-            lineHeight: '1.4'
+            padding: '5px 0'
           }}>
             📸 Point camera at bottle label for best recognition
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Action buttons - simplified layout */}
         <div style={{ 
           display: 'flex', 
-          gap: '12px',
-          alignItems: 'center'
+          gap: '10px',
+          justifyContent: 'center'
         }}>
           <button 
             type="button" 
             onClick={capturePhoto}
             disabled={!cameraReady || isCapturing}
             style={{
-              padding: '12px 24px',
+              padding: '10px 16px',
               backgroundColor: cameraReady && !isCapturing ? '#00ff00' : '#555',
               color: cameraReady && !isCapturing ? '#000' : '#ccc',
               border: 'none',
-              borderRadius: '25px',
+              borderRadius: '20px',
               cursor: cameraReady && !isCapturing ? 'pointer' : 'not-allowed',
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: 'bold',
               minWidth: '120px',
               transition: 'all 0.2s'
@@ -280,30 +265,29 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
             type="button" 
             onClick={handleCancel}
             style={{
-              padding: '12px 20px',
+              padding: '10px 14px',
               backgroundColor: 'transparent',
               color: '#ff4444',
               border: '1px solid #ff4444',
-              borderRadius: '25px',
+              borderRadius: '20px',
               cursor: 'pointer',
-              fontSize: '14px'
+              fontSize: '12px'
             }}
           >
             Cancel
           </button>
         </div>
 
-        {/* Error Display */}
+        {/* Error Display - simplified */}
         {error && (
           <div style={{ 
             color: '#ff4444', 
-            fontSize: '13px',
+            fontSize: '11px',
             textAlign: 'center',
             backgroundColor: 'rgba(255,68,68,0.1)',
-            padding: '10px',
-            borderRadius: '6px',
-            border: '1px solid rgba(255,68,68,0.3)',
-            maxWidth: '280px'
+            padding: '6px',
+            borderRadius: '4px',
+            border: '1px solid rgba(255,68,68,0.3)'
           }}>
             {error}
           </div>
@@ -313,13 +297,12 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
         <canvas ref={canvasRef} style={{ display: 'none' }} />
 
         <style>{`
-          @keyframes spin {
+          @keyframes cameraSpin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
           }
         `}</style>
       </div>
-    </div>
   );
 });
 

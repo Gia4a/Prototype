@@ -42,7 +42,7 @@
 .overlay-search {
   position: absolute;
   left: 215px; /* 50% of 430px */
-  bottom: 230px;
+  bottom: -17px;
   transform: translateX(-50%);
   width: 380px;
   max-width: 400px; /* Ensure it doesn't exceed frame width */
