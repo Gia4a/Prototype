@@ -5,16 +5,19 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    host: '0.0.0.0',
+    port: 5173,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        // Firebase Functions emulator endpoint
+        target: 'http://127.0.0.1:5001',
         changeOrigin: true,
       },
     },
   },
   build: {
-    // Changed: Output directly to where your backend expects it
-    outDir: '../backend/dist/frontend',
+    // Firebase Hosting expects 'dist' folder by default
+    outDir: 'dist',
     emptyOutDir: true,
   }
 })

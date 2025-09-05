@@ -1,78 +1,134 @@
 /* ========================================
-   FIXED CSS - Restricted to 430 x 932 mobile frame only
+   RESPONSIVE MOBILE CSS - Development Frame Helper
    ======================================== */
 
+/* Base mobile-first styles */
 .app-container {
   position: relative;
-  height: 932px; /* Fixed height instead of 100vh */
-  width: 430px;  /* Fixed width instead of 100% */
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   background-color: #000;
-  max-height: 932px;
-  max-width: 430px;
 }
 
-/* Image container - fills the mobile frame content area only */
+/* Image container - responsive */
 .image-container {
   position: relative;
-  height: 932px; /* Fixed height */
-  width: 430px;  /* Fixed width */
+  width: 100vw;
+  height: calc(var(--vh, 1vh) * 100);
   background-color: #000;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  max-height: 932px;
-  max-width: 430px;
 }
 
-/* Main background image - contained within 430x932 frame */
 .main-background-image {
-  position: static;
-  width: 430px;
-  height: auto;
-  max-height: 932px;
-  max-width: 430px;
-  object-fit: cover;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: calc(var(--vh, 1vh) * 100);
+  object-fit: contain;
   object-position: center center;
   display: block;
+  transform: translate(-50%, -50%);
 }
 
-/* Search bar - positioned within the 430x932 frame */
+/* Development frame constraints (browser only) */
+@media screen and (min-width: 501px) {
+  /* Constrain app container to frame */
+  .app-container {
+    width: 430px;
+    height: 932px;
+    max-width: 430px;
+    max-height: 932px;
+    margin: 0 auto;
+    position: relative;
+  }
+  
+  /* Constrain image container to frame */
+  .image-container {
+    width: 430px;
+    height: 932px;
+    max-width: 430px;
+    max-height: 932px;
+  }
+  
+  /* Constrain background image to frame */
+  .main-background-image {
+    width: 430px;
+    height: 932px;
+    max-width: 430px;
+    max-height: 932px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    object-fit: contain;
+    object-position: center center;
+  }
+}
+
+/* Search bar - responsive positioning */
 .overlay-search {
-  position: absolute;
-  left: 215px; /* 50% of 430px */
-  bottom: -17px;
+  position: fixed;
+  left: 50%;
+  bottom: env(safe-area-inset-bottom, 20px);
   transform: translateX(-50%);
-  width: 380px;
-  max-width: 400px; /* Ensure it doesn't exceed frame width */
+  width: min(380px, calc(100vw - 40px));
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1001;
+  box-sizing: border-box;
+  padding: 0 20px;
 }
 
-/* Horoscope grid container - positioned within 430x932 frame */
+/* Development frame search bar positioning */
+@media screen and (min-width: 501px) {
+  .overlay-search {
+    position: absolute; /* Changed from fixed to absolute */
+    left: 50%;
+    bottom: 20px;
+    transform: translateX(-50%);
+    width: 380px;
+  }
+}
+
+/* Horoscope grid container - responsive */
 .horoscope-grid-container {
-  position: absolute;
-  top: 0px; /* Position below the notch area */
-  left: 215px; /* 50% of 430px */
+  position: fixed;
+  top: env(safe-area-inset-top, 40px);
+  left: 50%;
   transform: translateX(-50%);
   z-index: 1010;
-  width: 430px; /* Fixed width within frame */
-  max-width: 430px;
+  width: min(410px, calc(100vw - 20px));
   box-sizing: border-box;
-  padding: 5px;
+  padding: 10px;
 }
 
-/* Horoscope grid styling - 2 rows of 6, contained within frame */
+/* Development frame horoscope positioning */
+@media screen and (min-width: 501px) {
+  .horoscope-grid-container {
+    position: absolute; /* Changed from fixed to absolute */
+    width: 410px;
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+}
+
+/* Horoscope grid - responsive 4x3 layout */
 .horoscope-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: repeat(3, 1fr);
-  gap: 6px;
+  gap: clamp(6px, 2vw, 12px);
   width: 100%;
-  max-width: 430px;
 }
 
 /* Individual horoscope sign container */
@@ -83,46 +139,67 @@
   justify-content: center;
 }
 
-/* Sign button styling - sized for 430px width */
+/* Sign button - responsive sizing */
 .horoscope-sign-button {
-  width: 60px;
-  height: 60px;
+  width: clamp(50px, 15vw, 70px);
+  height: clamp(50px, 15vw, 70px);
   background: linear-gradient(135deg, #1a1a2e 0%, #7c3aed 100%);
   clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
   border: 2px solid;
   border-image: linear-gradient(135deg, #4169e1, #7c3aed) 1;
   color: white;
-  font-size: 28px;
+  font-size: clamp(18px, 4vw, 28px);
   font-weight: bold;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 8px rgba(65, 105, 225, 0.3);
-  transition: transform 0.2s;
+  transition: transform 0.2s ease;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-.horoscope-sign-button:hover {
+.horoscope-sign-button:hover,
+.horoscope-sign-button:active {
   transform: scale(1.1);
 }
 
-/* Sign name styling - sized for frame */
+/* Development frame button sizing */
+@media screen and (min-width: 501px) {
+  .horoscope-sign-button {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+}
+
+/* Sign name - responsive text */
 .horoscope-sign-name {
-  margin-top: 0px;
-  font-size: 15px;
+  margin-top: clamp(2px, 1vw, 4px);
+  font-size: clamp(11px, 3vw, 15px);
   font-weight: 500;
   color: white;
   text-align: center;
-  line-height: 1;
+  line-height: 1.1;
+  user-select: none;
 }
 
-/* Loading spinner - contained within frame */
+/* Development frame sign name sizing */
+@media screen and (min-width: 501px) {
+  .horoscope-sign-name {
+    font-size: 13px;
+  }
+}
+
+/* Loading spinner - responsive */
 .loading-spinner {
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
   border-radius: 50%;
-  width: 40px;
-  height: 40px;
+  width: clamp(30px, 8vw, 40px);
+  height: clamp(30px, 8vw, 40px);
   animation: spin 2s linear infinite;
   margin: 0 auto 10px;
 }
@@ -132,18 +209,26 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Error message styling - contained within frame */
+/* Error message - responsive */
 .error-message {
   margin-top: 10px;
   text-align: center;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 8px 12px;
-  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.8);
+  padding: clamp(8px, 2vw, 12px) clamp(12px, 3vw, 16px);
+  border-radius: 6px;
   color: white;
-  max-width: 380px;
+  max-width: calc(100vw - 40px);
+  font-size: clamp(12px, 3vw, 14px);
 }
 
-/* Animation classes - no viewport units */
+/* Development frame error message */
+@media screen and (min-width: 501px) {
+  .error-message {
+    max-width: 400px;
+  }
+}
+
+/* Animations - responsive */
 @keyframes disappear-to-button {
   0% {
     opacity: 1;
@@ -174,9 +259,9 @@
   animation: reappear-from-button 0.5s forwards;
 }
 
-/* Card title styling - sized for 430px frame */
+/* Card title - responsive typography */
 .card-title {
-  font-size: clamp(0.9rem, 4vw, 1.4rem); /* Smaller responsive font size for mobile */
+  font-size: clamp(16px, 4vw, 24px);
   font-weight: bold;
   margin: 0 auto;
   text-shadow: 0px 4px 8px rgba(0, 0, 0, 0.7);
@@ -184,28 +269,118 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 430px; /* Contained within frame */
+  max-width: calc(100vw - 40px);
   width: 100%;
-  line-height: 1;
-  min-width: 0;
+  line-height: 1.2;
   font-family: inherit;
   display: block;
   letter-spacing: 0.01em;
   text-align: center;
-  align-items: center;
-  justify-content: center;
+  user-select: none;
 }
 
-/* Ensure nothing extends beyond 430x932 frame */
-* {
+/* Development frame card title */
+@media screen and (min-width: 501px) {
+  .card-title {
+    font-size: 18px;
+    max-width: 400px;
+  }
+}
+
+/* Mobile optimizations - ensure full viewport usage on real mobile devices */
+@media screen and (max-width: 500px) {
+  /* Mobile-specific overrides */
+  body {
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .app-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw !important; /* Force full width on mobile */
+    height: 100vh !important; /* Force full height on mobile */
+  }
+  
+  .image-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw !important; /* Force full width on mobile */
+    height: 100vh !important; /* Force full height on mobile */
+  }
+  
+  .main-background-image {
+    width: 100vw !important; /* Force full width on mobile */
+    height: calc(var(--vh, 1vh) * 100) !important; /* Use CSS custom property for real viewport height */
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important; /* Center the image properly */
+    object-fit: contain !important;
+    object-position: center center !important;
+  }
+  
+  /* Ensure search bar uses fixed positioning on mobile */
+  .overlay-search {
+    position: fixed !important;
+    left: 50% !important;
+    bottom: env(safe-area-inset-bottom, 20px) !important;
+    transform: translateX(-50%) !important;
+    width: min(380px, calc(100vw - 40px)) !important;
+  }
+  
+  /* Ensure horoscope grid uses fixed positioning on mobile */
+  .horoscope-grid-container {
+    position: fixed !important;
+    top: env(safe-area-inset-top, 40px) !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    width: min(410px, calc(100vw - 20px)) !important;
+  }
+  
+  /* Prevent mobile zoom and selection */
+  * {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  
+  input, textarea, button {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
+/* Landscape mobile adjustments */
+@media screen and (max-width: 500px) and (orientation: landscape) {
+  .horoscope-grid-container {
+    top: max(20px, env(safe-area-inset-top, 20px));
+  }
+  
+  .overlay-search {
+    bottom: max(10px, env(safe-area-inset-bottom, 10px));
+  }
+  
+  .horoscope-sign-button {
+    width: clamp(40px, 12vw, 55px);
+    height: clamp(40px, 12vw, 55px);
+    font-size: clamp(16px, 3.5vw, 22px);
+  }
+  
+  .horoscope-sign-name {
+    font-size: clamp(9px, 2.5vw, 12px);
+  }
+}
+
+/* Box sizing reset */
+*, *::before, *::after {
   box-sizing: border-box;
-}
-
-/* Container to ensure all content stays within bounds */
-.frame-boundary {
-  position: relative;
-  width: 430px;
-  height: 932px;
-  overflow: hidden;
-  background: #000;
 }

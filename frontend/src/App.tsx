@@ -166,19 +166,16 @@ const App: React.FC = () => {
                 />
             </div>
 
-            {/* Camera Modal - Card style within mobile frame */}
+         {/* Camera Modal - Override universal-card-container positioning */}
             {showCamera && (
                 <div
-                    className="universal-card-container"
                     style={{
-                        position: 'absolute',
+                        position: 'fixed',
                         top: '50%',
-                        left: '215px', // Same as your search bar - 50% of 430px mobile frame
+                        left: '50%',
                         transform: 'translate(-50%, -50%)',
-                        width: '380px',
-                        maxWidth: '400px',
-                        height: '600px',
-                        maxHeight: '700px',
+                        width: 'min(380px, calc(100vw - 40px))',
+                        height: 'min(600px, calc(100vh - 100px))',
                         background: 'rgba(20, 20, 30, 0.95)',
                         borderRadius: '12px',
                         border: '2px solid rgba(255, 255, 255, 0.2)',
@@ -187,10 +184,17 @@ const App: React.FC = () => {
                         overflow: 'hidden',
                         backdropFilter: 'blur(10px)',
                         padding: '15px',
-                        boxSizing: 'border-box'
+                        boxSizing: 'border-box',
+                        // Override any CSS class positioning
+                        bottom: 'unset !important',
+                        right: 'unset !important',
+                        margin: '0 !important',
+                        maxWidth: 'min(400px, calc(100vw - 40px)) !important',
+                        maxHeight: 'min(700px, calc(100vh - 100px)) !important'
                     }}
                     onClick={e => e.stopPropagation()}
                 >
+              
                     {/* Close button */}
                     <button
                         onClick={() => {
@@ -223,7 +227,6 @@ const App: React.FC = () => {
                         ×
                     </button>
 
-                    
                     {/* Camera container */}
                     <div
                         style={{
