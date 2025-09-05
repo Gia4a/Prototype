@@ -133,8 +133,7 @@ const MobileFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             {/* App Content Area */}
             <div style={{
               width: '100%',
-              height: '100%',
-              paddingTop: '35px',
+              height: '100%',        
               overflow: 'hidden',
               color: 'rgba(255, 255, 255, 0.87)',
               display: 'flex',

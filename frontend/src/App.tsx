@@ -145,25 +145,33 @@ const App: React.FC = () => {
                     alt="tips & thirst" 
                     className="main-background-image"
                 />
-                
-                {/* Search Bar Container - Centered */}
-                <div className="overlay-search">
-                    <SearchBar
-                        onNewSuggestion={handleNewSuggestion}
-                        onLoadingChange={handleLoadingChange}
-                        onError={handleError}
+                {/* Overlay container for search and button row */}
+                <div className="search-button-container" style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    zIndex: 1001
+                }}>
+                    <div className="overlay-search" style={{width: '100%'}}>
+                        <SearchBar
+                            onNewSuggestion={handleNewSuggestion}
+                            onLoadingChange={handleLoadingChange}
+                            onError={handleError}
+                            isLoading={isLoading}
+                            showCamera={false}
+                            onCameraToggle={() => {}}
+                        />
+                    </div>
+                    <ButtonRow 
+                        onHoroscopeClick={toggleHoroscopeGrid}
+                        onCameraClick={toggleCamera}
                         isLoading={isLoading}
-                        showCamera={false} // Remove camera logic from SearchBar
-                        onCameraToggle={() => {}} // Empty function since camera is handled at App level
                     />
                 </div>
-
-                {/* Button Row with Horoscope Star and Camera Eye */}
-                <ButtonRow 
-                    onHoroscopeClick={toggleHoroscopeGrid}
-                    onCameraClick={toggleCamera}
-                    isLoading={isLoading}
-                />
             </div>
 
          {/* Camera Modal - Override universal-card-container positioning */}
