@@ -1,6 +1,6 @@
 // api.ts - Shared API functions for TanStack Query
-import { getFunctions, httpsCallable } from 'firebase/functions';
 import { initializeApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -13,9 +13,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
-export async function fetchMixologistSuggestion(query: string) {
-    const getMixologistSuggestion = httpsCallable(functions, 'getMixologistSuggestion');
-    const result = await getMixologistSuggestion({ query });
+// Speech-based cocktail recommendation
+export async function getCocktailFromSpeech(speechText: string, conversationHistory?: any[]) {
+    const getCocktailFromSpeechFunction = httpsCallable(functions, 'getCocktailFromSpeech');
+    const result = await getCocktailFromSpeechFunction({ 
+        speechText, 
+        conversationHistory 
+    });
     return result.data;
 }
 

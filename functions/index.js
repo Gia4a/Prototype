@@ -27,10 +27,10 @@ const {
   getShooterFromImage 
 } = require('./shooters');
 
-// Import enhanced mixologist and upgrade endpoints
-const { fetchAndProcessGeminiResults, generateCocktailComment, generateSeasonalUpgrade } = require('./geminiService');
-const { extractBestRecipe } = require('./cocktail');
-const { isFoodItem, isLiquorType, isFlavoredLiquor } = require('./constants');
+// Import enhanced mixologist and upgrade endpoints - REMOVED for speech modal approach
+// const { fetchAndProcessGeminiResults, generateCocktailComment, generateSeasonalUpgrade } = require('./geminiservice');
+// const { extractBestRecipe } = require('./cocktail');
+// const { isFoodItem, isLiquorType, isFlavoredLiquor } = require('./constants');
 
 // Helper function to clean and parse JSON from Gemini responses
 function cleanAndParseGeminiJSON(responseText) {
@@ -418,18 +418,19 @@ exports.getAllBaseRecipes = functions.https.onRequest((req, res) => {
   });
 });
 
-// Enhanced mixologist function with comment generation
-exports.getMixologistSuggestion = functions.https.onCall(
+// Text search functionality removed - using speech modal instead
+
+// Upgrade and enhanced comment functions removed - using speech modal instead
+
+// ================== SPEECH-TO-COCKTAIL CONVERSATIONAL AI ==================
+
+// Speech-based cocktail assistant using Gemini for natural conversation
+exports.getCocktailFromSpeech = functions.https.onCall(
   async (data, context) => {
-    const { query } = data;
+    const { speechText, conversationHistory } = data;
 
-    if (!query || typeof query !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'Query is required and must be a string');
-    }
-
-    const trimmedQuery = query.trim();
-    if (trimmedQuery.length === 0) {
-      throw new functions.https.HttpsError('invalid-argument', 'Query cannot be empty');
+    if (!speechText || typeof speechText !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'Speech text is required');
     }
 
     const apiKey = functions.config().generativelanguage.key;
@@ -438,187 +439,109 @@ exports.getMixologistSuggestion = functions.https.onCall(
     }
 
     try {
-      console.log(`Processing enhanced query: "${trimmedQuery}"`);
+      console.log(`Processing speech input: "${speechText}"`);
 
-      // Get the basic cocktail results
-      const results = await fetchAndProcessGeminiResults(trimmedQuery, apiKey);
-            
-      if (!results || results.length === 0) {
-        throw new HttpsError('not-found', 'No results found for the given query');
+      // Build conversation context
+      let conversationContext = '';
+      if (conversationHistory && Array.isArray(conversationHistory)) {
+        conversationContext = conversationHistory.map(msg => 
+          `${msg.role}: ${msg.content}`
+        ).join('\n');
       }
 
-      const primaryResult = results[0];
-            
-      // Check if this is a cocktail/liquor query that should get enhanced comments
-      const isEnhanceable = (isLiquorType(trimmedQuery) || 
-                 trimmedQuery.toLowerCase().includes('cocktail') ||
-                 trimmedQuery.toLowerCase().includes('drink')) &&
-                !trimmedQuery.toLowerCase().includes('horoscope');
+      // Create a conversational prompt for Gemini
+      const prompt = `You are an expert bartender and mixologist having a friendly conversation with a customer. 
+      
+${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
 
-      if (isEnhanceable && primaryResult.snippet) {
-        try {
-          // Extract ingredients for comment generation
-          const ingredientsText = primaryResult.snippet.match(/Ingredients:\s*([\s\S]*?)(?=\s*Instructions?:|$)/i);
-          const ingredients = ingredientsText ? 
-            ingredientsText[1].split(/[\,\n]/).map(i => i.trim()).filter(i => i.length > 0) : 
-            ['premium spirits', 'quality mixers'];
+Customer just said: "${speechText}"
 
-          // Generate enhanced comment
-          const enhancedComment = await generateCocktailComment(
-            primaryResult.title,
-            ingredients,
-            null, // Let function determine current season
-            apiKey
-          );
+Respond naturally as a knowledgeable bartender would. If they're asking about cocktails, ingredients, or what to make, provide specific recommendations with recipes. If they're just chatting, respond conversationally but try to guide them toward cocktail recommendations.
 
-          // Add enhanced comment to the result
-          primaryResult.enhancedComment = enhancedComment;
-          primaryResult.supportsUpgrade = true;
-                    
-        } catch (commentError) {
-          console.warn('Could not generate enhanced comment:', commentError.message);
-          // Continue with basic result
-        }
+For cocktail recommendations, always include:
+1. The cocktail name
+2. A brief description of taste/style
+3. Complete ingredient list with measurements
+4. Step-by-step instructions
+5. Any tips or variations
+
+Keep your response conversational, friendly, and under 300 words. If they ask about multiple things, focus on one main recommendation.
+
+Format your response as natural speech that could be read aloud, avoiding complex formatting.`;
+
+      // Call Gemini API
+      const response = await callGeminiAPI(prompt);
+      
+      if (!response || !response.trim()) {
+        throw new Error('Empty response from Gemini');
+      }
+
+      // Extract any cocktail recipe if mentioned
+      let detectedCocktail = null;
+      if (response.toLowerCase().includes('ingredients:') || 
+          response.toLowerCase().includes('recipe:') ||
+          response.toLowerCase().includes('oz') || 
+          response.toLowerCase().includes('ml')) {
+        
+        // Try to extract a structured recipe
+        detectedCocktail = extractCocktailFromResponse(response);
       }
 
       return {
-        originalQuery: trimmedQuery,
-        suggestion: primaryResult.snippet || primaryResult.content || 'No specific recommendation available.',
-        title: primaryResult.title || 'Mixologist Recommendation',
-        filePath: primaryResult.filePath || null,
-        results: results,
-        searchType: 'cocktail_suggestion',
-        snippet: primaryResult.snippet,
-        why: primaryResult.why || 'Expert mixologist recommendation',
-        enhancedComment: primaryResult.enhancedComment || null,
-        supportsUpgrade: primaryResult.supportsUpgrade || false
+        success: true,
+        response: response,
+        cocktailRecommendation: detectedCocktail,
+        conversational: true,
+        timestamp: new Date().toISOString()
       };
 
     } catch (error) {
-      console.error('Error in getMixologistSuggestion:', error);
-            
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-            
-      throw new HttpsError('internal', `Failed to process mixologist request: ${error.message}`);
+      console.error('Error in getCocktailFromSpeech:', error);
+      throw new functions.https.HttpsError('internal', `Failed to process speech: ${error.message}`);
     }
   }
 );
 
-// New function for handling upgrade requests
-exports.getUpgradedCocktail = functions.https.onCall(
-  async (data, context) => {
-    const { originalQuery, upgradeType } = data;
+// Helper function to extract cocktail info from conversational response
+function extractCocktailFromResponse(response) {
+  try {
+    // Look for cocktail name (often in quotes or as first sentence)
+    const nameMatch = response.match(/(?:try|make|recommend|suggest)(?:ing)?\s+(?:a\s+)?["']?([^"'.!?\n]+)["']?[.!]?/i);
+    const cocktailName = nameMatch ? nameMatch[1].trim() : 'Recommended Cocktail';
 
-    if (!originalQuery || typeof originalQuery !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'Original query is required');
+    // Extract ingredients section
+    const ingredientsMatch = response.match(/ingredients?:?\s*([\s\S]*?)(?=instructions?|directions?|method|steps|\n\n|$)/i);
+    let ingredients = [];
+    if (ingredientsMatch) {
+      ingredients = ingredientsMatch[1]
+        .split(/\n|,|\d+\./)
+        .map(ing => ing.trim())
+        .filter(ing => ing.length > 0 && !ing.match(/^(instructions?|directions?|method|steps)/i))
+        .slice(0, 8); // Limit to reasonable number
     }
 
-    if (!upgradeType || typeof upgradeType !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'Upgrade type is required');
+    // Extract instructions
+    const instructionsMatch = response.match(/(?:instructions?|directions?|method|steps):?\s*([\s\S]*?)(?:\n\n|$)/i);
+    let instructions = '';
+    if (instructionsMatch) {
+      instructions = instructionsMatch[1].trim();
     }
 
-    const apiKey = functions.config().generativelanguage.key;
-    if (!apiKey) {
-      throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
-    }
-
-    try {
-      console.log(`Processing upgrade request: "${originalQuery}" -> ${upgradeType}`);
-
-      // Generate the seasonal/upgraded version
-      const upgradeResult = await generateSeasonalUpgrade(
-        originalQuery,
-        upgradeType,
-        null, // Let function determine current season
-        apiKey
-      );
-
-      if (!upgradeResult) {
-        throw new HttpsError('internal', 'Could not generate upgrade recipe');
-      }
-
-      // Generate enhanced comment for the upgrade
-      let enhancedComment = null;
-      try {
-        const ingredientsText = upgradeResult.snippet.match(/Ingredients:\s*([\s\S]*?)(?=\s*Instructions?:|$)/i);
-        const ingredients = ingredientsText ? 
-          ingredientsText[1].split(/[\,\n]/).map(i => i.trim()).filter(i => i.length > 0) : 
-          ['premium spirits', 'seasonal ingredients'];
-
-        enhancedComment = await generateCocktailComment(
-          upgradeResult.title,
-          ingredients,
-          null,
-          apiKey
-        );
-      } catch (commentError) {
-        console.warn('Could not generate upgrade comment:', commentError.message);
-      }
-
+    if (ingredients.length > 0 || instructions) {
       return {
-        originalQuery: originalQuery,
-        suggestion: upgradeResult.snippet,
-        title: upgradeResult.title,
-        filePath: upgradeResult.filePath,
-        searchType: 'cocktail_upgrade',
-        snippet: upgradeResult.snippet,
-        why: upgradeResult.why,
-        upgradeType: upgradeType,
-        enhancedComment: enhancedComment,
-        supportsUpgrade: true // Upgrades can be further upgraded
+        name: cocktailName,
+        ingredients: ingredients,
+        instructions: instructions,
+        description: response.split('.')[0] + '.' // First sentence as description
       };
-
-    } catch (error) {
-      console.error('Error in getUpgradedCocktail:', error);
-            
-      if (error instanceof HttpsError) {
-        throw error;
-      }
-            
-      throw new HttpsError('internal', `Failed to process upgrade request: ${error.message}`);
     }
+
+    return null;
+  } catch (error) {
+    console.error('Error extracting cocktail from response:', error);
+    return null;
   }
-);
-
-// Optional: Function to get just enhanced comment for existing recipes
-exports.getEnhancedComment = functions.https.onCall(
-  async (data, context) => {
-    const { cocktailName, ingredients } = data;
-
-    if (!cocktailName || typeof cocktailName !== 'string') {
-      throw new functions.https.HttpsError('invalid-argument', 'Cocktail name is required');
-    }
-
-    if (!ingredients || !Array.isArray(ingredients)) {
-      throw new functions.https.HttpsError('invalid-argument', 'Ingredients array is required');
-    }
-
-    const apiKey = functions.config().generativelanguage.key;
-    if (!apiKey) {
-      throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
-    }
-
-    try {
-      const enhancedComment = await generateCocktailComment(
-        cocktailName,
-        ingredients,
-        null,
-        apiKey
-      );
-
-      return {
-        enhancedComment: enhancedComment,
-        success: true
-      };
-
-    } catch (error) {
-      console.error('Error generating enhanced comment:', error);
-      throw new HttpsError('internal', `Failed to generate comment: ${error.message}`);
-    }
-  }
-);
+}
 
 // Batch function for multiple signs
 exports.getBatchRecipes = functions.https.onRequest((req, res) => {

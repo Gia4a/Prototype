@@ -3,13 +3,12 @@
   "version": "1.0.0",
   "scripts": {
     "build:frontend": "cd frontend && npm install && npm run build",
-    "build:backend": "cd backend && npm install && npm run build",
-    "build": "npm run build:frontend && npm run build:backend",
-    "start": "cd backend && npm start",
+    "build": "npm run build:frontend",
     "dev:frontend": "cd frontend && npm run dev",
-    "dev:backend": "cd backend && npm run dev",
     "dev": "npm run dev:frontend",
-    "deploy:functions": "firebase deploy --only functions"
+    "deploy:functions": "firebase deploy --only functions",
+    "deploy:hosting": "firebase deploy --only hosting",
+    "deploy": "firebase deploy"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",
