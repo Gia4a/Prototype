@@ -38,7 +38,8 @@ function cleanAndParseGeminiJSON(responseText) {
         throw new Error('Empty response from Gemini');
     }
 
-    console.log("Original Gemini response:", responseText);
+    // Remove debug logging for production
+    // console.log("Original Gemini response:", responseText);
 
     try {
         // Remove markdown code blocks
@@ -61,7 +62,7 @@ function cleanAndParseGeminiJSON(responseText) {
             .replace(/,\s*([}\]])/g, '$1')  // Remove trailing commas
             .replace(/([{,]\s*)([a-zA-Z_$][a-zA-Z0-9_$]*)\s*:/g, '$1"$2":');  // Quote keys
 
-        console.log("Cleaned JSON:", cleaned);
+        // console.log("Cleaned JSON:", cleaned);
         
         return JSON.parse(cleaned);
         
@@ -96,7 +97,7 @@ exports.getRecipesFromCameraImage = functions.https.onCall(
     }
 
     try {
-      console.log('Processing camera image for liquor recognition and recipe generation...');
+      // Processing camera image for liquor recognition and recipe generation
 
       const result = await getRecipesFromImage(imageData, apiKey);
 
@@ -498,6 +499,67 @@ Format your response as natural speech that could be read aloud, avoiding comple
     } catch (error) {
       console.error('Error in getCocktailFromSpeech:', error);
       throw new functions.https.HttpsError('internal', `Failed to process speech: ${error.message}`);
+    }
+  }
+);
+
+// API Endpoint: Get cocktail recommendation from speech
+exports.getCocktailFromSpeech = functions.https.onCall(
+  async (data, context) => {
+    const { speechText, conversationHistory } = data;
+
+    if (!speechText || typeof speechText !== 'string') {
+      throw new HttpsError('invalid-argument', 'Speech text is required and must be a string');
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new HttpsError('internal', 'Gemini API key is not configured');
+    }
+
+    try {
+      // Build conversation context
+      let conversationContext = '';
+      if (conversationHistory && Array.isArray(conversationHistory)) {
+        conversationContext = conversationHistory
+          .slice(-3) // Keep last 3 exchanges for context
+          .map(item => `User: ${item.user}\nBartender: ${item.bartender}`)
+          .join('\n\n');
+      }
+
+      const prompt = `You are a knowledgeable and creative cocktail bartender at "Tips & Thirst" bar. 
+You have access to a wide variety of cocktail recipes and can create new ones based on customer preferences.
+
+${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
+
+Customer says: "${speechText}"
+
+Please respond as a friendly bartender would. If they want a cocktail recommendation, suggest 1-2 specific cocktails with:
+- Cocktail name
+- Brief description
+- Key ingredients
+- Simple preparation instructions
+
+Keep your response conversational and engaging, like you're chatting with a customer at the bar. If they ask about something else, respond helpfully but try to steer the conversation toward cocktails when appropriate.
+
+Response format: Keep it natural, like spoken conversation.`;
+
+      const response = await callGeminiAPI(prompt);
+
+      return {
+        response: response,
+        cocktailRecommendation: null, // We'll parse this from the response if needed
+        timestamp: new Date().toISOString()
+      };
+
+    } catch (error) {
+      console.error('Error in getCocktailFromSpeech:', error);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      throw new HttpsError('internal', `Failed to get cocktail recommendation: ${error.message}`);
     }
   }
 );

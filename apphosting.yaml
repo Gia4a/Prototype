@@ -17,12 +17,11 @@ runConfig:
 
   # Environment variables
   env:
-    # Gemini AI API Key
-    - variable: VITE_GEMINI_API_KEY
+    # Gemini AI API Key for functions
+    - variable: GEMINI_API_KEY
       value: AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M
       type: SECRET
       availability:
-        - BUILD
         - RUNTIME
 
     # Firebase Configuration

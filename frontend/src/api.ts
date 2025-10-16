@@ -1,50 +1,20 @@
-// api.ts - Shared API functions using local data and Gemini AI
-import { GoogleGenerativeAI } from '@google/generative-ai';
+// api.ts - Shared API functions using Firebase functions
+import { httpsCallable } from 'firebase/functions';
+import { functions } from './firebase';
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M');
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-// Speech-based cocktail recommendation using client-side Gemini AI
+// Speech-based cocktail recommendation using server-side Firebase function
 export async function getCocktailFromSpeech(speechText: string, conversationHistory?: Array<{user: string, bartender: string}>) {
     try {
-        // Build conversation context
-        let conversationContext = '';
-        if (conversationHistory && conversationHistory.length > 0) {
-            conversationContext = conversationHistory
-                .slice(-3) // Keep last 3 exchanges for context
-                .map(item => `User: ${item.user}\nBartender: ${item.bartender}`)
-                .join('\n\n');
-        }
+        const getCocktailFromSpeechFunction = httpsCallable(functions, 'getCocktailFromSpeech');
+        
+        const result = await getCocktailFromSpeechFunction({
+            speechText,
+            conversationHistory
+        });
 
-        const prompt = `You are a knowledgeable and creative cocktail bartender at "Tips & Thirst" bar. 
-You have access to a wide variety of cocktail recipes and can create new ones based on customer preferences.
-
-${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
-
-Customer says: "${speechText}"
-
-Please respond as a friendly bartender would. If they want a cocktail recommendation, suggest 1-2 specific cocktails with:
-- Cocktail name
-- Brief description
-- Key ingredients
-- Simple preparation instructions
-
-Keep your response conversational and engaging, like you're chatting with a customer at the bar. If they ask about something else, respond helpfully but try to steer the conversation toward cocktails when appropriate.
-
-Response format: Keep it natural, like spoken conversation.`;
-
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
-
-        return {
-            response: text,
-            cocktailRecommendation: null, // We'll parse this from the response if needed
-            timestamp: new Date().toISOString()
-        };
+        return result.data;
     } catch (error) {
-        console.error('Error calling Gemini API:', error);
+        console.error('Error calling Firebase function:', error);
         throw new Error('Failed to get cocktail recommendation');
     }
 }
