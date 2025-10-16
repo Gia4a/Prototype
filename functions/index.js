@@ -90,7 +90,7 @@ exports.getRecipesFromCameraImage = functions.https.onCall(
       throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
     }
 
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new HttpsError('internal', 'Gemini API key is not configured');
     }
@@ -133,7 +133,7 @@ exports.getShooterFromCameraImage = functions.https.onCall(
       throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
     }
 
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new HttpsError('internal', 'Gemini API key is not configured');
     }
@@ -175,7 +175,7 @@ exports.detectLiquorFromCameraImage = functions.https.onCall(
       throw new HttpsError('invalid-argument', 'Image data is required and must be a base64 string');
     }
 
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new HttpsError('internal', 'Gemini API key is not configured');
     }
@@ -217,7 +217,7 @@ exports.getRecipesFromLiquorName = functions.https.onCall(
       throw new HttpsError('invalid-argument', 'Liquor name is required and must be a string');
     }
 
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new HttpsError('internal', 'Gemini API key is not configured');
     }
@@ -433,7 +433,7 @@ exports.getCocktailFromSpeech = functions.https.onCall(
       throw new functions.https.HttpsError('invalid-argument', 'Speech text is required');
     }
 
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
       throw new functions.https.HttpsError('internal', 'Gemini API key is not configured');
     }
@@ -583,14 +583,14 @@ function getCurrentMoonPhase() {
 // Improved Gemini API integration
 async function callGeminiAPI(prompt) {
   try {
-    const apiKey = functions.config().generativelanguage.key;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
       throw new Error('Generative Language API Key not configured');
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
     const result = await model.generateContent({
       contents: [{ parts: [{ text: prompt }] }],

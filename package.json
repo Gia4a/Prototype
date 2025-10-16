@@ -1,5 +1,5 @@
 {
-  "name": "gemini-ai-search-app",
+  "name": "tips-and-thirst",
   "version": "1.0.0",
   "scripts": {
     "build:frontend": "cd frontend && npm install && npm run build",

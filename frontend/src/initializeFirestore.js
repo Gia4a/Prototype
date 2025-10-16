@@ -1,7 +1,6 @@
-// api.ts - Shared API functions using Firestore
+// initializeFirestore.js - Script to populate Firestore with initial data
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
     apiKey: "AIzaSyBAsuB5hgBGYr8vz32cM4EKcs39SMI3bHQ",
@@ -16,56 +15,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// Initialize Gemini AI
-const genAI = new GoogleGenerativeAI('AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M');
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
-// Speech-based cocktail recommendation using client-side Gemini AI
-export async function getCocktailFromSpeech(speechText: string, conversationHistory?: any[]) {
-    try {
-        // Build conversation context
-        let conversationContext = '';
-        if (conversationHistory && conversationHistory.length > 0) {
-            conversationContext = conversationHistory
-                .slice(-3) // Keep last 3 exchanges for context
-                .map(item => `User: ${item.user}\nBartender: ${item.bartender}`)
-                .join('\n\n');
-        }
-
-        const prompt = `You are a knowledgeable and creative cocktail bartender at "Tips & Thirst" bar. 
-You have access to a wide variety of cocktail recipes and can create new ones based on customer preferences.
-
-${conversationContext ? `Previous conversation:\n${conversationContext}\n\n` : ''}
-
-Customer says: "${speechText}"
-
-Please respond as a friendly bartender would. If they want a cocktail recommendation, suggest 1-2 specific cocktails with:
-- Cocktail name
-- Brief description
-- Key ingredients
-- Simple preparation instructions
-
-Keep your response conversational and engaging, like you're chatting with a customer at the bar. If they ask about something else, respond helpfully but try to steer the conversation toward cocktails when appropriate.
-
-Response format: Keep it natural, like spoken conversation.`;
-
-        const result = await model.generateContent(prompt);
-        const response = result.response;
-        const text = response.text();
-
-        return {
-            response: text,
-            cocktailRecommendation: null, // We'll parse this from the response if needed
-            timestamp: new Date().toISOString()
-        };
-    } catch (error) {
-        console.error('Error calling Gemini API:', error);
-        throw new Error('Failed to get cocktail recommendation');
-    }
-}
-
-// Local fallback data for horoscope recipes (will use Firestore when billing is enabled)
-const localHoroscopeData = [
+// Horoscope recipes data
+const horoscopeRecipes = [
     {
         sign: 'aries',
         element: 'fire',
@@ -409,42 +360,21 @@ const localHoroscopeData = [
     }
 ];
 
-// Fetch horoscope data (using local data for now, will switch to Firestore when billing is enabled)
-export async function fetchHoroscope(sign: string, displayName: string) {
+// Function to initialize Firestore data
+async function initializeHoroscopeData() {
     try {
-        // For now, use local data. Later this will query Firestore:
-        // const horoscopeRef = collection(db, 'horoscopeRecipes');
-        // const q = query(horoscopeRef, where('sign', '==', sign.toLowerCase()));
-        // const querySnapshot = await getDocs(q);
+        console.log('Initializing horoscope data...');
 
-        const recipe = localHoroscopeData.find(r => r.sign === sign.toLowerCase());
-
-        if (recipe) {
-            // Calculate current moon phase
-            const moonPhase = getCurrentMoonPhase();
-
-            return {
-                ...recipe,
-                moonPhase,
-                timestamp: new Date().toISOString()
-            };
-        } else {
-            throw new Error(`No horoscope recipe found for sign: ${sign}`);
+        for (const recipe of horoscopeRecipes) {
+            await addDoc(collection(db, 'horoscopeRecipes'), recipe);
+            console.log(`Added recipe for ${recipe.sign}`);
         }
+
+        console.log('Horoscope data initialization complete!');
     } catch (error) {
-        console.error('Error fetching horoscope:', error);
-        throw new Error('Failed to fetch horoscope data');
+        console.error('Error initializing data:', error);
     }
 }
 
-// Helper function to calculate moon phase
-function getCurrentMoonPhase(): string {
-    const phases = [
-        'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
-        'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
-    ];
-    const now = new Date();
-    const dayOfMonth = now.getDate();
-    const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
-    return phases[phaseIndex];
-}
+// Run the initialization
+initializeHoroscopeData();
