@@ -1,26 +1,22 @@
-// api.ts - Shared API functions using Firebase functions
-import { httpsCallable } from 'firebase/functions';
-import { functions } from './firebase';
+// initializeFirestore.js - Script to populate Firestore with initial data
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc } from 'firebase/firestore';
 
-// Speech-based cocktail recommendation using server-side Firebase function
-export async function getCocktailFromSpeech(speechText: string, conversationHistory?: Array<{user: string, bartender: string}>) {
-    try {
-        const getCocktailFromSpeechFunction = httpsCallable(functions, 'getCocktailFromSpeech');
-        
-        const result = await getCocktailFromSpeechFunction({
-            speechText,
-            conversationHistory
-        });
+const firebaseConfig = {
+    apiKey: "AIzaSyBAsuB5hgBGYr8vz32cM4EKcs39SMI3bHQ",
+    authDomain: "tips-and-thirst.firebaseapp.com",
+    projectId: "tips-and-thirst",
+    storageBucket: "tips-and-thirst.firebasestorage.app",
+    messagingSenderId: "998624584520",
+    appId: "1:998624584520:web:fda90f99c304aaae32497d",
+    measurementId: "G-R1DDH5L7TZ"
+};
 
-        return result.data;
-    } catch (error) {
-        console.error('Error calling Firebase function:', error);
-        throw new Error('Failed to get cocktail recommendation');
-    }
-}
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-// Local fallback data for horoscope recipes (will use Firestore when billing is enabled)
-const localHoroscopeData = [
+// Horoscope recipes data
+const horoscopeRecipes = [
     {
         sign: 'aries',
         element: 'fire',
@@ -364,42 +360,21 @@ const localHoroscopeData = [
     }
 ];
 
-// Fetch horoscope data (using local data for now, will switch to Firestore when billing is enabled)
-export async function fetchHoroscope(sign: string) {
+// Function to initialize Firestore data
+async function initializeHoroscopeData() {
     try {
-        // For now, use local data. Later this will query Firestore:
-        // const horoscopeRef = collection(db, 'horoscopeRecipes');
-        // const q = query(horoscopeRef, where('sign', '==', sign.toLowerCase()));
-        // const querySnapshot = await getDocs(q);
+        console.log('Initializing horoscope data...');
 
-        const recipe = localHoroscopeData.find(r => r.sign === sign.toLowerCase());
-
-        if (recipe) {
-            // Calculate current moon phase
-            const moonPhase = getCurrentMoonPhase();
-
-            return {
-                ...recipe,
-                moonPhase,
-                timestamp: new Date().toISOString()
-            };
-        } else {
-            throw new Error(`No horoscope recipe found for sign: ${sign}`);
+        for (const recipe of horoscopeRecipes) {
+            await addDoc(collection(db, 'horoscopeRecipes'), recipe);
+            console.log(`Added recipe for ${recipe.sign}`);
         }
+
+        console.log('Horoscope data initialization complete!');
     } catch (error) {
-        console.error('Error fetching horoscope:', error);
-        throw new Error('Failed to fetch horoscope data');
+        console.error('Error initializing data:', error);
     }
 }
 
-// Helper function to calculate moon phase
-function getCurrentMoonPhase(): string {
-    const phases = [
-        'new_moon', 'waxing_crescent', 'first_quarter', 'waxing_gibbous',
-        'full_moon', 'waning_gibbous', 'third_quarter', 'waning_crescent'
-    ];
-    const now = new Date();
-    const dayOfMonth = now.getDate();
-    const phaseIndex = Math.floor((dayOfMonth / 30) * 8) % 8;
-    return phases[phaseIndex];
-}
+// Run the initialization
+initializeHoroscopeData();

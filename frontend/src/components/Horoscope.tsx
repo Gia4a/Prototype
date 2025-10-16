@@ -472,10 +472,11 @@ interface HoroscopeProps {
 
 const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, onError }) => {
   const horoscopeRecipes = new HoroscopeRecipes();
+  const [selectedSign, setSelectedSign] = useState<AstrologySign | null>(null);
 
   const mutation = useMutation({
-    mutationFn: ({ sign, displayName }: { sign: string; displayName: string }) => fetchHoroscope(sign, displayName),
-    onSuccess: (astrologyData: any, variables: { sign: string; displayName: string }) => {
+    mutationFn: ({ sign }: { sign: string }) => fetchHoroscope(sign),
+    onSuccess: (astrologyData: any, variables: { sign: string }) => {
       const recipe = horoscopeRecipes.getRecipe(variables.sign, astrologyData.moonPhase);
       const ingredients = [];
       if (recipe.recipe.base_spirit) ingredients.push(`2oz ${recipe.recipe.base_spirit.replace('_', ' ')}`);
@@ -498,7 +499,7 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
         insight: astrologyData.fourLineIdiom,
         planetaryAlignments: astrologyData.planetaryAlignments
       };
-      onSignSelect({ name: variables.sign, symbol: '', displayName: variables.displayName }, result);
+      onSignSelect({ name: variables.sign, symbol: '', displayName: selectedSign?.displayName || '' }, result);
     },
     onError: () => {
       if (onError) onError('Unable to connect to cosmic servers.');
@@ -509,8 +510,9 @@ const Horoscope: React.FC<HoroscopeProps> = ({ onSignSelect, onLoadingChange, on
   });
 
   const handleSignSelect = (sign: AstrologySign) => {
+    setSelectedSign(sign);
     if (onLoadingChange) onLoadingChange(true);
-    mutation.mutate({ sign: sign.name, displayName: sign.displayName });
+    mutation.mutate({ sign: sign.name });
   };
 
   return (
