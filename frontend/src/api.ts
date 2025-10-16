@@ -1,27 +1,12 @@
-// api.ts - Shared API functions using Firestore
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, doc, getDoc, getDocs, query, where, orderBy, limit } from 'firebase/firestore';
+// api.ts - Shared API functions using local data and Gemini AI
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-const firebaseConfig = {
-    apiKey: "AIzaSyBAsuB5hgBGYr8vz32cM4EKcs39SMI3bHQ",
-    authDomain: "tips-and-thirst.firebaseapp.com",
-    projectId: "tips-and-thirst",
-    storageBucket: "tips-and-thirst.firebasestorage.app",
-    messagingSenderId: "998624584520",
-    appId: "1:998624584520:web:fda90f99c304aaae32497d",
-    measurementId: "G-R1DDH5L7TZ"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
 // Initialize Gemini AI
-const genAI = new GoogleGenerativeAI('AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M');
+const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY || 'AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M');
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
 // Speech-based cocktail recommendation using client-side Gemini AI
-export async function getCocktailFromSpeech(speechText: string, conversationHistory?: any[]) {
+export async function getCocktailFromSpeech(speechText: string, conversationHistory?: Array<{user: string, bartender: string}>) {
     try {
         // Build conversation context
         let conversationContext = '';
@@ -410,7 +395,7 @@ const localHoroscopeData = [
 ];
 
 // Fetch horoscope data (using local data for now, will switch to Firestore when billing is enabled)
-export async function fetchHoroscope(sign: string, displayName: string) {
+export async function fetchHoroscope(sign: string) {
     try {
         // For now, use local data. Later this will query Firestore:
         // const horoscopeRef = collection(db, 'horoscopeRecipes');

@@ -1,0 +1,15 @@
+# Firebase App Hosting Configuration
+# This file configures how Firebase App Hosting builds and deploys your app
+
+runConfig:
+  # Build command to run in the repository root
+  buildCommand: cd frontend && npm run build
+
+  # Directory containing the built app (relative to repository root)
+  outputDirectory: frontend/dist
+
+  # Environment variables
+  env:
+    - variable: VITE_GEMINI_API_KEY
+      value: AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M
+      type: SECRET
