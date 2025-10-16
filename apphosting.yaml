@@ -1,5 +1,5 @@
 # Firebase App Hosting Configuration
-# This file configures how Firebase App Hosting builds and deploys your app
+# Enhanced configuration based on production best practices
 
 runConfig:
   # Build command to run in the repository root
@@ -8,8 +8,89 @@ runConfig:
   # Directory containing the built app (relative to repository root)
   outputDirectory: frontend/dist
 
+  # Performance optimizations
+  cpu: 1
+  memoryMiB: 1024
+  concurrency: 80
+  minInstances: 0
+  maxInstances: 50
+
   # Environment variables
   env:
+    # Gemini AI API Key
     - variable: VITE_GEMINI_API_KEY
       value: AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M
       type: SECRET
+      availability:
+        - BUILD
+        - RUNTIME
+
+    # Firebase Configuration
+    - variable: VITE_FIREBASE_API_KEY
+      value: AIzaSyBAsuB5hgBGYr8vz32cM4EKcs39SMI3bHQ
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_AUTH_DOMAIN
+      value: tips-and-thirst.firebaseapp.com
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_PROJECT_ID
+      value: tips-and-thirst
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_STORAGE_BUCKET
+      value: tips-and-thirst.firebasestorage.app
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_MESSAGING_SENDER_ID
+      value: "998624584520"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_APP_ID
+      value: "1:998624584520:web:fda90f99c304aaae32497d"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_FIREBASE_MEASUREMENT_ID
+      value: "G-R1DDH5L7TZ"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    # App Configuration
+    - variable: VITE_APP_NAME
+      value: "Tips & Thirst"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    - variable: VITE_APP_TYPE
+      value: "cocktail-assistant"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    # Node.js Environment
+    - variable: NODE_ENV
+      value: "production"
+      availability:
+        - BUILD
+        - RUNTIME
+
+    # Frontend URL for future use
+    - variable: VITE_FRONTEND_URL
+      value: "https://tips-and-thirst--[backend-id].web.app"
+      availability:
+        - BUILD
+        - RUNTIME
