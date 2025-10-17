@@ -2,12 +2,6 @@
 # Enhanced configuration based on production best practices
 
 runConfig:
-  # Build command to run in the repository root
-  buildCommand: cd frontend && npm run build
-
-  # Directory containing the built app (relative to repository root)
-  outputDirectory: frontend/dist
-
   # Performance optimizations
   cpu: 1
   memoryMiB: 1024
@@ -20,7 +14,6 @@ runConfig:
     # Gemini AI API Key for functions
     - variable: GEMINI_API_KEY
       value: AIzaSyAIWQtqpRd02wXOG9a6rsVW0B1PxHWkl2M
-      type: SECRET
       availability:
         - RUNTIME
 
