@@ -6,8 +6,8 @@ const StarButton = ({ onClick }: { onClick: () => void }) => (
         onClick={onClick}
         style={{
             position: 'relative',
-            width: '105px',
-            height: '105px',
+            width: 'clamp(4rem, 15vw, 6.5625rem)', // 64px to 105px
+            height: 'clamp(4rem, 15vw, 6.5625rem)', // 64px to 105px
             cursor: 'pointer',
             transition: 'transform 0.3s ease',
         }}
@@ -122,8 +122,8 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
             justifyContent: 'center',
             cursor: disabled ? 'not-allowed' : 'pointer',
             opacity: disabled ? 0.5 : 1,
-            width: 120,
-            height: 80,
+            width: 'clamp(4.5rem, 18vw, 7.5rem)', // 72px to 120px
+            height: 'clamp(3rem, 12vw, 5rem)', // 48px to 80px
             background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
             borderRadius: '60px / 40px', // Oval shape
             border: 'none',
@@ -144,8 +144,8 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
     >
         <div style={{
             position: 'relative',
-            width: '60px',
-            height: '35px',
+            width: 'clamp(2.5rem, 10vw, 3.75rem)', // 40px to 60px
+            height: 'clamp(1.5rem, 6vw, 2.1875rem)', // 24px to 35px
             background: '#fff',
             borderRadius: '50px',
             display: 'flex',
@@ -156,8 +156,8 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
         }}>
             {/* Iris */}
             <div style={{
-                width: '24px',
-                height: '24px',
+                width: 'clamp(1rem, 4vw, 1.5rem)', // 16px to 24px
+                height: 'clamp(1rem, 4vw, 1.5rem)', // 16px to 24px
                 background: 'radial-gradient(circle at 30% 30%, #4169e1, #1a1a2e)',
                 borderRadius: '50%',
                 position: 'relative',
@@ -165,8 +165,8 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
             }}>
                 {/* Pupil */}
                 <div style={{
-                    width: '12px',
-                    height: '12px',
+                    width: 'clamp(0.5rem, 2vw, 0.75rem)', // 8px to 12px
+                    height: 'clamp(0.5rem, 2vw, 0.75rem)', // 8px to 12px
                     background: '#000',
                     borderRadius: '50%',
                     position: 'absolute',
@@ -176,13 +176,13 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
                 }}>
                     {/* Light reflection */}
                     <div style={{
-                        width: '4px',
-                        height: '4px',
+                        width: 'clamp(0.2rem, 0.8vw, 0.25rem)', // 3.2px to 4px
+                        height: 'clamp(0.2rem, 0.8vw, 0.25rem)', // 3.2px to 4px
                         background: '#fff',
                         borderRadius: '50%',
                         position: 'absolute',
-                        top: '2px',
-                        left: '2px'
+                        top: '0.125rem', // 2px
+                        left: '0.125rem' // 2px
                     }} />
                 </div>
             </div>
@@ -204,10 +204,10 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
         <style>{`
             @keyframes eyeBlink {
                 0%, 90%, 100% { 
-                    height: 35px;
+                    height: 100%;
                 }
                 95% { 
-                    height: 4px;
+                    height: 11.4%; /* approximately 4px relative to 35px */
                 }
             }
             
@@ -221,10 +221,10 @@ const EyeIcon = ({ onClick, disabled }: { onClick: () => void; disabled: boolean
             }
             
             @keyframes eyeMove {
-                0%, 100% { transform: translateX(0px); }
-                25% { transform: translateX(-3px); }
-                50% { transform: translateX(0px); }
-                75% { transform: translateX(3px); }
+                0%, 100% { transform: translateX(0rem); }
+                25% { transform: translateX(-0.1875rem); } /* -3px */
+                50% { transform: translateX(0rem); }
+                75% { transform: translateX(0.1875rem); } /* 3px */
             }
         `}</style>
     </div>
@@ -240,13 +240,13 @@ const ButtonRow: React.FC<ButtonRowProps> = ({ onHoroscopeClick, onCameraClick, 
     return (
         <div style={{
             position: 'absolute',
-            left: '10px',
-            bottom: '130px',
+            left: '0.625rem', // 10px
+            bottom: '8.125rem', // 130px
             zIndex: 1002,
             display: 'flex',
             flexDirection: 'row',
             alignItems: 'center',
-            gap: '15px', // Space between buttons
+            gap: '0.9375rem', // 15px
         }}>
             {/* Daily Horoscope Star Button */}
             <StarButton onClick={onHoroscopeClick} />

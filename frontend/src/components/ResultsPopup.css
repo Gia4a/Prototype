@@ -22,20 +22,20 @@
 /* Close button */
 .results-popup-close-button {
     position: absolute;
-    top: 12px;
-    right: 12px;
+    top: 0.75rem; /* 12px */
+    right: 0.75rem; /* 12px */
     /* Ensure it's inside the card, not the screen */
     z-index: 20;
     background: none;
     border: none;
     color: white;
-    font-size: 28px;
+    font-size: 1.75rem; /* 28px */
     cursor: pointer;
     z-index: 10;
-    padding: 5px;
+    padding: 0.3125rem; /* 5px */
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 2.5rem; /* 40px */
+    height: 2.5rem; /* 40px */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -48,17 +48,17 @@
 /* Universal card container - optimized for mobile frame */
 .universal-card-container {
     width: 100%;
-    max-width: 432px; /* Match mobile frame width */
+    max-width: 27rem; /* 432px */
     height: 62vh;
-    max-height: 535px; /* Constrain for 930px height */
+    max-height: 33.4375rem; /* 535px */
     background-color: transparent;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 8px;
+    padding: 0.5rem; /* 8px */
     box-sizing: border-box;
-    border-radius: 16px;
+    border-radius: 1rem; /* 16px */
     box-shadow: 0 4px 24px rgba(0,0,0,0.18);
     position: relative;
     bottom: 5%;
@@ -74,10 +74,10 @@
 }
 
 .loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #333;
-    border-top: 4px solid #0056b3;
+    width: 2.5rem; /* 40px */
+    height: 2.5rem; /* 40px */
+    border: 0.25rem solid #333; /* 4px */
+    border-top: 0.25rem solid #0056b3; /* 4px */
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto;
@@ -86,16 +86,16 @@
 /* Error styling */
 .error-section {
     background-color: #3a1f1f;
-    border-radius: 8px;
-    padding: 20px;
-    border-left: 4px solid #ff6b6b;
+    border-radius: 0.5rem; /* 8px */
+    padding: 1.25rem; /* 20px */
+    border-left: 0.25rem solid #ff6b6b; /* 4px */
     height: 100%;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
     text-align: center;
-    max-width: 432px;
+    max-width: 27rem; /* 432px */
     margin: 0 auto;
 }
 

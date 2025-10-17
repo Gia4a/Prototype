@@ -4,7 +4,7 @@
 const STANDARD_STYLES = {
   containerStyle: {
     width: '100%',
-    maxWidth: '432px', // Match your mobile frame width
+    maxWidth: '27rem', // 432px
     height: '100%', // Inherit from parent container
     maxHeight: '100%', // Inherit from parent container
     backgroundColor: '#111827',
@@ -12,10 +12,10 @@ const STANDARD_STYLES = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: '12px',
+    padding: '0.75rem', // 12px
     boxSizing: 'border-box',
     margin: '0 auto',
-    borderRadius: '16px',
+    borderRadius: '1rem', // 16px
     boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
   } as React.CSSProperties,
 
@@ -24,7 +24,7 @@ const STANDARD_STYLES = {
     height: '100%', // Fill parent container
     maxWidth: '100%',
     backgroundColor: '#1f2937',
-    borderRadius: '8px',
+    borderRadius: '0.5rem',
     border: '1px solid #3b82f6',
     overflow: 'hidden', // Changed from visible to hidden
     display: 'flex',
@@ -33,19 +33,19 @@ const STANDARD_STYLES = {
 
   headerStyle: {
     background: 'linear-gradient(to right, #2563eb, #9333ea)',
-    padding: '10px',
+    padding: '0.625rem', // 10px
     textAlign: 'center',
     flexShrink: 0,
-    marginBottom: '8px',
+    marginBottom: '0.5rem', // 8px
     maxHeight: '12%', // Reduced from 15%
-    minHeight: '60px'
+    minHeight: '3.75rem' // 60px
   } as React.CSSProperties,
 
   titleStyle: {
     fontSize: 'clamp(1rem, 4vw, 1.8rem)', // More responsive sizing
     fontWeight: 'bold',
     margin: '0',
-    textShadow: '0px 4px 8px rgba(0, 0, 0, 0.7)',
+    textShadow: '0 0.25rem 0.5rem rgba(0, 0, 0, 0.7)',
     color: 'white',
     whiteSpace: 'nowrap',
     overflow: 'hidden',
@@ -66,10 +66,10 @@ const STANDARD_STYLES = {
   } as React.CSSProperties,
 
   contentStyle: {
-    padding: '10px',
+    padding: '0.625rem', // 10px
     display: 'flex',
     flexDirection: 'column',
-    gap: '6px',
+    gap: '0.375rem', // 6px
     flex: 1,
     overflow: 'hidden',
     height: '100%',
@@ -82,11 +82,11 @@ const STANDARD_STYLES = {
     fontSize: 'clamp(0.65rem, 3vw, 0.75rem)',
     lineHeight: '1.3',
     backgroundColor: '#374151',
-    borderRadius: '4px',
-    padding: '8px',
+    borderRadius: '0.25rem', // 4px
+    padding: '0.5rem', // 8px
     flexShrink: 0,
     marginTop: 0,
-    border: '3px solid rgba(59,130,246,0.18)',
+    border: '0.1875rem solid rgba(59,130,246,0.18)', // 3px
     boxShadow: '0 2px 8px 0 rgba(59,130,246,0.07)',
     minHeight: '20%', // Reduced from 24%
     maxHeight: '20%',
@@ -103,7 +103,7 @@ const STANDARD_STYLES = {
   poeticTextStyle: {
     fontStyle: 'italic',
     color: '#bfdbfe',
-    marginBottom: '4px',
+    marginBottom: '0.25rem',
     fontSize: 'clamp(0.65rem, 2.8vw, 0.75rem)',
     textAlign: 'center',
     lineHeight: '1.25',
