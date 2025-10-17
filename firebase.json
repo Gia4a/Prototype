@@ -14,15 +14,9 @@
     ]
   },
   "emulators": {
-    "dataconnect": {
-      "dataDir": "dataconnect/.dataconnect/pgliteData"
-    },
     "hosting": {
       "port": 5000
     }
-  },
-  "dataconnect": {
-    "source": "dataconnect"
   },
   "functions": {
     "source": "functions",
