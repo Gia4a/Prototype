@@ -1,22 +1,3 @@
-# Firebase App Hosting Configuration
-# Configuration for serving static frontend with Express server
-
-runConfig:
-  # Environment variables for functions
-  env:
-    - variable: GEMINI_API_KEY
-      value: AIzaSyCXt4Rgduq8OhQzBFW1nXdToL-4gc-OjX8
-      availability:
-        - RUNTIME
-        - BUILD
-
-  # Cloud Run configuration
-  cpu: 1
-  memoryMiB: 512
-  concurrency: 80
-  minInstances: 0
-  maxInstances: 100
-
 # Firebase App Hosting Configuration for Static Site
 runConfig:
   env:
@@ -34,12 +15,17 @@ runConfig:
 
 buildConfig:
   buildCommand: |
+    echo "Building frontend..."
     cd frontend && npm ci && npm run build
-    npm ci
-    cp -r frontend/dist/* .
+    echo "Installing root dependencies..."
+    cd .. && npm ci
+    echo "Copying built files..."
+    cp -r frontend/dist/* ./
+    echo "Build complete. Files in workspace:"
+    ls -la
   startCommand: node server.js
   includedFiles:
-    - frontend/dist/**
+    - frontend/**
     - server.js
     - package*.json
     - firebase.json

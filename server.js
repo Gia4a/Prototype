@@ -22,10 +22,22 @@ app.get('*', (req, res) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).send('API route not found');
   }
-  res.sendFile(path.join(__dirname, 'index.html'));
+
+  const indexPath = path.join(__dirname, 'index.html');
+  console.log('Serving index.html from:', indexPath);
+
+  if (require('fs').existsSync(indexPath)) {
+    res.sendFile(indexPath);
+  } else {
+    console.error('index.html not found at:', indexPath);
+    console.log('Directory contents:', require('fs').readdirSync(__dirname));
+    res.status(404).send('index.html not found');
+  }
 });
 
 const port = process.env.PORT || 8080;
 app.listen(port, () => {
   console.log(`Firebase App Hosting server running on port ${port}`);
+  console.log('Working directory:', __dirname);
+  console.log('Directory contents:', require('fs').readdirSync(__dirname));
 });
