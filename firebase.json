@@ -13,9 +13,15 @@
       }
     ]
   },
+  "apphosting": {
+    "source": "apphosting.yaml"
+  },
   "emulators": {
     "hosting": {
       "port": 5000
+    },
+    "functions": {
+      "port": 5001
     }
   },
   "functions": {

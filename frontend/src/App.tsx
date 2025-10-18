@@ -1,5 +1,7 @@
-// App.tsx - Updated with Camera Modal at App level
+// App.tsx - Updated with Speech-to-Cocktail Integration
 import React, { useState, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
 import ButtonRow from './components/ButtonRow';
@@ -7,6 +9,26 @@ import CameraCapture from './components/CameraCapture';
 import SpeechModal from './components/SpeechModal';
 import type { CameraCaptureHandle } from './components/CameraCapture';
 import './App.css';
+
+// Initialize Firebase (replace with your actual config)
+const firebaseConfig = {
+    apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+    authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.REACT_APP_FIREBASE_APP_ID
+};
+
+const app = initializeApp(firebaseConfig);
+const functions = getFunctions(app);
+
+// Interface for conversation messages
+interface ConversationMessage {
+    role: 'user' | 'assistant';
+    content: string;
+    timestamp: string;
+}
 
 // Interface for mixologist response
 interface MixologistResponse {
@@ -26,7 +48,7 @@ interface MixologistResponse {
     };
 }
 
-// Add the missing HoroscopeResult interface
+// Horoscope result interface
 interface HoroscopeResult {
     cocktailName: string;
     theme: string;
@@ -50,8 +72,120 @@ const App: React.FC = () => {
     const [showCamera, setShowCamera] = useState(false);
     const [showSpeechModal, setShowSpeechModal] = useState(false);
     
+    // Speech conversation state
+    const [conversationHistory, setConversationHistory] = useState<ConversationMessage[]>([]);
+    const [isProcessingSpeech, setIsProcessingSpeech] = useState(false);
+    
     // Camera ref at App level
     const cameraRef = useRef<CameraCaptureHandle>(null);
+
+    // Process speech with Gemini via Firebase Function
+    const processSpeechWithGemini = async (speechText: string) => {
+        setIsProcessingSpeech(true);
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            console.log('Processing speech:', speechText);
+            
+            // Get the callable function
+            const getCocktailFromSpeech = httpsCallable(functions, 'getCocktailFromSpeech');
+            
+            // Call with speech text and conversation history
+            const result = await getCocktailFromSpeech({
+                speechText: speechText,
+                conversationHistory: conversationHistory.map(msg => ({
+                    role: msg.role,
+                    content: msg.content
+                }))
+            });
+
+            const data = result.data as any;
+            console.log('Gemini response:', data);
+
+            if (data.success) {
+                // Add user message to history
+                const userMessage: ConversationMessage = {
+                    role: 'user',
+                    content: speechText,
+                    timestamp: new Date().toISOString()
+                };
+
+                // Add assistant response to history
+                const assistantMessage: ConversationMessage = {
+                    role: 'assistant',
+                    content: data.response,
+                    timestamp: data.timestamp || new Date().toISOString()
+                };
+
+                setConversationHistory(prev => [...prev, userMessage, assistantMessage]);
+
+                // If there's a cocktail recommendation, display it
+                if (data.cocktailRecommendation) {
+                    const cocktail = data.cocktailRecommendation;
+                    const cocktailResponse: MixologistResponse = {
+                        originalQuery: speechText,
+                        suggestion: data.response,
+                        title: cocktail.name,
+                        content: cocktail.description,
+                        snippet: formatCocktailSnippet(cocktail),
+                        searchType: 'speech',
+                        why: 'Personalized recommendation from your bartender',
+                        enhancedComment: {
+                            poeticDescription: cocktail.description,
+                            personalComment: data.response,
+                            upgradeComment: undefined
+                        }
+                    };
+                    
+                    setRecipes({classic: cocktailResponse, elevate: null});
+                    setCurrentRecipeType('classic');
+                    setShowResults(true);
+                } else {
+                    // Just conversational response without specific cocktail
+                    const conversationalResponse: MixologistResponse = {
+                        originalQuery: speechText,
+                        suggestion: data.response,
+                        title: 'Bartender Says',
+                        content: data.response,
+                        searchType: 'speech',
+                        why: 'Conversational response from your bartender'
+                    };
+                    
+                    setRecipes({classic: conversationalResponse, elevate: null});
+                    setCurrentRecipeType('classic');
+                    setShowResults(true);
+                }
+
+            } else {
+                throw new Error('Failed to get response from bartender');
+            }
+
+        } catch (err: any) {
+            console.error('Error calling Firebase function:', err);
+            const errorMessage = err.message || 'Failed to process your request. Please try again.';
+            setError(errorMessage);
+            handleError(errorMessage);
+        } finally {
+            setIsProcessingSpeech(false);
+            setIsLoading(false);
+        }
+    };
+
+    // Format cocktail recipe into snippet
+    const formatCocktailSnippet = (cocktail: any): string => {
+        let snippet = '';
+        
+        if (cocktail.ingredients && cocktail.ingredients.length > 0) {
+            snippet += 'Ingredients: ' + cocktail.ingredients.join(', ') + '. ';
+        }
+        
+        if (cocktail.instructions) {
+            snippet += 'Instructions: ' + cocktail.instructions;
+        }
+        
+        return snippet;
+    };
 
     // Handle new suggestions from search
     const handleNewSuggestion = (suggestion: MixologistResponse | string | null, query?: string) => {
@@ -122,6 +256,10 @@ const App: React.FC = () => {
     // Toggle speech modal visibility
     const toggleSpeechModal = () => {
         setShowSpeechModal(!showSpeechModal);
+        // Clear conversation when closing modal
+        if (showSpeechModal) {
+            setConversationHistory([]);
+        }
     };
 
     // Handle camera capture - moved to App level
@@ -143,11 +281,16 @@ const App: React.FC = () => {
         }
     };
 
-    // Handle speech result
-    const handleSpeechResult = (transcript: string) => {
-        setShowSpeechModal(false);
+    // Handle speech result - UPDATED to use Firebase Function
+    const handleSpeechResult = async (transcript: string) => {
+        console.log('Speech recognized:', transcript);
+        
         if (transcript.trim()) {
-            handleNewSuggestion(transcript);
+            try {
+                await processSpeechWithGemini(transcript);
+            } catch (err) {
+                console.error('Error processing speech:', err);
+            }
         }
     };
 
@@ -186,17 +329,16 @@ const App: React.FC = () => {
                     transform: 'translateX(-50%)',
                     zIndex: 1002
                 }}>
-                    {/* @ts-ignore */}
                     <ButtonRow 
                         onHoroscopeClick={toggleHoroscopeGrid}
                         onCameraClick={toggleCamera}
                         onSpeechClick={toggleSpeechModal}
-                        isLoading={isLoading}
+                        isLoading={isLoading || isProcessingSpeech}
                     />
                 </div>
             </div>
 
-            {/* Camera Modal - Override universal-card-container positioning */}
+            {/* Camera Modal */}
             {showCamera && (
                 <div
                     style={{
@@ -215,7 +357,6 @@ const App: React.FC = () => {
                         backdropFilter: 'blur(10px)',
                         padding: '15px',
                         boxSizing: 'border-box',
-                        // Override any CSS class positioning
                         bottom: 'unset !important',
                         right: 'unset !important',
                         margin: '0 !important',
@@ -224,7 +365,6 @@ const App: React.FC = () => {
                     }}
                     onClick={e => e.stopPropagation()}
                 >
-              
                     {/* Close button */}
                     <button
                         onClick={() => {
@@ -261,7 +401,7 @@ const App: React.FC = () => {
                     <div
                         style={{
                             width: '100%',
-                            height: 'calc(100% - 60px)', // Account for title and padding
+                            height: 'calc(100% - 60px)',
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: 'center',
@@ -299,7 +439,7 @@ const App: React.FC = () => {
                 />
             )}
 
-            {/* Horoscope Grid - Outside image-container */}
+            {/* Horoscope Grid */}
             {showHoroscope && (
                 <Horoscope 
                     onSignSelect={(sign, result: HoroscopeResult) => {
@@ -327,7 +467,7 @@ const App: React.FC = () => {
                 />
             )}
 
-            {/* Speech Modal */}
+            {/* Speech Modal - NOW INTEGRATED WITH FIREBASE */}
             <SpeechModal
                 isOpen={showSpeechModal}
                 onClose={() => setShowSpeechModal(false)}
@@ -336,7 +476,7 @@ const App: React.FC = () => {
             />
 
             {/* Loading Indicator */}
-            {isLoading && (
+            {(isLoading || isProcessingSpeech) && (
                 <div className="loading-container" style={{ 
                     position: 'fixed', 
                     top: '50%', 
@@ -350,7 +490,7 @@ const App: React.FC = () => {
                     zIndex: 9999
                 }}>
                     <div className="loading-spinner" />
-                    <p>Crafting your perfect cocktail...</p>
+                    <p>{isProcessingSpeech ? 'Talking to your bartender...' : 'Crafting your perfect cocktail...'}</p>
                 </div>
             )}
 

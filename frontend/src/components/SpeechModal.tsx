@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 
 // TypeScript declarations for Web Speech API
 declare global {
@@ -27,6 +27,7 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
     const [confidence, setConfidence] = useState(0);
     const recognitionRef = useRef<any>(null);
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const isStoppingRef = useRef(false);
 
     // Check for browser support
     useEffect(() => {
@@ -42,6 +43,7 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
 
             recognition.onstart = () => {
                 setIsListening(true);
+                isStoppingRef.current = false;
                 console.log('Speech recognition started');
             };
 
@@ -69,8 +71,11 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                         clearTimeout(timeoutRef.current);
                     }
                     timeoutRef.current = setTimeout(() => {
-                        stopListening();
-                    }, 1500); // Wait 1.5 seconds for more speech
+                        if (recognitionRef.current && !isStoppingRef.current) {
+                            isStoppingRef.current = true;
+                            recognitionRef.current.stop();
+                        }
+                    }, 1500);
                 }
             };
 
@@ -78,11 +83,16 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                 console.error('Speech recognition error:', event.error);
                 setIsListening(false);
                 
+                // Don't treat 'no-speech' as an error - just restart
+                if (event.error === 'no-speech') {
+                    console.log('No speech detected, continuing to listen...');
+                    return;
+                }
+                
                 let errorMessage = 'Speech recognition failed';
                 switch (event.error) {
-                    case 'no-speech':
-                        errorMessage = 'No speech detected. Please try again.';
-                        break;
+                    case 'aborted':
+                        return; // Silent - user stopped manually
                     case 'audio-capture':
                         errorMessage = 'Microphone not available. Please check permissions.';
                         break;
@@ -99,8 +109,22 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
             };
 
             recognition.onend = () => {
-                setIsListening(false);
                 console.log('Speech recognition ended');
+                setIsListening(false);
+                
+                // Auto-restart if we're still open and not manually stopping
+                if (isOpen && !isStoppingRef.current) {
+                    console.log('Restarting speech recognition...');
+                    setTimeout(() => {
+                        try {
+                            if (recognitionRef.current && !isStoppingRef.current) {
+                                recognitionRef.current.start();
+                            }
+                        } catch (error) {
+                            console.error('Failed to restart recognition:', error);
+                        }
+                    }, 100);
+                }
             };
 
             recognitionRef.current = recognition;
@@ -111,9 +135,9 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [onError]);
+    }, [onError, isOpen]);
 
-    const startListening = () => {
+    const startListening = useCallback(() => {
         if (!isSupported || !recognitionRef.current) {
             onError('Speech recognition is not supported in this browser');
             return;
@@ -121,26 +145,34 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
 
         setTranscript('');
         setConfidence(0);
+        isStoppingRef.current = false;
         
         try {
             recognitionRef.current.start();
-        } catch (error) {
+        } catch (error: any) {
+            // If already started, ignore the error
+            if (error.message && error.message.includes('already started')) {
+                console.log('Recognition already started');
+                return;
+            }
             console.error('Failed to start speech recognition:', error);
             onError('Failed to start speech recognition');
         }
-    };
+    }, [isSupported, onError]);
 
-    const stopListening = () => {
+    const stopListening = useCallback(() => {
+        isStoppingRef.current = true;
         if (recognitionRef.current && isListening) {
             recognitionRef.current.stop();
         }
         if (timeoutRef.current) {
             clearTimeout(timeoutRef.current);
         }
-    };
+    }, [isListening]);
 
     const handleSubmit = () => {
         if (transcript.trim()) {
+            stopListening();
             onSpeechResult(transcript.trim());
             setTranscript('');
             onClose();
@@ -156,10 +188,17 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
     // Auto-close modal when not open
     useEffect(() => {
         if (!isOpen) {
+            isStoppingRef.current = true;
             stopListening();
             setTranscript('');
+        } else {
+            // Auto-start listening when modal opens
+            const timer = setTimeout(() => {
+                startListening();
+            }, 500);
+            return () => clearTimeout(timer);
         }
-    }, [isOpen]);
+    }, [isOpen, startListening, stopListening]);
 
     if (!isOpen) return null;
 
@@ -185,7 +224,6 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                 boxShadow: '0 10px 30px rgba(0, 0, 0, 0.3)',
                 position: 'relative'
             }}>
-                {/* Close button */}
                 <button
                     onClick={handleClose}
                     style={{
@@ -218,7 +256,6 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                     </div>
                 ) : (
                     <>
-                        {/* Microphone visualization */}
                         <div style={{
                             textAlign: 'center',
                             marginBottom: '20px'
@@ -254,7 +291,6 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                             </p>
                         </div>
 
-                        {/* Transcript display */}
                         <div style={{
                             minHeight: '80px',
                             padding: '15px',
@@ -293,7 +329,6 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                             )}
                         </div>
 
-                        {/* Action buttons */}
                         <div style={{
                             display: 'flex',
                             gap: '10px',
@@ -331,7 +366,6 @@ const SpeechModal: React.FC<SpeechModalProps> = ({
                 )}
             </div>
 
-            {/* CSS Animation */}
             <style>
                 {`
                     @keyframes pulse {

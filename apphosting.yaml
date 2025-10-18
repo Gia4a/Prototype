@@ -1,11 +1,34 @@
 # Firebase App Hosting Configuration
-# Enhanced configuration based on production best practices
+# Configuration for serving static frontend with Express server
 
 runConfig:
-  # Environment variables
+  # Environment variables for functions
   env:
-    # Gemini AI API Key for functions
     - variable: GEMINI_API_KEY
       value: AIzaSyCXt4Rgduq8OhQzBFW1nXdToL-4gc-OjX8
       availability:
         - RUNTIME
+        - BUILD
+
+  # Cloud Run configuration
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+  minInstances: 0
+  maxInstances: 100
+
+# Build configuration
+buildConfig:
+  # Build the frontend and prepare server
+  buildCommand: |
+    cd frontend && npm ci && npm run build
+    npm ci
+  # Start command for the server
+  startCommand: node server.js
+  # Include necessary files
+  includedFiles:
+    - frontend/dist/**
+    - server.js
+    - package*.json
+    - firebase.json
+    - apphosting.yaml
