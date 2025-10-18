@@ -17,15 +17,27 @@ runConfig:
   minInstances: 0
   maxInstances: 100
 
-# Build configuration
+# Firebase App Hosting Configuration for Static Site
+runConfig:
+  env:
+    - variable: GEMINI_API_KEY
+      value: AIzaSyCXt4Rgduq8OhQzBFW1nXdToL-4gc-OjX8
+      availability:
+        - RUNTIME
+        - BUILD
+
+  cpu: 1
+  memoryMiB: 512
+  concurrency: 80
+  minInstances: 0
+  maxInstances: 100
+
 buildConfig:
-  # Build the frontend and prepare server
   buildCommand: |
     cd frontend && npm ci && npm run build
     npm ci
-  # Start command for the server
+    cp -r frontend/dist/* .
   startCommand: node server.js
-  # Include necessary files
   includedFiles:
     - frontend/dist/**
     - server.js
