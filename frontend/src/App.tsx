@@ -1,10 +1,10 @@
 // App.tsx - Updated with Camera Modal at App level
 import React, { useState, useRef } from 'react';
-import SearchBar from './components/SearchBar';
 import ResultsPopup from './components/ResultsPopup';
 import Horoscope from './components/Horoscope';
 import ButtonRow from './components/ButtonRow';
 import CameraCapture from './components/CameraCapture';
+import SpeechModal from './components/SpeechModal';
 import type { CameraCaptureHandle } from './components/CameraCapture';
 import './App.css';
 
@@ -48,6 +48,7 @@ const App: React.FC = () => {
     const [showResults, setShowResults] = useState(false);
     const [showHoroscope, setShowHoroscope] = useState(false);
     const [showCamera, setShowCamera] = useState(false);
+    const [showSpeechModal, setShowSpeechModal] = useState(false);
     
     // Camera ref at App level
     const cameraRef = useRef<CameraCaptureHandle>(null);
@@ -118,6 +119,11 @@ const App: React.FC = () => {
         setShowCamera(!showCamera);
     };
 
+    // Toggle speech modal visibility
+    const toggleSpeechModal = () => {
+        setShowSpeechModal(!showSpeechModal);
+    };
+
     // Handle camera capture - moved to App level
     const handleCameraCapture = (imageData: string) => {
         if (cameraRef.current) {
@@ -137,44 +143,60 @@ const App: React.FC = () => {
         }
     };
 
+    // Handle speech result
+    const handleSpeechResult = (transcript: string) => {
+        setShowSpeechModal(false);
+        if (transcript.trim()) {
+            handleNewSuggestion(transcript);
+        }
+    };
+
     return (
-        <div className="app-container">
-            <div className="image-container">
+        <div className="app-container" style={{
+            position: 'relative',
+            width: '100vw',
+            height: '100vh',
+            overflow: 'hidden'
+        }}>
+            <div className="image-container" style={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+            }}>
                 <img 
                     src="tips_thirst.png" 
                     alt="tips & thirst" 
                     className="main-background-image"
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'center'
+                    }}
                 />
-                {/* Overlay container for search and button row */}
-                <div className="search-button-container" style={{
+                
+                {/* Button Row at bottom - fixed positioning */}
+                <div style={{
                     position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    zIndex: 1001
+                    bottom: '1rem',
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    zIndex: 1002
                 }}>
-                    <div className="overlay-search" style={{width: '100%'}}>
-                        <SearchBar
-                            onNewSuggestion={handleNewSuggestion}
-                            onLoadingChange={handleLoadingChange}
-                            onError={handleError}
-                            isLoading={isLoading}
-                            showCamera={false}
-                            onCameraToggle={() => {}}
-                        />
-                    </div>
+                    {/* @ts-ignore */}
                     <ButtonRow 
                         onHoroscopeClick={toggleHoroscopeGrid}
                         onCameraClick={toggleCamera}
+                        onSpeechClick={toggleSpeechModal}
                         isLoading={isLoading}
                     />
                 </div>
             </div>
 
-         {/* Camera Modal - Override universal-card-container positioning */}
+            {/* Camera Modal - Override universal-card-container positioning */}
             {showCamera && (
                 <div
                     style={{
@@ -304,6 +326,14 @@ const App: React.FC = () => {
                     onError={handleError}
                 />
             )}
+
+            {/* Speech Modal */}
+            <SpeechModal
+                isOpen={showSpeechModal}
+                onClose={() => setShowSpeechModal(false)}
+                onSpeechResult={handleSpeechResult}
+                onError={handleError}
+            />
 
             {/* Loading Indicator */}
             {isLoading && (

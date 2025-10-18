@@ -78,3 +78,18 @@ button:focus-visible {
     background-color: #f9f9f9;
   }
 }
+
+@keyframes eyelidBlink {
+  0%, 90%, 100% { opacity: 0; }
+  95% { opacity: 1; }
+}
+
+@keyframes spin-text {
+  from { transform: translate(-50%, -50%) rotate(0deg); }
+  to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; }
+  50% { opacity: 1; }
+}

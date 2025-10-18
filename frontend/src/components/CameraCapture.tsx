@@ -42,10 +42,10 @@ const CameraCapture = forwardRef<CameraCaptureHandle, CameraCaptureProps>(({ onC
     const initCamera = async () => {
       setError(null);
       try {
-        // Prioritize back camera for better bottle/label recognition
+        // Require back camera for better bottle/label recognition
         const constraints = { 
           video: { 
-            facingMode: 'environment', // Back camera for product scanning
+            facingMode: { exact: 'environment' }, // Require back camera
             width: { ideal: 1280, max: 1920 }, // Higher resolution for better text recognition
             height: { ideal: 720, max: 1080 }
           } 
