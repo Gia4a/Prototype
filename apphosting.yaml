@@ -57,6 +57,12 @@ buildConfig:
     npm run build
     echo "Frontend build complete. Checking dist contents..."
     ls -la dist/
+    echo "=== Checking assets directory ==="
+    ls -la dist/assets/
+    echo "=== Listing all JS files ==="
+    ls -la dist/assets/*.js || echo "No JS files found"
+    echo "=== Checking index.html content (first 50 lines) ==="
+    head -50 dist/index.html
     echo "Moving back to root..."
     cd ..
     echo "Installing root dependencies..."

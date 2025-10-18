@@ -10,6 +10,13 @@ console.log('Serving static files from:', staticPath);
 
 if (require('fs').existsSync(staticPath)) {
   console.log('Static directory exists. Contents:', require('fs').readdirSync(staticPath));
+  
+  // Check if assets directory exists
+  const assetsPath = path.join(staticPath, 'assets');
+  if (require('fs').existsSync(assetsPath)) {
+    console.log('Assets directory contents:', require('fs').readdirSync(assetsPath));
+  }
+  
   app.use(express.static(staticPath, {
     setHeaders: (res, path) => {
       if (path.endsWith('.js')) {
@@ -33,13 +40,9 @@ if (require('fs').existsSync(staticPath)) {
 //   }
 // }));
 
-// Handle client-side routing - send all non-API requests to index.html
+// Handle client-side routing - send all requests to index.html
+// This should be LAST and only handle routes that aren't static files
 app.get('*', (req, res) => {
-  // Don't serve index.html for API routes or static assets
-  if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.includes('.')) {
-    return res.status(404).send('Not found');
-  }
-
   const indexPath = path.join(__dirname, 'frontend', 'dist', 'index.html');
   console.log('Serving index.html for route:', req.path);
 
