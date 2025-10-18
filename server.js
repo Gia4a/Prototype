@@ -10,7 +10,15 @@ console.log('Serving static files from:', staticPath);
 
 if (require('fs').existsSync(staticPath)) {
   console.log('Static directory exists. Contents:', require('fs').readdirSync(staticPath));
-  app.use(express.static(staticPath));
+  app.use(express.static(staticPath, {
+    setHeaders: (res, path) => {
+      if (path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+    }
+  }));
 } else {
   console.error('Static directory does not exist:', staticPath);
   console.log('Root directory contents:', require('fs').readdirSync(__dirname));
@@ -27,22 +35,18 @@ if (require('fs').existsSync(staticPath)) {
 
 // Handle client-side routing - send all non-API requests to index.html
 app.get('*', (req, res) => {
-  // Don't serve index.html for API routes
-  if (req.path.startsWith('/api')) {
-    return res.status(404).send('API route not found');
+  // Don't serve index.html for API routes or static assets
+  if (req.path.startsWith('/api') || req.path.startsWith('/assets') || req.path.includes('.')) {
+    return res.status(404).send('Not found');
   }
 
   const indexPath = path.join(__dirname, 'frontend', 'dist', 'index.html');
-  console.log('Serving index.html from:', indexPath);
+  console.log('Serving index.html for route:', req.path);
 
   if (require('fs').existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
     console.error('index.html not found at:', indexPath);
-    console.log('Root directory contents:', require('fs').readdirSync(__dirname));
-    if (require('fs').existsSync(path.join(__dirname, 'frontend', 'dist'))) {
-      console.log('Dist directory contents:', require('fs').readdirSync(path.join(__dirname, 'frontend', 'dist')));
-    }
     res.status(404).send('index.html not found');
   }
 });
