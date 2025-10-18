@@ -1,5 +1,5 @@
 // firebase.ts - Firebase configuration and initialization
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getFunctions } from 'firebase/functions';
 
 const firebaseConfig = {
@@ -12,5 +12,6 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase only if it hasn't been initialized yet
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const functions = getFunctions(app);
