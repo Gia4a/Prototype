@@ -13,9 +13,6 @@
       }
     ]
   },
-  "apphosting": {
-    "source": "apphosting.yaml"
-  },
   "emulators": {
     "hosting": {
       "port": 5000
@@ -34,8 +31,6 @@
       "firebase-debug.*.log",
       "*.local"
     ],
-    "predeploy": [],
     "runtime": "nodejs20"
   }
 }
-

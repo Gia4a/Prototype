@@ -10,16 +10,10 @@
     "deploy:hosting": "firebase deploy --only hosting",
     "deploy": "firebase deploy"
   },
-  "devDependencies": {
-    "concurrently": "^8.2.2",
-    "typescript": "^5.9.2"
-  },
   "engines": {
     "node": ">=16.0.0"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "http-proxy-middleware": "^2.0.6",
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector"
   }
 }
