@@ -15,13 +15,18 @@ runConfig:
 
 buildConfig:
   buildCommand: |
+    echo "=== Starting build process ==="
+    echo "Installing frontend dependencies..."
+    cd frontend && npm ci
     echo "Building frontend..."
-    cd frontend && npm ci && npm run build
+    npm run build
+    echo "Frontend build complete. Checking dist contents..."
+    ls -la dist/
+    echo "Moving back to root..."
+    cd ..
     echo "Installing root dependencies..."
-    cd .. && npm ci
-    echo "Copying built files..."
-    cp -r frontend/dist/* ./
-    echo "Build complete. Files in workspace:"
+    npm ci
+    echo "Build complete. Root directory contents:"
     ls -la
   startCommand: node server.js
   includedFiles:
