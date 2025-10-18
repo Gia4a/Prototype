@@ -15,3 +15,4 @@ const firebaseConfig = {
 // Initialize Firebase only if it hasn't been initialized yet
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const functions = getFunctions(app);
+export { app };
